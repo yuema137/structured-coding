@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -16,7 +17,7 @@ PLATFORMS = {
 }
 
 
-def install(host, project):
+def install(host, project, dry_run=False):
     """Copy publishable files without replacing an existing installation."""
     project = Path(project).expanduser().resolve(strict=True)
     if not project.is_dir():
@@ -36,6 +37,8 @@ def install(host, project):
     # Reuse the package allowlist; private authoring files never enter the copy.
     # Read everything before changing the project so missing sources fail early.
     payload = {relative: path.read_bytes() for relative, path in source_files(host).items()}
+    if dry_run:
+        return destination
     parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".structured-coding-install-", dir=parent) as temporary:
         staged = Path(temporary) / "structured-coding"
@@ -64,15 +67,53 @@ def main():
     parser.add_argument("host", choices=PLATFORMS)
     parser.add_argument("--project", required=True, type=Path,
                         help="Existing target project directory (use . for the current directory)")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--hooks", choices=("continuity",), help="Opt in to project-local continuity hooks")
+    modes.add_argument("--remove-hooks", action="store_true", help="Remove only our hook registration, preserving skill/state")
+    modes.add_argument("--check-hooks", action="store_true", help="Check registration, runtime files, and host version")
+    parser.add_argument("--dry-run", action="store_true", help="Preview installation/removal without writing")
     args = parser.parse_args()
     try:
+        if args.hooks or args.remove_hooks or args.check_hooks:
+            import hook_install
+            if args.remove_hooks:
+                path = hook_install.remove(args.host, args.project, args.dry_run)
+                print(f"{'Would remove' if args.dry_run else 'Removed'} only owned continuity hooks: {path}")
+                print("Skill files, session bindings, and checkpoints are retained. Existing settings are preserved/restored.")
+                return 0
+            if args.check_hooks:
+                print(hook_install.doctor(args.host, args.project))
+                return 0
+            plan = hook_install.prepare(args.host, args.project)
+            if plan["skill"].exists():
+                hook_install.verify_skill(plan)
+            if args.dry_run:
+                if not plan["skill"].exists():
+                    install(args.host, args.project, dry_run=True)
+                print(f"Would install/reuse skill at {plan['skill']}")
+                print(f"Would register continuity only: {plan['config']} ({args.host} {plan['version']})")
+                print("Events: PreCompact manual/auto; SessionStart startup/resume/compact/clear.")
+                print("Existing hooks/settings preserved. No global settings, trust, or permission changes.")
+                return 0
+            if not plan["skill"].exists():
+                install(args.host, args.project)
+            hook_install.apply(plan)
+            print(f"Continuity hooks registered in {plan['config']}. Skill: {plan['skill']}")
+            print("Restart the host and review/enable the hooks through /hooks; trust is not granted by this installer.")
+            print("Only explicit session bindings are checked. Read references/continuity.md in the installed skill.")
+            print("No merge guard, mutation guard, global settings, or permission changes.")
+            return 0
+        if args.dry_run:
+            destination = install(args.host, args.project, dry_run=True)
+            print(f"Would copy skill files to {destination}; no hooks.")
+            return 0
         destination = install(args.host, args.project)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(f"Installation failed: {error}", file=sys.stderr)
         return 1
     print(f"Installed structured-coding for {args.host}: {destination}")
     print(f"Open the target project in your agent and invoke {PLATFORMS[args.host][1]}.")
-    print("Copied skill files only. No hooks, global settings, or permissions were changed.")
+    print("Copied skill files only. No hooks were registered; global settings and permissions were unchanged.")
     return 0
 
 
