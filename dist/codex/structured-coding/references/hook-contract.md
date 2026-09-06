@@ -1,6 +1,6 @@
 # Hook behavior contract
 
-Status: **SPECIFICATION ONLY — no runtime hooks are implemented or installed by this package.**
+Status: **BEHAVIOR SPECIFICATION — optional [continuity preset](continuity.md) implements mechanical H4 checks, H5 snapshot attempts, and the H6 recovery-instruction subset.** It is not registered by default. H1/H2/H3/H7 and H6 mutation enforcement remain unimplemented. The requirements below remain the complete target, not a claim of full adapter coverage.
 
 This contract translates the workflow's freeze, merge, and context-continuity requirements into observable behavior. Event names below describe the workflow; actual host adapters are separate work. Supported host events and their sources are listed in [platforms.md](platforms.md).
 

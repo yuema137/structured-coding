@@ -145,7 +145,7 @@ Compaction 不重置进度，也不初始化新 PR。通过 handoff 恢复 activ
 
 计划中的 manual compaction 应先同步 design、handoff、HEAD 和 working-tree fingerprint。不可避免的 automatic compaction 遇到过时的语义 handoff 时，应产生机械恢复 snapshot 和警告，不能造成 compaction deadlock。hook 不得编造 semantic summary。
 
-事件行为与验收场景详见 [hook contract](hook-contract.md)。当前仅包含指令的版本中，这些是流程要求，尚未安装强制 guard。
+事件行为与验收场景详见 [hook contract](hook-contract.md)。未明确设置 hook 时，这些仍是流程要求。可选的 [continuity preset](continuity.md) 只提供机械 compact 同步检查、snapshot 尝试和恢复指令，不强制语义恢复，也不拦截 implementation/merge。
 
 ## 9. 达到 operator review 条件
 

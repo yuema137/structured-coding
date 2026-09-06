@@ -51,4 +51,4 @@ Operator 可以在 CI 运行时 review diff。这种并行不表示 agent 已达
 
 ## Skill 指令与 runtime enforcement
 
-本版本提供指令与 hook 行为约定，不安装平台 hook，也不修改权限。当前按流程执行 freeze、恢复和 merge 检查；后续集成可以机械执行同样的决策。不要仅为了消除所有可能的中断而请求大范围权限变更。
+本版本提供指令、hook 行为约定，以及需要明确选装的 [continuity preset](continuity.md)。默认安装不注册平台 hook；两种模式都不修改权限。Preset 提供 compact 同步检查、snapshot 尝试和恢复指令，不强制 freeze/merge 检查。其余检查仍按流程执行。不要仅为了消除所有可能的中断而请求大范围权限变更。

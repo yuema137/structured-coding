@@ -2,7 +2,7 @@
 
 [Chinese mirror](platforms.zh-CN.md)
 
-Both packages use the same `SKILL.md`, agent workflow, human guide, and complete prompts. The Codex package adds `agents/openai.yaml` for display metadata. The Claude Code package uses the common skill entry point without adding fork, subagent, model, or permission settings. Neither package installs hooks.
+Both packages use the same `SKILL.md`, agent workflow, human guide, and complete prompts. The Codex package adds `agents/openai.yaml` for display metadata. The Claude Code package uses the common skill entry point without adding fork, subagent, model, or permission settings. Neither package registers hooks by default. The repository installer can opt in to the [continuity preset](continuity.md) with `--hooks continuity`, and supports `--dry-run`, `--check-hooks`, and `--remove-hooks`. Existing hook groups and unrelated project settings are preserved; global settings, permissions, and trust are not changed.
 
 ## Placement and invocation
 
@@ -19,7 +19,7 @@ For a new PR, prepare the complete approved design and filled contract in the pl
 
 ## Mapping hooks to platforms
 
-This table guides future adapters; it is not a configuration file. Implement and validate event payloads, return values, permission behavior, and tool coverage against the target version.
+This table maps the full target contract; it is not a configuration file. The optional continuity adapter covers compact freshness, snapshot attempts, and recovery instructions only. Freeze/merge guards and enforced recovery remain future work. The [preset interface](continuity.md) lists supported versions, setup, tests, and coverage limits. Host protocol tests do not establish real lifecycle delivery; verify the installed registration in `/hooks`.
 
 | Workflow behavior | Candidate Codex event | Candidate Claude Code event |
 | --- | --- | --- |

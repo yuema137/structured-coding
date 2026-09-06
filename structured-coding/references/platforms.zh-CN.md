@@ -2,7 +2,7 @@
 
 [English source](platforms.md) · 英文是唯一权威源，本页是中文镜像。
 
-两份包使用同一份 `SKILL.md`、agent workflow、human guide 和完整 prompt。Codex 包另带 `agents/openai.yaml` 展示信息。Claude Code 包使用通用 skill 入口，不添加 fork、子 agent、模型或权限设置。两边均未安装 hook。
+两份包使用同一份 `SKILL.md`、agent workflow、human guide 和完整 prompt。Codex 包另带 `agents/openai.yaml` 展示信息。Claude Code 包使用通用 skill 入口，不添加 fork、子 agent、模型或权限设置。两边默认都不注册 hook。仓库 installer 可以通过 `--hooks continuity` 选装 [continuity preset](continuity.md)，并支持 `--dry-run`、`--check-hooks` 和 `--remove-hooks`。已有 hook group 和其他项目设置会保留；全局设置、权限和信任配置不变。
 
 ## 放置与调用
 
@@ -19,7 +19,7 @@ Codex 的目录和调用方式依据 [OpenAI 官方 skills 文档](https://learn
 
 ## Hook 的平台映射
 
-下表是后续适配依据，不是配置文件。事件的 payload、返回值、权限策略和工具覆盖必须按目标版本实现并验证。
+下表对应完整目标 contract，不是配置文件。可选 continuity adapter 只提供 compact 同步检查、snapshot 尝试和恢复指令。freeze/merge guard 和强制恢复仍是后续工作。[Preset interface](continuity.md) 列出了支持版本、设置方式、测试和覆盖限制。Host protocol 测试不能证明实际生命周期事件已经送达；安装后还要在 `/hooks` 中核对。
 
 | 工作流行为 | Codex 候选事件 | Claude Code 候选事件 |
 | --- | --- | --- |

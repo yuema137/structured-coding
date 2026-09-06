@@ -21,7 +21,7 @@ Read [agent-workflow.md](references/agent-workflow.md) and [adaptation.md](refer
 | Execute / resume | Full [working rules](prompts/implementation-working-rules.md) and [test rules](prompts/test-ci-gate-rules.md); filled contract; current PR design in full | Implement, validate, review, commit, and iterate through authorized PR/CI work |
 | Operator review / merge | Working rules §§21–22; current PR design and exact-head evidence | Review-ready handoff; merge only with explicit operator authorization |
 | After merge | Confirmed merge result; current PR, step, and overall documents | Update PR → step → overall; detail the immediate next PR |
-| Hook design / integration | [hook contract](references/hook-contract.md); [platform notes](references/platforms.md) | A host-specific implementation only when requested; this package contains the contract only |
+| Hook design / integration | [hook contract](references/hook-contract.md); [platform notes](references/platforms.md); [continuity preset](references/continuity.md) when explicitly enabled | Optional continuity only; further host integration only when requested |
 
 The original long prompts are deliberately preserved. Do not replace them with this entrypoint or a summary during execution. Resolve relative resource links against this skill directory, not the target repository.
 
@@ -44,6 +44,6 @@ The filled, approved project contract specializes these reusable rules. User ins
 
 `SIDERIUS`, `shuffle`, `file_order`, Gate labels, tool names, and scientific examples in the prompts retain their source wording. Apply them where relevant using [adaptation.md](references/adaptation.md); do not create those systems in an unrelated project.
 
-Hook enforcement is **specified, not installed**. Do not claim that freeze, merge, or compaction guards are active. A missing hook does not block work the user has authorized in this instruction-only edition; follow the same checks procedurally and report the enforcement status accurately.
+Hooks are **optional, not registered by default**. If the operator has enabled `continuity`, read [its interface](references/continuity.md), explicitly bind the current execution session, and maintain its mechanical checkpoint after semantic handoff updates. Never enable/register hooks yourself merely because the skill was invoked. This preset supplies compact freshness checks, snapshot attempts, and recovery instructions, not freeze/merge guards or enforced semantic recovery. Without it, follow the same checks procedurally; missing hooks do not block authorized work. Report actual enforcement status accurately.
 
 For the human explanation and interaction examples, use [README.md](README.md). It is not required reading during routine execution.
