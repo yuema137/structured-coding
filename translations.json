@@ -1,11 +1,17 @@
 {
   "authority": "English is the only authoritative source. Chinese files are synchronized explanatory mirrors.",
+  "presentation_source_pair": {
+    "english": "docs/content.en.json",
+    "chinese": "docs/content.zh-CN.json",
+    "english_sha256": "d2863afb8dab4c411c660ba546669ea4bbf62379f8eb2d4c50ad934774db5c76",
+    "chinese_sha256": "dca5d5c79b037e1a7e823a455f93f37cc8458f6058ab3acf075cf4f399124510"
+  },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "85624218b90d73633ec29ab78f82a47039c5a6acdbcf2b29f5a538e512c51fd2",
-      "chinese_sha256": "b48909e483e7bd4108d755bbec8a4307685c6873d5baf74f5b912ddaae58b11d"
+      "english_sha256": "ab3aca40cbc786bc982f5143fd8f348e0f98a8694222362c76e189ea890ecb49",
+      "chinese_sha256": "f66bc21bfeff37efa58a774e007fb7d52fa3d44dec5422834a3ce797eefc4726"
     },
     {
       "english": "structured-coding/README.md",

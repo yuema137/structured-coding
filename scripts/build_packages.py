@@ -125,6 +125,12 @@ def check_languages():
     for relative, expected in manifest["specification_sha256"].items():
         require(sha((ROOT / relative).read_bytes()) == expected,
                 f"Established specification changed: {relative}")
+    presentation = manifest["presentation_source_pair"]
+    for language, relative in (("english", "docs/content.en.json"),
+                               ("chinese", "docs/content.zh-CN.json")):
+        require(presentation[language] == relative, "Unexpected presentation source path")
+        require(sha((ROOT / relative).read_bytes()) == presentation[f"{language}_sha256"],
+                f"Human presentation source changed; review mirror synchronization: {relative}")
     print(f"PASS {len(mirrors)} translation pairs and unchanged specification baseline")
 
 
@@ -198,6 +204,8 @@ def check_packages():
 
 
 def main():
+    from build_human_docs import check as check_human_docs
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Verify existing packages without writing")
     args = parser.parse_args()
@@ -205,6 +213,7 @@ def main():
         source_files(host)
     check_languages()
     check_markdown()
+    check_human_docs()
     print("PASS publishable source files, local links, and fences")
     if not args.check:
         build()
