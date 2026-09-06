@@ -4,6 +4,99 @@
 
 A reusable workflow for human-guided planning, autonomous agent coding, and review before merge.
 
+## Quick start
+
+### 1. Install for your agent
+
+Run **one** of the following blocks in a terminal at the root of the project where you want to use the skill. These commands require Git and a POSIX shell, such as bash or zsh on macOS/Linux, or bash in WSL. Have Codex or Claude Code installed already; the commands below install this skill, not the agent itself.
+
+Each block downloads the public repo's current `main` into a temporary directory and copies the complete platform package into your project. No GitHub SSH setup, zip download, or build step is needed. An existing skill directory, file, or symlink stops the command before copying, so it will not overwrite your installation.
+
+#### Codex
+
+```sh
+(
+  set -e
+  skill_dir=".agents/skills/structured-coding"
+  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
+    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
+    exit 1
+  fi
+  skill_tmp="$(mktemp -d)"
+  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
+  mkdir -p ".agents/skills"
+  cp -R "$skill_tmp/source/dist/codex/structured-coding" "$skill_dir"
+)
+```
+
+Open this project in Codex and start your planning message with `$structured-coding`. The project-local location is `.agents/skills/structured-coding/`. If the skill does not appear, restart Codex. See the [official Codex skills documentation](https://learn.chatgpt.com/docs/build-skills).
+
+#### Claude Code
+
+```sh
+(
+  set -e
+  skill_dir=".claude/skills/structured-coding"
+  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
+    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
+    exit 1
+  fi
+  skill_tmp="$(mktemp -d)"
+  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
+  mkdir -p ".claude/skills"
+  cp -R "$skill_tmp/source/dist/claude-code/structured-coding" "$skill_dir"
+)
+```
+
+Start Claude Code in this project and begin your planning message with `/structured-coding`. The project-local location is `.claude/skills/structured-coding/`. If you created the project's first skills directory during an existing session, restart Claude Code. See the [official Claude Code skills documentation](https://code.claude.com/docs/en/skills).
+
+Both commands install only for the current project and leave your global configuration alone. To make the skill available across projects, see the personal installation paths in [platform notes](structured-coding/references/platforms.md). Do not copy only `SKILL.md`: the prompts and references must stay with it.
+
+### 2. Start with requirements, not an execution command
+
+For a new feature, give the agent the desired behavior and constraints:
+
+```text
+Use the structured-coding workflow for this feature. First agree with me on
+requirements, module-level direction, and overall step boundaries; then detail
+the current step. Work on planning for now.
+Requirements: ...
+```
+
+Discuss the proposed direction and PR boundaries. Then ask for the current PR's concrete design:
+
+```text
+Read the overall and step documents, audit the current code, and prepare the
+PR 01a design doc and filled execution contract. Follow the original PR
+requirements for the commit checklist. Separate implementation, validation,
+and review, and prepare the design for my approval.
+```
+
+If you already have plans, provide their paths and the current phase instead of recreating them. A planning request is not permission to begin implementation.
+
+### 3. Approve the design, then start a fresh execution session
+
+Review the design and filled contract. Resolve scope, invariants, acceptance criteria, permissions, budget, and stop conditions. Once approved, use a new session for that PR's implementation:
+
+```text
+Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
+and the filled contract is docs/plan/pr-01a-contract.md.
+Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
+in full, reconcile actual state, and begin.
+Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
+Do not merge.
+```
+
+Replace the example paths with your actual documents. This short request points the agent to the full rules; it does not summarize away the execution template. Let the agent work through ordinary implementation and CI repairs. Participate when it presents a material decision or the final review handoff.
+
+### 4. Review, confirm merge, and prepare the next PR
+
+Review the diff and recorded evidence. Request repairs or explicitly authorize merge. After merge is confirmed, have the agent update the PR, step, and overall docs and prepare the next PR design from the merged code.
+
+Do not carry straight on with the next PR in the previous implementation session. Approve its own design and contract, then start fresh. If you are merely resuming the current PR, give the agent its design, contract, and handoff paths instead.
+
+## What is Structured Coding?
+
 Structured Coding packages a personal agent-coding workflow into a reusable skill for Codex and Claude Code. You and the agent agree on what to build and the boundaries of the next PR. The agent then implements, tests, reviews, records its findings, and commits within that agreement. You review the result before merge. The merged code and lessons from that PR become the basis for planning the next one.
 
 This repo provides the instructions, preserved prompt templates, and document requirements for that process. It does **not** contain a design for your particular project, and installing it does not start work automatically. You bring a feature or substantial change; the agent helps you prepare the project-specific plans and then execute them.
@@ -181,63 +274,7 @@ docs/plan/
 
 These are illustrative paths, not a required directory layout. Follow the project's existing conventions and avoid duplicate authorities. If one step is one PR, its step doc can become the PR design directly.
 
-## How to use it in your project
-
-### 1. Install the complete skill folder
-
-Clone this repo or download one of the packages below. Copy the entire `structured-coding/` package folder, including its prompts and references, into your target project.
-
-| Platform | Package in this repo | Zip download | Destination in your project |
-| --- | --- | --- | --- |
-| Codex | [dist/codex/structured-coding](dist/codex/structured-coding/SKILL.md) | [Codex skill](dist/structured-coding-codex.zip) | `.agents/skills/structured-coding/` |
-| Claude Code | [dist/claude-code/structured-coding](dist/claude-code/structured-coding/SKILL.md) | [Claude Code skill](dist/structured-coding-claude-code.zip) | `.claude/skills/structured-coding/` |
-
-Do not copy only `SKILL.md`: it loads the other files. Compare any existing customized installation before replacing it. Personal installation paths and platform-specific details are in [platform notes](structured-coding/references/platforms.md).
-
-In Codex, invoke the skill with `$structured-coding`; in Claude Code, use `/structured-coding`. Use that entrypoint with the requests below. Both packages use the same core workflow.
-
-### 2. Start with requirements, not an execution command
-
-For a new feature, give the agent the desired behavior and constraints:
-
-```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
-Requirements: ...
-```
-
-Discuss the proposed direction and PR boundaries. Then ask for the current PR's concrete design:
-
-```text
-Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
-```
-
-If you already have plans, provide their paths and the current phase instead of recreating them. A planning request is not permission to begin implementation.
-
-### 3. Approve the design, then start a fresh execution session
-
-Review the design and filled contract. Resolve scope, invariants, acceptance criteria, permissions, budget, and stop conditions. Once approved, use a new session for that PR's implementation:
-
-```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
-Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
-Do not merge.
-```
-
-Replace the example paths with your actual documents. This short request points the agent to the full rules; it does not summarize away the execution template. Let the agent work through ordinary implementation and CI repairs. Participate when it presents a material decision or the final review handoff.
-
-### 4. Review, confirm merge, and prepare the next PR
-
-Review the diff and recorded evidence. Request repairs or explicitly authorize merge. After merge is confirmed, have the agent update the PR, step, and overall docs and prepare the next PR design from the merged code.
-
-Do not carry straight on with the next PR in the previous implementation session. Approve its own design and contract, then start fresh. If you are merely resuming the current PR, give the agent its design, contract, and handoff paths instead.
+Prefer a manual download? The [Codex zip](dist/structured-coding-codex.zip) and [Claude Code zip](dist/structured-coding-claude-code.zip) remain available. They contain the same files installed by the commands above.
 
 ## What is enforced today?
 

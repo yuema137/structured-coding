@@ -4,6 +4,99 @@
 
 一套可复用的 workflow：人参与规划，agent 自主 coding，merge 前由人 review。
 
+## 先装上，再开始用
+
+### 1. 给你用的 agent 安装 skill
+
+先在 terminal 里进入**要使用这个 skill 的项目根目录**，再选下面一段命令运行。需要 Git 和 POSIX shell，比如 macOS/Linux 上的 bash、zsh，或者 WSL 里的 bash。Codex 或 Claude Code 要事先装好；下面装的是这个 skill，不是 agent 本身。
+
+每段命令都会把公开 repo 当前的 `main` 下载到临时目录，再把完整的平台 package 复制进你的项目。不用配置 GitHub SSH，不用手动下载 zip，也不用先 build。目标位置如果已经有同名目录、文件或 symlink，命令会在复制前停下来，不会覆盖已有安装。
+
+#### Codex
+
+```sh
+(
+  set -e
+  skill_dir=".agents/skills/structured-coding"
+  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
+    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
+    exit 1
+  fi
+  skill_tmp="$(mktemp -d)"
+  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
+  mkdir -p ".agents/skills"
+  cp -R "$skill_tmp/source/dist/codex/structured-coding" "$skill_dir"
+)
+```
+
+用 Codex 打开这个项目，在规划请求开头加上 `$structured-coding`。项目内的安装位置是 `.agents/skills/structured-coding/`。如果没看到这个 skill，重启 Codex 再看。依据见 [Codex 官方 skills 文档](https://learn.chatgpt.com/docs/build-skills)。
+
+#### Claude Code
+
+```sh
+(
+  set -e
+  skill_dir=".claude/skills/structured-coding"
+  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
+    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
+    exit 1
+  fi
+  skill_tmp="$(mktemp -d)"
+  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
+  mkdir -p ".claude/skills"
+  cp -R "$skill_tmp/source/dist/claude-code/structured-coding" "$skill_dir"
+)
+```
+
+在这个项目里启动 Claude Code，在规划请求开头加上 `/structured-coding`。项目内的安装位置是 `.claude/skills/structured-coding/`。如果你是在已有 session 运行时，才创建了项目的第一个 skills 目录，重启 Claude Code 再用。依据见 [Claude Code 官方 skills 文档](https://code.claude.com/docs/en/skills)。
+
+这两段命令都只给当前项目安装，不动你的全局配置。想让多个项目都能用，个人级安装路径见 [platform notes](structured-coding/references/platforms.zh-CN.md)。别只复制 `SKILL.md`，prompts 和 references 也得一起带上。
+
+### 2. 先给需求，不要一上来就让它执行
+
+新 feature 先说明期望行为和约束：
+
+```text
+Use the structured-coding workflow for this feature. First agree with me on
+requirements, module-level direction, and overall step boundaries; then detail
+the current step. Work on planning for now.
+Requirements: ...
+```
+
+和 agent 讨论它提出的方向和 PR 边界，然后让它准备当前 PR 的具体设计：
+
+```text
+Read the overall and step documents, audit the current code, and prepare the
+PR 01a design doc and filled execution contract. Follow the original PR
+requirements for the commit checklist. Separate implementation, validation,
+and review, and prepare the design for my approval.
+```
+
+如果已经有计划，就提供路径和当前阶段，不用从头再造一套。让 agent 做规划，不等于允许它开始实现。
+
+### 3. 批准设计，再开新的 execution session
+
+review 设计和填好的 contract，把范围、invariants、验收条件、权限、预算和停止条件定下来。批准后，开新 session 执行这个 PR：
+
+```text
+Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
+and the filled contract is docs/plan/pr-01a-contract.md.
+Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
+in full, reconcile actual state, and begin.
+Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
+Do not merge.
+```
+
+把示例路径换成你实际的文档路径。这段短请求是让 agent 找到完整规则，不是把 execution 模板压缩成这几句话。普通实现和 CI 修复，可以放手让它做；它提出实质性决定，或者交付最终 review handoff 时，你再参与。
+
+### 4. review、确认 merge，再准备下一个 PR
+
+review diff 和记录的证据。需要修就让 agent 修，可以接受就明确授权 merge。确认 merge 后，让 agent 更新 PR、step 和 overall docs，再根据 merge 后的 code 准备下一个 PR design。
+
+别在上一个 implementation session 里顺手就开干下一个 PR。先批准新 PR 自己的设计和 contract，再开新 session。如果只是恢复当前 PR，提供它的 design、contract 和 handoff 路径就行。
+
+## Structured Coding 是做什么的？
+
 Structured Coding 把我自己整理的一套 agent coding workflow 做成了可复用的 skill，供 Codex 和 Claude Code 使用。你和 agent 先商量好要做啥，以及下一个 PR 的边界。agent 在这个约定里完成实现、测试、review、记录和 commit。merge 前，你来 review 结果。这个 PR merge 后的 code，加上实现中得到的新认识，再用来规划下一个 PR。
 
 这个 repo 提供的是这套流程需要的指令、保留下来的 prompt 模板和文档要求。它**不包含你自己项目的设计方案**，装好以后也不会自动开工。你带着一个 feature 或较大的改动来，agent 帮你准备项目自己的计划，再按计划执行。
@@ -181,63 +274,7 @@ docs/plan/
 
 这些路径只是示例，不是强制目录结构。沿用项目已有约定，别给同一件事留两份互相竞争的依据。一个 step 如果就是一个 PR，它的 step doc 可以直接扩展成 PR design。
 
-## 别人拿到以后，怎么用？
-
-### 1. 安装完整的 skill 文件夹
-
-clone 这个 repo，或者下载下面的 package。把整个 `structured-coding/` package 文件夹复制到目标项目，包括里面的 prompts 和 references。
-
-| 平台 | 本 repo 中的 package | Zip 下载 | 目标项目中的位置 |
-| --- | --- | --- | --- |
-| Codex | [dist/codex/structured-coding](dist/codex/structured-coding/SKILL.md) | [Codex skill](dist/structured-coding-codex.zip) | `.agents/skills/structured-coding/` |
-| Claude Code | [dist/claude-code/structured-coding](dist/claude-code/structured-coding/SKILL.md) | [Claude Code skill](dist/structured-coding-claude-code.zip) | `.claude/skills/structured-coding/` |
-
-别只复制 `SKILL.md`，它还要读取其他文件。如果已经有自己改过的安装版本，先比较，再替换。个人级安装路径和平台细节见 [platform notes](structured-coding/references/platforms.zh-CN.md)。
-
-Codex 用 `$structured-coding` 调用，Claude Code 用 `/structured-coding`。通过这个入口配合下面的请求使用。两个 package 的核心 workflow 相同。
-
-### 2. 先给需求，不要一上来就让它执行
-
-新 feature 先说明期望行为和约束：
-
-```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
-Requirements: ...
-```
-
-和 agent 讨论它提出的方向和 PR 边界，然后让它准备当前 PR 的具体设计：
-
-```text
-Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
-```
-
-如果已经有计划，就提供路径和当前阶段，不用从头再造一套。让 agent 做规划，不等于允许它开始实现。
-
-### 3. 批准设计，再开新的 execution session
-
-review 设计和填好的 contract，把范围、invariants、验收条件、权限、预算和停止条件定下来。批准后，开新 session 执行这个 PR：
-
-```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
-Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
-Do not merge.
-```
-
-把示例路径换成你实际的文档路径。这段短请求是让 agent 找到完整规则，不是把 execution 模板压缩成这几句话。普通实现和 CI 修复，可以放手让它做；它提出实质性决定，或者交付最终 review handoff 时，你再参与。
-
-### 4. review、确认 merge，再准备下一个 PR
-
-review diff 和记录的证据。需要修就让 agent 修，可以接受就明确授权 merge。确认 merge 后，让 agent 更新 PR、step 和 overall docs，再根据 merge 后的 code 准备下一个 PR design。
-
-别在上一个 implementation session 里顺手就开干下一个 PR。先批准新 PR 自己的设计和 contract，再开新 session。如果只是恢复当前 PR，提供它的 design、contract 和 handoff 路径就行。
+想手动下载也行：[Codex zip](dist/structured-coding-codex.zip) 和 [Claude Code zip](dist/structured-coding-claude-code.zip) 仍然提供，里面的文件和上面命令安装的一样。
 
 ## 现在有哪些约束是真正生效的？
 
