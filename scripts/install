@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Install the standalone skill into an explicitly selected project."""
+
+import argparse
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from build_packages import source_files
+
+
+PLATFORMS = {
+    "codex": (".agents", "$structured-coding"),
+    "claude-code": (".claude", "/structured-coding"),
+}
+
+
+def install(host, project):
+    """Copy publishable files without replacing an existing installation."""
+    project = Path(project).expanduser().resolve(strict=True)
+    if not project.is_dir():
+        raise ValueError(f"Project is not a directory: {project}")
+
+    config, _ = PLATFORMS[host]
+    parent = project / config / "skills"
+    for path in (project / config, parent):
+        if path.is_symlink():
+            raise ValueError(f"Refusing redirected installation directory: {path}")
+        if path.exists() and not path.is_dir():
+            raise ValueError(f"Installation parent is not a directory: {path}")
+    destination = parent / "structured-coding"
+    if os.path.lexists(destination):
+        raise FileExistsError(f"Already exists: {destination}. Compare or back up your installation before updating.")
+
+    # Reuse the package allowlist; private authoring files never enter the copy.
+    # Read everything before changing the project so missing sources fail early.
+    payload = {relative: path.read_bytes() for relative, path in source_files(host).items()}
+    parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".structured-coding-install-", dir=parent) as temporary:
+        staged = Path(temporary) / "structured-coding"
+        for relative, content in payload.items():
+            target = staged / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+
+        # Reserve the name without overwriting even an empty existing directory.
+        # Publishing the complete staged directory is atomic on macOS/Linux.
+        destination.mkdir()
+        try:
+            os.replace(staged, destination)
+        except OSError:
+            # Only remove our empty reservation, never a populated directory.
+            try:
+                destination.rmdir()
+            except OSError:
+                pass
+            raise
+    return destination
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("host", choices=PLATFORMS)
+    parser.add_argument("--project", required=True, type=Path,
+                        help="Existing target project directory (use . for the current directory)")
+    args = parser.parse_args()
+    try:
+        destination = install(args.host, args.project)
+    except (OSError, ValueError) as error:
+        print(f"Installation failed: {error}", file=sys.stderr)
+        return 1
+    print(f"Installed structured-coding for {args.host}: {destination}")
+    print(f"Open the target project in your agent and invoke {PLATFORMS[args.host][1]}.")
+    print("Copied skill files only. No hooks, global settings, or permissions were changed.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
