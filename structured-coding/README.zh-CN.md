@@ -6,7 +6,7 @@
 
 Structured Coding 把这个判断提前讲清楚。你和 agent 先商定一个 PR 要完成什么、哪些地方不能越界。接下来它自己实现、检查，把途中发生的事记下来。做完以后，你 review，再决定是否 merge。这一轮查明白的事，接着用来改下一轮计划。
 
-这份指南讲你怎么跟 agent 配合。给 agent 的详细指令放在 [SKILL.md](SKILL.md) 和 [agent workflow](references/agent-workflow.zh-CN.md)。完整的 [PR requirements](prompts/pr-design-requirements.md)、[execution prompt](prompts/implementation-working-rules.md) 和 [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) 单独保留，原文怎么保存的见 [prompt provenance](references/prompt-provenance.zh-CN.md)。
+这份指南讲你怎么跟 agent 配合。给 agent 的详细指令放在 [SKILL.md](SKILL.md) 和 [agent workflow](references/agent-workflow.zh-CN.md)。完整的 [PR requirements](prompts/pr-design-requirements.md)、[execution prompt](prompts/implementation-working-rules.md) 和 [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) 单独保留。
 
 英文是唯一权威版本。中文镜像保持同样的含义，专业术语保留英文。specification 和 execution prompt 只维护英文。
 

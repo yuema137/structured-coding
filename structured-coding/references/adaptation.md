@@ -2,7 +2,7 @@
 
 [Chinese mirror](adaptation.zh-CN.md)
 
-This file connects the source prompts to reusable projects. It does not replace their detailed instructions. The execution and test-rule wording is preserved; the PR requirements contain the limited execution-boundary updates authorized by the workflow author. See [provenance](prompt-provenance.md).
+This file explains how to apply the prompts to different projects. It does not replace their detailed instructions.
 
 ## Resolve rules by scope and phase
 

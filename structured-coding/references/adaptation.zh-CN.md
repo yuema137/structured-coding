@@ -2,7 +2,7 @@
 
 [English source](adaptation.md) · 英文是唯一权威源，本页是中文镜像。
 
-本文解释如何将原始 prompt 应用于不同项目，不替代其中的详细指令。execution 和 test rules 保留原文措辞；PR requirements 包含工作流作者此前批准的有限 execution 边界更新。详见 [provenance](prompt-provenance.zh-CN.md)。
+本文解释如何将 prompt 应用于不同项目，不替代其中的详细指令。
 
 ## 按 scope 和阶段理解规则
 

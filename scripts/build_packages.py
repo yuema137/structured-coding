@@ -6,7 +6,6 @@ import hashlib
 import json
 import re
 import shutil
-import string
 from pathlib import Path
 from urllib.parse import unquote
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -17,6 +16,26 @@ SOURCE = ROOT / "structured-coding"
 DIST = ROOT / "dist"
 HOSTS = ("codex", "claude-code")
 
+# Only runtime instructions, user guides, and platform metadata belong in a skill.
+# Adding a new source file requires an explicit publication decision here.
+PUBLISHED_FILES = {
+    "SKILL.md",
+    "README.md",
+    "README.zh-CN.md",
+    "agents/openai.yaml",
+    "prompts/pr-design-requirements.md",
+    "prompts/implementation-working-rules.md",
+    "prompts/test-ci-gate-rules.md",
+    "references/agent-workflow.md",
+    "references/agent-workflow.zh-CN.md",
+    "references/adaptation.md",
+    "references/adaptation.zh-CN.md",
+    "references/platforms.md",
+    "references/platforms.zh-CN.md",
+    "references/hook-contract.md",
+    "references/language-policy.md",
+}
+
 
 def require(condition, message):
     if not condition:
@@ -25,44 +44,6 @@ def require(condition, message):
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
-
-
-def check_prompts():
-    manifest = json.loads((SOURCE / "references/prompt-provenance.json").read_text())
-    raw = (ROOT / manifest["source_file"]).read_bytes()
-    require(sha(raw) == manifest["source_sha256"], "Original source hash changed")
-    original = raw.decode("utf-8")
-    boundaries = {
-        "pr-design-requirements": ("audit relevant code base", "\nExecution阶段："),
-        "implementation-working-rules": (
-            r"\# Implementation Working Rules", r"\#\# TEST / CI / GATE EXECUTION RULES"
-        ),
-        "test-ci-gate-rules": (
-            r"\#\# TEST / CI / GATE EXECUTION RULES", "\nBackward update plan阶段："
-        ),
-    }
-    for name, (start, end) in boundaries.items():
-        body = original[original.index(start):original.index(end)].strip() + "\n"
-        body = re.sub(
-            r"\\(.)", lambda m: m[1] if m[1] in string.punctuation else m[0], body
-        )
-        entry = manifest["prompts"][name]
-        for change in entry["wording_changes"]:
-            require(body.count(change["before"]) == 1, f"Ambiguous approved edit: {name}")
-            body = body.replace(change["before"], change["after"])
-        if name == "pr-design-requirements":
-            body = "# PR Design Doc Requirements\n\n" + body
-        elif name == "implementation-working-rules":
-            body = body.replace("\nPROJECT / PR:", "\n```text\nPROJECT / PR:", 1)
-            body = re.sub(r"^````[ \t]*$", "```", body, count=1, flags=re.M)
-        else:
-            body = re.sub(
-                r"^={10,}[ \t]*\n(\d+\.[^\n]*)\n={10,}[ \t]*$",
-                lambda m: "### " + m[1].strip(), body, flags=re.M,
-            )
-        actual = (SOURCE / "prompts" / f"{name}.md").read_bytes()
-        require(actual == body.encode("utf-8"), f"Unexpected prompt edits: {name}")
-        require(sha(actual) == entry["sha256"], f"Prompt hash changed: {name}")
 
 
 def check_markdown():
@@ -119,7 +100,6 @@ def check_languages():
         "structured-coding/references/agent-workflow.md",
         "structured-coding/references/adaptation.md",
         "structured-coding/references/platforms.md",
-        "structured-coding/references/prompt-provenance.md",
     }
     require({p["english"] for p in manifest["pairs"]} == expected_sources,
             "Translation source set differs from the language policy")
@@ -149,15 +129,21 @@ def check_languages():
 
 
 def source_files(host):
-    files = {}
-    for path in sorted(SOURCE.rglob("*")):
+    require(host in HOSTS, f"Unknown host: {host}")
+    require(not SOURCE.is_symlink(), "Skill source must not be a symlink")
+    actual = set()
+    for path in SOURCE.rglob("*"):
         require(not path.is_symlink(), f"Unexpected source symlink: {path}")
-        if path.is_file():
-            relative = path.relative_to(SOURCE).as_posix()
-            if host == "claude-code" and relative == "agents/openai.yaml":
-                continue
-            files[relative] = path
-    return files
+        if path.is_file() and path.name != ".DS_Store":
+            actual.add(path.relative_to(SOURCE).as_posix())
+    require(actual == PUBLISHED_FILES,
+            f"Publishable source file set differs: missing={sorted(PUBLISHED_FILES - actual)}, "
+            f"unexpected={sorted(actual - PUBLISHED_FILES)}")
+    return {
+        relative: SOURCE / relative
+        for relative in sorted(PUBLISHED_FILES)
+        if not (host == "claude-code" and relative == "agents/openai.yaml")
+    }
 
 
 def check_output_paths():
@@ -215,10 +201,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Verify existing packages without writing")
     args = parser.parse_args()
-    check_prompts()
+    for host in HOSTS:
+        source_files(host)
     check_languages()
     check_markdown()
-    print("PASS original source, complete prompt preservation, approved edits, local links, and fences")
+    print("PASS publishable source files, local links, and fences")
     if not args.check:
         build()
     check_packages()

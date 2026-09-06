@@ -10,8 +10,8 @@
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "1e3b27eee3b76314e0a8dc0250b42ec4ba694897e10d0499ea0a14e636f9c22b",
-      "chinese_sha256": "7abdd85704facaf1118a4a48827e15990c4b9f927ed96562ba79cbfd8e8b4353"
+      "english_sha256": "bd391780ba99b79ac9c3a8407b1014bb393f91d4655fb0b1d367eb74688c13a1",
+      "chinese_sha256": "5f424ff441cd015e6fe1be0d71db2c854ddd660ba83c64a78599879f0af7faea"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
@@ -22,24 +22,18 @@
     {
       "english": "structured-coding/references/adaptation.md",
       "chinese": "structured-coding/references/adaptation.zh-CN.md",
-      "english_sha256": "35b5a54a2aec354da601cbaea756413d9d0d137d6be025bb7bbeb32360df4fe7",
-      "chinese_sha256": "575f3e74f5edd40e5978390be3c84278bfe78f8d003eb76c160a28e0c4773030"
+      "english_sha256": "05f74f50c2a3575e2f0d404e9bb04af986d311592b6550d8e701537e798d480f",
+      "chinese_sha256": "0e2154dafe250f14d7123aa3d3bb77f12438386ea61a477c9419f8243773bf12"
     },
     {
       "english": "structured-coding/references/platforms.md",
       "chinese": "structured-coding/references/platforms.zh-CN.md",
       "english_sha256": "f32ce785b50135b3b585af71389d17f9ee79c6da5da73627eacf8291e35d8ec9",
       "chinese_sha256": "88ebaa7514c4e57a7284f8c3ea919f838bb8b96090fc9bf58856f2194318a4d8"
-    },
-    {
-      "english": "structured-coding/references/prompt-provenance.md",
-      "chinese": "structured-coding/references/prompt-provenance.zh-CN.md",
-      "english_sha256": "3b8eedc17b1c0981ddf2193fd50b64a29ac65482129ee2c1b297b561faae8e30",
-      "chinese_sha256": "0365d0a01f20cf63b84af71ac3dc3f0e531bc866f2874faa8c0a33d617ed8aa5"
     }
   ],
   "specification_sha256": {
-    "structured-coding/SKILL.md": "e94cb9a6cda62405e9261e5472d65e193291cd673b9a26db8afb5571740550d6",
+    "structured-coding/SKILL.md": "411e3c598d0e6e93b3ae6e4eafabc8b624919e18b553bff0d8c5969439cea6f9",
     "structured-coding/prompts/implementation-working-rules.md": "7caa1d829fcdb0741b3b621918d6058352adcacf6c8bfee5267e37d2850debcf",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",

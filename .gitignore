@@ -1,3 +1,10 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+
+# Local authoring material is not part of the published skill.
+/.local/
+/Structured Coding skill.md
+**/prompt-provenance.md
+**/prompt-provenance.zh-CN.md
+**/prompt-provenance.json
