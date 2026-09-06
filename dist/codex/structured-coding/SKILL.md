@@ -46,4 +46,4 @@ The filled, approved project contract specializes these reusable rules. User ins
 
 Hook enforcement is **specified, not installed**. Do not claim that freeze, merge, or compaction guards are active. A missing hook does not block work the user has authorized in this instruction-only edition; follow the same checks procedurally and report the enforcement status accurately.
 
-For the human explanation and interaction examples, use [README.md](README.md). For exact preservation boundaries and the approved PR-rule updates, use [prompt-provenance.md](references/prompt-provenance.md). Neither is required reading during routine execution.
+For the human explanation and interaction examples, use [README.md](README.md). It is not required reading during routine execution.
