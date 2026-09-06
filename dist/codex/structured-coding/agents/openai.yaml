@@ -1,0 +1,4 @@
+interface:
+  display_name: "Structured Coding"
+  short_description: "Plan, freeze, execute, review, and update the next PR"
+  default_prompt: "Use $structured-coding to identify this project's current planning or execution phase and continue from its authoritative documents."
