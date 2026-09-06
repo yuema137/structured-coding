@@ -4,14 +4,14 @@
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "6e0b3b91963db2f9f625269c6ac626ba961cb6e8e71eac47a46fdacdee25d2b4",
-      "chinese_sha256": "c1fc44f78ca5fc414067550fd054aa314129ea7cb0a109b5ef4fafb2e82b993a"
+      "english_sha256": "add4cf3c2a5b132fdc7a330393f200ccf268a3fa10b7d05e854307a04c21580e",
+      "chinese_sha256": "f9c2854b42fef31e24f387e6da55b1c1a07ab75068c1778d9e8c6edb88b4d036"
     },
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "d0bd57ed45539a7afdffa164347fbd4d3e782dfc6589bf2abd16c0f5d6600fa7",
-      "chinese_sha256": "2f07997aa5e2a56d19116b66e190a5e84a208c540d8a616cb8d9d5cc3656e862"
+      "english_sha256": "1e3b27eee3b76314e0a8dc0250b42ec4ba694897e10d0499ea0a14e636f9c22b",
+      "chinese_sha256": "7abdd85704facaf1118a4a48827e15990c4b9f927ed96562ba79cbfd8e8b4353"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",

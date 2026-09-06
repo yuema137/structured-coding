@@ -2,114 +2,132 @@
 
 [Chinese mirror](README.zh-CN.md)
 
-Turn requirements into reviewable PRs, let an agent implement autonomously within clear boundaries, and use actual results to update the next plan.
+You give an agent a feature to build. It changes several files, tests fail, and the implementation uncovers something the plan missed. You need to know whether it can fix that detail and continue, or whether the discovery changes what you agreed to build.
 
-This guide is for the people using the workflow. The agent starts at [SKILL.md](SKILL.md), with detailed operating guidance in [agent-workflow.md](references/agent-workflow.md). The refined [PR design requirements](prompts/pr-design-requirements.md), [execution template](prompts/implementation-working-rules.md), and [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) are preserved in full. See [prompt provenance](references/prompt-provenance.md) for the exact preservation boundaries.
+Structured Coding makes that decision easier. You and the agent agree on the goal and boundaries of one PR. The agent implements it, checks the result, and records what happened. You review the finished change before merge. What you learn from that PR then shapes the next one.
 
-English is the only authoritative version. The Chinese page mirrors this explanation and retains English technical terms. Specifications and execution prompts remain English-only; a translation cannot amend them.
+This guide explains how to work with the agent. The detailed instructions are in [SKILL.md](SKILL.md) and [agent workflow](references/agent-workflow.md). The complete [PR requirements](prompts/pr-design-requirements.md), [execution prompt](prompts/implementation-working-rules.md), and [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) remain separate. See [prompt provenance](references/prompt-provenance.md) for their preservation record.
 
-## Why planning has three layers
+English is the only authoritative version. The Chinese mirror keeps the same meaning and English technical terms. Specifications and execution prompts remain English-only.
 
-At the start of a substantial feature, you can usually discuss the intended outcome and cooperating modules before knowing what problems a particular function will expose. Writing every future PR down to function level at that point creates details based on unverified assumptions. Maintaining those premature details gets harder as implementation progresses.
+## Plan the next change at the level you can actually inspect
 
-This workflow assigns decisions of different precision to different layers. Distant work retains its direction; the immediate PR is detailed against actual code.
+At the start, you may know what the feature should do and which modules it will involve. You usually know less about the exact functions a later PR will need. If you write those details now, later discoveries can make you rewrite a plan that never matched the code.
 
-| Document | What to settle now | Level of detail |
+The workflow keeps three levels of detail. Work further away gets a direction and boundaries. The current PR gets a plan based on inspected code.
+
+| Document | Question it answers | Detail to include |
 | --- | --- | --- |
-| Overall doc | Final requirements, direction, module relationships, risks, and step boundaries | Modules and major capabilities |
-| Step doc | How many PRs the step needs, their responsibilities, and how they cooperate | Files or file groups and PR boundaries |
-| PR design doc | How the current PR will be implemented, validated, reviewed, and accepted | Commits, files, and functions grounded in an audit |
+| Overall doc | What are we building, and what are the main steps? | Requirements, modules, major capabilities, risks, and step boundaries |
+| Step doc | Which PRs will complete this step, and how do they fit together? | Files or file groups, their relationships, PR scope, dependencies, and checkpoints |
+| PR design doc | What will we change next, and how will we know it is done? | Audited files and functions, commit plan, validation, review, and acceptance criteria |
 
-Each PR should deliver an integration checkpoint. For example, “the option supplied through the CLI changes the actual reading sequence” is a more useful checkpoint than “three configuration fields were added.” Define adversarial criteria too: if one layer drops the option, what observation would expose it?
+An audit means reading the relevant code, its callers, and its tests to check the plan's assumptions. The agent does that before naming the exact files and functions to change.
 
-If a step needs only one PR, expand the step doc in place into the PR design doc. The three layers represent three kinds of questions; they do not require three documents with duplicate content.
+Take a hypothetical feature: add an alphabetical reading mode while preserving the current default. One PR connects the CLI option to the reader. Its checkpoint should establish that the option reaches the reader and changes what it visits. A test could supply files `[c, a, b]`, enable the new mode, and observe visits `[a, b, c]`. Merely finding the new value in configuration would leave the main claim untested. The existing default needs its own unchanged-behavior evidence.
 
-## How one cycle progresses
+An integration checkpoint is a result that shows the relevant parts working together. Its adversarial criteria describe a broken implementation that the checks must catch. Here, dropping the option between configuration and reader should make the check fail. Each PR gets such a checkpoint so you can judge what it delivered.
+
+If a step takes only one PR, expand its step doc in place into the PR design doc. You still answer all three levels of questions without keeping duplicate plans.
+
+## Follow one PR from agreement to merge
 
 ```mermaid
 flowchart TD
-    A[Human and agent agree on overall requirements and direction] --> B[Step: define PRs and integration checkpoints]
-    B --> C[Current PR: audit code and detail the commit plan]
-    C --> D[Human approves design and execution scope: DESIGN FROZEN]
-    D --> E[Fresh session: fill and load the execution contract]
-    E --> F[Agent implements, validates, reviews, updates ledger, and commits]
-    F --> G[PR and CI on the final HEAD]
+    A[Human and agent agree on overall requirements and direction] --> B[Step: define PR scope and checkpoints]
+    B --> C[Current PR: audit code and prepare the commit plan]
+    C --> D[Human approves the design and execution contract]
+    D --> E[Fresh session: load the approved design and contract]
+    E --> F[Agent implements, validates, reviews, records findings, and commits]
+    F --> G[Open or update the PR and check CI on its final HEAD]
     G --> H[Human reviews and explicitly decides whether to merge]
     H --> I[After confirmed merge: update PR, step, and overall]
-    I --> J[Use actual findings to detail the next PR]
+    I --> J[Use the findings to detail the next PR]
     J --> C
 ```
 
-For ordinary implementation problems, the agent stays in the autonomous loop to investigate and repair them. Material issues that change scope, acceptance, or frozen constraints return to the operator with evidence and concrete choices. You can begin review while CI runs; the agent still needs to reach the agreed completion conditions.
+The execution contract records what this PR may change, what must stay true, which actions and validation runs are authorized, and where the agent should stop. Fill it before execution so the agent can make local decisions against an agreed boundary.
 
-## Where people participate
+An ordinary bug keeps the agent in the implementation loop: investigate, fix, validate, and continue. A discovery that requires a different public interface or acceptance criterion brings the affected decision back to you. CI runs the repo's automated checks on the change. You can start reviewing while those checks run, but the agent still has to reach the contract's completion conditions.
 
-At the start, describe the desired behavior, existing behavior that must remain intact, scope, and cost limits. The agent can read code, assess impact, and propose boundaries and risks. Product requirements, direction, and consequential tradeoffs need your judgment.
+This workflow takes effort to maintain. The agent must keep the design and evidence current, and you must review the scope and final result. That effort gives you a record you can inspect and a place from which the agent can resume. It does not guarantee that every plan, test, or LLM review is correct.
 
-Before execution, review the current PR design. Focus on whether the goal and scope are right, each checkpoint proves the requirement, frozen constraints are clear, and budgets and stop conditions are explicit. You do not need to choose every local function implementation in advance, but the agent needs clear decision boundaries.
+## Decide the boundaries, then let the agent work inside them
 
-During execution, the agent can audit, implement, add tests, consult official sources, fix ordinary bugs, perform logic review, maintain the ledger, and create commits autonomously. Within the authorized scope, it also opens the PR and handles CI. Before committing, it still checks the diff, staged files, tests, and deviations; these checks do not require your approval each time.
+At the beginning, explain the behavior you want, the existing behavior that must survive, what is outside scope, and the cost limits. The agent can inspect the repo, trace callers, propose PR boundaries, and point out risks. You decide product requirements, direction, and tradeoffs that would lead to materially different results.
 
-At the end of each PR, review the code and complete record before deciding whether to merge. Check what was delivered, how it differs from the plan, whether those differences have reasons and evidence, and whether unresolved issues affect acceptance. Merge requires your explicit authorization.
+Before execution, review the current PR design. Check that its goal matches yours and that its acceptance criteria describe an observable result. Identify the conditions that must remain true during the change; these are the frozen invariants. You do not have to settle every local implementation detail in advance.
 
-| Situation | Agent action | Human involvement |
+Once that design and contract are approved, the agent can implement, add tests, consult official sources, repair ordinary bugs, review logic, update the PR design, and create commits. It can also publish the branch, open or update the PR, and repair CI when those actions are authorized. Before each commit it checks the diff, staged files, tests, and deviations, then continues without asking you to approve that commit.
+
+| What the agent finds | What it does next | When you participate |
 | --- | --- | --- |
-| A planned function lives in another module | Audit, correct the path, record the finding, and continue | Usually unnecessary |
-| Another caller needs to propagate an option | Assess impact, complete propagation and validation, and continue | Unnecessary if scope and invariants hold |
-| A Unit test or CI exposes an ordinary bug | Read the complete error, diagnose, repair, and revalidate | Usually unnecessary |
-| A public schema or frozen metric semantics must change | Prepare evidence, impact, and a concrete proposal | A material decision is required |
-| Meaningful real validation exceeds the approved budget | Estimate the smallest useful run and its cost | Expanded authorization is required |
-| Acceptance is satisfied and final-HEAD CI is green | Deliver the review handoff and await the merge decision | Review and merge authorization are required |
+| A function lives in a different module | Inspect it, correct the plan's path, record the finding, and continue | Usually no decision needed |
+| An extra caller needs to pass the option | Trace its consumers, complete the change and validation, and continue | No decision needed while scope and invariants hold |
+| A Unit test or CI exposes an ordinary bug | Read the full error, diagnose it, repair it, and revalidate | Usually no decision needed |
+| The solution requires a public schema or frozen metric change | Prepare evidence, consequences, and a concrete proposal | Decide whether to change the approved design |
+| A meaningful real run exceeds the approved budget | Estimate the smallest useful run and its cost | Decide whether to authorize the larger run |
+| The PR meets acceptance and final-HEAD CI is green | Present the complete review handoff | Review the result and explicitly authorize any merge |
 
-Existing authorization remains valid. If the contract already allows a small real-training run, the agent need not ask again before launching it. A template's default budget does not replace actual authorization for the current project.
+Existing authorization still counts. If the contract already permits a bounded real-training run, the agent need not ask again for that same run. An example budget printed in a template does not grant authorization by itself.
 
-## Why the document stays live after design freeze
+At final review, compare the delivered behavior with the agreed goal. Read the deviations and their evidence, check any remaining limitations, and then decide whether to merge. Passing CI is evidence for that review; merge still needs your explicit authorization.
 
-The goal, scope, key invariants, and acceptance criteria are frozen. Completed work, discoveries, and corrected assumptions still need to be recorded as implementation happens.
+## Freeze the agreement and keep the record current
 
-The PR design doc therefore serves two consecutive purposes. Before execution, it establishes agreement between the person and the agent. During execution, it records actual progress and evidence. At final review, the same document explains both the original plan and why the implementation took its final form.
+After you approve a PR design, it gets a `DESIGN FROZEN` header. The goal, scope, invariants, and acceptance criteria are now agreed. The document continues to record progress, discoveries, decisions, and evidence as implementation proceeds. That running record is its live ledger.
 
-Track implementation, validation, and review separately for each commit. Validation uses observed execution to establish a specified behavior; review uses LLM analysis to examine logic, callers, and omissions. Passing tests does not complete review, and reading code does not mean tests ran. Each checked item should have its own evidence.
+Suppose the reading-mode plan names a path from CLI configuration to the reader. During implementation, the agent finds a job builder between them. That builder also needs to carry the option. If this preserves the approved behavior and scope, the agent records the old assumption, the actual path, its correction, and the validation, then continues. If the solution instead requires changing a public protocol, it prepares that decision for you.
 
-For example, if the real caller chain contains an extra layer, the agent should record the prior assumption, audited chain, correction, and additional validation, then continue. If the existing public protocol cannot express the approved requirement, the agent must bring that decision back instead of silently changing the protocol.
+Track implementation, validation, and review separately for each commit. Implementation records the change. Validation records what a test or real run observed. Review records the LLM's inspection of logic, contracts, callers, and possible omissions. Each checked item needs its own evidence. Passing a test does not tell you that the planned review happened.
 
-## Why validation has separate owners
+At the end, the design doc should let you follow what was planned, what was discovered, and why the final code looks the way it does. Record failed assumptions when they matter; silently replacing them with the final answer would remove information you need for review.
 
-Different evidence answers different questions. A Unit test can establish a calculation for given inputs, but a mock cannot prove that a real training process publishes its output on time. A real-model test can show whether a model follows a prompt without repeatedly owning the proof of a purely numerical formula.
+## Choose a check that observes the property you need
 
-| Validation layer | Questions it can answer |
+For the reading-mode example, checking a configuration value answers whether the option was stored. Observing the reader visit `[a, b, c]` answers whether the option affected reading. Choose evidence that reaches the behavior your acceptance criterion promises.
+
+Other claims need other checks. A Unit test can prove a calculation for supplied inputs. A mock that writes a file immediately cannot establish whether a real training process writes that file in time. The latter needs a run through the actual process.
+
+| Layer | What it checks |
 | --- | --- |
-| Static tools | Types, formatting, and statically detectable call errors |
-| Unit | Deterministic rules, local calculations, boundaries, and failure classification |
-| Gate 1 | Whether a real LLM generates, interprets, and crosses protocol boundaries as intended |
-| Gate 2 | Whether real data, files, processes, training, or inference follow the intended lifecycle and timing |
-| CI | Whether the final commit satisfies the repository's required automated checks |
+| Static tools | Types, formatting, and call errors the tools can detect without running the behavior |
+| Unit | Deterministic rules, local calculations, boundaries, and failure classification for explicit inputs |
+| Gate 1 | Whether a real LLM responds to the prompt and crosses the required protocol boundaries |
+| Gate 2 | Whether real data, files, processes, training, or inference follow the required lifecycle and timing |
+| CI | Whether the final commit passes the repo's required automated checks |
 
-Map Gate names to the project's own terminology. An ordinary backend project does not need to add an LLM or training pipeline to use this skill. Mark a layer as not required when no corresponding claim needs it.
+Gate 1 and Gate 2 are the workflow's labels for real-LLM and real-lifecycle checks. Use the project's corresponding commands. A backend change with no LLM behavior does not need to introduce a model test just to use the skill. Record a layer as not required when no acceptance claim needs it.
 
-During development, run validation relevant to the change. Expensive full-suite checks normally belong to the final PR's canonical CI. Existing required checks still apply; avoiding duplicate evidence does not justify bypassing them. Even if a Gate exits with code zero, inspect whether its artifacts establish the claim stated before the run.
+During development, run the checks relevant to each change. Expensive full-suite checks normally belong to the final PR's canonical CI, the run used as its final CI evidence. Keep existing required checks; avoid rerunning the same expensive suite without a new reason.
 
-## Why each PR starts fresh but the same PR must resume
+Read the actual Gate logs and artifacts before calling a run successful. An exit code of zero does not establish that the intended path ran. CI evidence also belongs to the HEAD it tested: if review leads to another code change, revalidate the affected behavior and obtain CI evidence for the new final HEAD.
 
-Knowledge across PRs should come from merged code and updated parent documents. The preceding PR's conversation may contain failed attempts, temporary state, or assumptions that never reached the merged implementation. Carrying that entire context into the next PR can turn these into apparent current facts.
+## Start the next PR fresh, and resume the current PR where it stopped
 
-Each new PR therefore begins in a fresh implementation session with a newly filled contract. Prepare the design and kickoff in the planning session, then launch execution in the fresh session.
+The previous PR's chat can contain abandoned approaches, temporary state, and assumptions that changed during implementation. A new PR should begin from merged code and updated parent plans, so each new PR uses a fresh implementation session with its own filled contract.
 
-Compaction within a PR leaves the task unchanged. Recovery checks git, processes, PR design, handoff, and execution rules, then continues from the recorded next action. The handoff explains the current checkpoint, running processes, and next action; the PR design carries goals, decisions, and evidence.
+Compaction during the same PR is different. The host shortens the conversation to free context, but the implementation task and completed work remain. The agent checks the repo and running processes, reloads the current design and execution rules, and continues from the recorded checkpoint.
 
-Synchronize records before manual compact. If automatic compact arrives before that synchronization, the future hook should save a mechanical snapshot, permit compaction, and require reconciliation on resume. A hook must not fabricate a semantic summary when context is already tight or indefinitely block automatic compact because a handoff is stale.
+The handoff file holds the details needed to continue: current PR, branch and HEAD, completed checkpoint, running jobs and logs, unresolved issues, and the exact next action. The PR design retains the goals, decisions, and validation evidence. Together they let the next continuation establish what is actually happening without relying on chat memory alone.
 
-## Why post-merge planning details only the next move
+For example, if a Gate is still running at compact time, the handoff identifies that job and its log. On resume, the agent checks the job before starting another. That prevents it from spending the budget twice because it lost conversational context.
 
-Merge makes this implementation a code fact the next iteration can depend on. Update the PR status, then the step and overall documents. Backward updates cover both completed capabilities and evidence, and the implications for future work.
+Before manual compact, synchronize the design and handoff with actual state. If automatic compact arrives while the handoff is stale, the future hook should save a mechanical snapshot, such as branch, HEAD, and changed-file state, allow compact, and require recovery. It must not invent decisions or test results, or keep blocking an unavoidable compact. Hooks are not installed in this edition; these checks currently rely on the agent following the workflow.
 
-Suppose a step makes data reading order controllable. PR A connects configuration to the reader; PR B improves resume behavior. While implementing A, the agent discovers that resume stores a file position, but the same file may appear twice in the input list. After A merges, the step doc records the actual data flow and adjusts B to handle duplicate-file identity and resume position. The overall doc records progress and the newly discovered risk.
+## Use the merged result to plan the next PR
 
-B now deserves detailed audit. More distant performance work can retain a dependency note until B supplies actual results. If this iteration disproves the overall direction, report that immediately; detailing only one step ahead must not hide broader implications.
+After a confirmed merge, mark the PR merged and update its parent step, then the overall doc. Record both what was delivered and what the findings change about future work. This is the backward update: facts from implementation go back into the plans that led to it.
 
-## How to start
+Return to the reading feature. PR A connects the new option to the reader; PR B will handle resume. While implementing A, the agent discovers that resume remembers a filename. A list such as `[a, b, a]` shows the missing distinction: the filename `a` alone cannot say which occurrence should resume. This is a hypothetical example of the kind of finding the ledger should preserve.
 
-Place the complete skill folder according to the [platform notes](references/platforms.md). The short messages below enter the workflow; the agent still reads the complete prompts and current contract during execution.
+After A merges, the step doc records the actual data path and adjusts B to address occurrence identity and resume position. The overall doc records progress and the newly discovered risk. B now has a concrete issue to audit before its detailed design is frozen.
+
+Detail that next PR using the merged code. More distant performance work can keep a dependency note until B supplies further evidence. If a finding already invalidates the overall direction, report it now. Planning one step ahead does not excuse hiding a wider problem.
+
+## Start with a request, then prepare the execution session
+
+Install the complete skill folder as described in [platform notes](references/platforms.md). In Codex, prefix your message with `$structured-coding`; in Claude Code, use `/structured-coding`.
 
 Start from requirements:
 
@@ -129,7 +147,7 @@ requirements for the commit checklist. Separate implementation, validation,
 and review, and prepare the design for my approval.
 ```
 
-Execute in a fresh session:
+Review the concrete design and contract before approving execution. Put the actual paths, implementation base, scope, budget, and stop conditions into the contract. Then open a fresh implementation session:
 
 ```text
 Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
@@ -140,12 +158,12 @@ Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```
 
-For Codex, prefix the message with `$structured-coding`; for Claude Code, use `/structured-coding`. The contract must contain actual paths, base, scope, budget, and stop conditions. These messages are interaction examples.
+These messages are entry points, not replacements for the complete prompts. The agent still reads the current contract and full execution rules. `READY FOR OPERATOR REVIEW` means the agreed implementation, review, and validation are complete, the PR is opened or updated, and required CI is green on its exact final HEAD.
 
-When the PR is ready, review the handoff and diff, request repairs or explicitly authorize merge. After confirmed merge, have the agent update parent plans and prepare the next PR design, then begin the next fresh execution session.
+Review the handoff and diff when the agent reaches that point. Request repairs if needed, or explicitly authorize merge. After merge is confirmed, have the agent update the parent plans and prepare the next PR design. Start that PR's execution in another fresh session.
 
-## What this package contains
+## Know what the package provides
 
-This edition includes the complete skill, explanations for both audiences, preserved long prompts, and the [hook behavior contract](references/hook-contract.md). Codex and Claude Code use the same core, with only the needed platform metadata differing during packaging.
+The package contains the skill, explanations for people and agents, the complete prompts, and a [hook behavior specification](references/hook-contract.md). Codex and Claude Code receive the same core; packaging adds only the platform metadata each needs.
 
-Hooks are not implemented or installed. The skill asks the agent to perform freeze, recovery, and merge checks; future hooks would enforce the contract at host tool boundaries. The distinction and platform sources are in [platform notes](references/platforms.md).
+The hook specification describes what future guards must check before implementation, compact/resume, and merge. No executable hooks are implemented or installed here. The skill tells the agent to perform the checks, but that instruction is not a mechanical interception of tool calls. See [platform notes](references/platforms.md) for the host integration boundaries and sources.
