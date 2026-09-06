@@ -4,8 +4,6 @@
 
 English is the only authoritative source for maintained documentation and specifications. Chinese files ending in `.zh-CN.md` are synchronized mirrors of explanatory documents. In a disagreement, follow English and correct the mirror. A mirror must not introduce, relax, or amend a requirement.
 
-The unchanged mixed-language `Structured Coding skill.md` at the authoring repository root is historical source material. Its retained prompts and approved historical edits are tracked by prompt provenance; the archive is not the current specification.
-
 ## Explanations with mirrors
 
 Maintain an English source and a Chinese mirror for:
@@ -15,7 +13,6 @@ Maintain an English source and a Chinese mirror for:
 - The detailed agent workflow explanation.
 - Prompt adaptation notes.
 - Platform notes.
-- Prompt provenance explanations.
 
 Keep corresponding sections, examples, caveats, tables, and links aligned. Chinese explanatory links should lead to Chinese mirrors where available. Links to specifications must lead to their English originals. Code, commands, paths, identifiers, status values, and reusable prompt examples remain unchanged.
 
@@ -35,4 +32,4 @@ Keep `SKILL.md`, `prompts/*.md`, and `references/hook-contract.md` in English on
 
 The checker detects unacknowledged content changes, missing pairs, English-source language violations, and mismatched heading structure. It also verifies that the established specifications retain their recorded hashes. Fingerprints establish which bytes were reviewed; they cannot prove translation accuracy. Never mark a stale mirror synchronized merely by refreshing its checksum.
 
-The specification baseline in `translations.json` records the files preserved during bilingual separation. A later intentional specification change requires its own explicit scope and review, followed by a deliberate baseline update. Prompt wording changes additionally require the existing prompt-provenance checks.
+The specification baseline in `translations.json` records the files preserved during bilingual separation. A later intentional specification change requires its own explicit scope and review, followed by a deliberate baseline update.

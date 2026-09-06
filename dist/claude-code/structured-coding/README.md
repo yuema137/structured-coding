@@ -6,7 +6,7 @@ You give an agent a feature to build. It changes several files, tests fail, and 
 
 Structured Coding makes that decision easier. You and the agent agree on the goal and boundaries of one PR. The agent implements it, checks the result, and records what happened. You review the finished change before merge. What you learn from that PR then shapes the next one.
 
-This guide explains how to work with the agent. The detailed instructions are in [SKILL.md](SKILL.md) and [agent workflow](references/agent-workflow.md). The complete [PR requirements](prompts/pr-design-requirements.md), [execution prompt](prompts/implementation-working-rules.md), and [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) remain separate. See [prompt provenance](references/prompt-provenance.md) for their preservation record.
+This guide explains how to work with the agent. The detailed instructions are in [SKILL.md](SKILL.md) and [agent workflow](references/agent-workflow.md). The complete [PR requirements](prompts/pr-design-requirements.md), [execution prompt](prompts/implementation-working-rules.md), and [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) remain separate.
 
 English is the only authoritative version. The Chinese mirror keeps the same meaning and English technical terms. Specifications and execution prompts remain English-only.
 
