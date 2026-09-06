@@ -29,7 +29,7 @@ Repeating preparation for identical binding and snapshot state does not rearm co
 
 ## Host events and coverage
 
-PreToolUse matches `^Bash$`. Only one direct `git commit ...` command, including an absolute executable ending in `/git`, at the configured Git root receives `additionalContext`. Quoted arguments are supported. Recognition deliberately excludes shell metacharacters even inside quotes, chains, redirections, substitutions, environment prefixes, wrappers, Git global options, aliases, scripts, nested repositories, and other tool routes such as MCP calls or writes to an existing shell session. Unknown routes return `{}`. No command is executed, expanded, rewritten, validated or denied by this adapter.
+PreToolUse matches `^Bash$`. Only one direct `git commit ...` command, including an absolute executable ending in `/git`, at the configured Git root receives `additionalContext`. Quoted arguments are supported. Recognition deliberately excludes shell metacharacters even inside quotes, chains, redirections, substitutions, environment prefixes, wrappers, explicit tool cwd/workdir overrides, Git global options, aliases, scripts, nested repositories, and other tool routes such as MCP calls or writes to an existing shell session. Unknown routes return `{}`. No command is executed, expanded, rewritten, validated or denied by this adapter.
 
 The host delivers context before an already-selected tool invocation. That does not prove the agent re-read it before the commit ran. The explicit `inspect` preparation is the primary path; the hook is an advisory backstop.
 

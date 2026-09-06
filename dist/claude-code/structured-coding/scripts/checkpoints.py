@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Installed helpers must not create files in the published skill tree.
 sys.dont_write_bytecode = True
-from continuity import (
+from continuity import (  # noqa: E402
     HOSTS,
     MAX_INPUT,
     Repository,
@@ -26,7 +26,14 @@ from continuity import (
 
 MAX_CONTEXT = 8000
 DOCUMENTS = ("design", "contract", "handoff")
-ERRORS = (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError)
+ERRORS = (
+    OSError,
+    ValueError,
+    KeyError,
+    TypeError,
+    RecursionError,
+    subprocess.SubprocessError,
+)
 COMMIT_CHECKLIST = (
     "Before the semantic commit: run checkpoints.py inspect explicitly; inspect the actual "
     "staged diff and staged filenames; synchronize the existing design and handoff; record "
@@ -202,7 +209,7 @@ def cancel_review(repository, host, session):
         if record and record["state"] == "pending":
             record["state"] = "cancelled"
             atomic_json(intent_path(directory), record)
-    return {"notice": "cancelled" if record else "absent"}
+    return {"notice": record["state"] if record else "absent"}
 
 
 def stop(repository, host, session):
@@ -243,6 +250,8 @@ def event(project, host, mode, payload):
     if mode == "pre-commit":
         tool_input = payload.get("tool_input")
         if payload.get("tool_name") != "Bash" or not isinstance(tool_input, dict):
+            return {}
+        if any(key in tool_input for key in ("cwd", "workdir")):
             return {}
         if not recognized(tool_input.get("command")):
             return {}

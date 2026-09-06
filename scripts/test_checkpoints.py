@@ -257,3 +257,45 @@ class CheckpointsTests(WorktreeTest):
         text = runtime.bounded("界" * 12000)
         self.assertLessEqual(len(json.dumps(text, ensure_ascii=True)), 8000)
         self.assertIn("omitted", text)
+
+    def test_cancel_consumed_intent_reports_actual_state_and_cwd_overrides_are_unknown(
+        self,
+    ):
+        self.activate()
+        self.helper("prepare-review")
+        self.event("stop")
+        self.assertEqual(
+            json.loads(self.helper("cancel-review").stdout)["notice"], "consumed"
+        )
+        for field in ("cwd", "workdir"):
+            payload = self.payload("pre-commit")
+            payload["tool_input"][field] = str(self.root)
+            self.assertEqual(self.event("pre-commit", payload=payload)[0], {})
+
+    def test_malformed_and_deep_json_are_bounded_nonblocking_errors(self):
+        for host in runtime.HOSTS:
+            for raw in (
+                "{broken",
+                "[" * 2000 + "0" + "]" * 2000,
+                "x" * (runtime.MAX_INPUT + 1),
+            ):
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(SCRIPT),
+                        "event",
+                        "--host",
+                        host,
+                        "--project",
+                        str(self.project),
+                        "--event",
+                        "stop",
+                    ],
+                    input=raw,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(json.loads(result.stdout), {})
+                self.assertLess(len(result.stderr), 200)
