@@ -109,6 +109,9 @@ def detail_blocks(data, svg=False):
             data["hooksTitle"],
             f'<p class="status">{esc(data["hooksStatus"])}</p>'
             + paragraphs(data["hooksIntro"])
+            + f'<h4>{esc(data["hookInstallTitle"])}</h4><pre><code>{esc(data["hookInstallCommands"])}</code></pre>'
+            + paragraphs(data["hookInstallNote"])
+            + f'<a href="{source_link("structured-coding/references/continuity.md")}">Continuity preset interface →</a>'
             + table_html(data["hooks"], data["hookColumns"])
             + paragraphs(data["hooksNote"], data["hookExample"])
             + f'<a href="{source_link(SPEC)}">Hook behavior contract →</a>',
@@ -179,7 +182,7 @@ def render_html(data):
 <section class="block" id="workflow">{heading("01", "workflowTitle")}<p class="lead">{esc(data["workflowCaption"])}</p>
 <div class="flow"><div class="flow-caption">{esc(data["workflowLabel"])}</div><svg class="flow-arrows" viewBox="0 0 900 600" aria-hidden="true">{DEFS}{ARROWS}{LOOP}</svg><ol class="flow-grid">{nodes}</ol><p class="flow-note">{esc(data["workflowNote"])}</p><div class="flow-loop">{esc(data["loopLabel"])}</div></div></section>
 <section class="block" id="kit">{heading("02", "kitTitle")}<p class="lead">{esc(data["kitLead"])}</p><div class="kit-grid">{cards}</div></section>
-<section class="block" id="start">{heading("03", "startTitle")}<p class="lead">{esc(data["startLead"])}</p><p class="code-label">{esc(data["cloneLabel"])}</p>{codebox(CLONE, data)}<p class="code-label">{esc(data["installLabel"])}</p><div class="install-grid">{installs}</div><p class="small">{esc(data["projectNote"])}</p><div class="callout"><strong>{esc(data["invokeLabel"])}</strong><p>{esc(data["invoke"])}</p></div><p class="small">{esc(data["installNote"])}</p></section>
+<section class="block" id="start">{heading("03", "startTitle")}<p class="lead">{esc(data["startLead"])}</p><p class="code-label">{esc(data["cloneLabel"])}</p>{codebox(CLONE, data)}<p class="code-label">{esc(data["installLabel"])}</p><div class="install-grid">{installs}</div><p class="small">{esc(data["projectNote"])}</p><div class="callout"><strong>{esc(data["invokeLabel"])}</strong><p>{esc(data["invoke"])}</p></div><p class="small">{esc(data["installNote"])}</p><p class="small"><a href="#hooks">{esc(data["optionalHookNote"])}</a></p></section>
 <section class="block" id="people">{heading("04", "peopleTitle")}<p class="lead">{esc(data["peopleLead"])}</p><ol class="people">{people}</ol><div class="autonomy">{esc(data["autonomy"])}</div><p class="small">{esc(data["escalation"])}</p></section>
 <section class="block technical" id="technical">{heading("05", "technicalTitle")}<p class="lead">{esc(data["technicalLead"])}</p>{details}</section>
 </main>
@@ -298,7 +301,7 @@ def render_readme(data):
         ),
     ]
     chunks += [
-        f"## {data['startTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n"
+        f"## {data['startTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n\n[{data['optionalHookNote']}](#hooks)\n"
     ]
     chunks += [
         f"## {data['peopleTitle']}\n\n{data['peopleLead']}\n\n![{data['peopleTitle']}](docs/assets/people{suffix}.svg)\n\n{data['autonomy']}\n\n{data['escalation']}\n"
@@ -306,7 +309,7 @@ def render_readme(data):
     chunks += [f"## {data['technicalTitle']}\n\n{data['technicalLead']}\n"]
     for key, title, body in detail_blocks(data, svg=True):
         chunks += [
-            f"<details>\n<summary>{esc(title)}</summary>\n\n{body}\n\n</details>\n"
+            f'<details id="{key}">\n<summary>{esc(title)}</summary>\n\n{body}\n\n</details>\n'
         ]
     chunks += [
         f"---\n\n[{data['guideLabel']}]({guide}) · [{data['htmlLabel']}](docs/index{suffix}.html)\n\n{data['htmlNote']}\n\n{data['footer']}\n"

@@ -113,7 +113,7 @@ The handoff file holds the details needed to continue: current PR, branch and HE
 
 For example, if a Gate is still running at compact time, the handoff identifies that job and its log. On resume, the agent checks the job before starting another. That prevents it from spending the budget twice because it lost conversational context.
 
-Before manual compact, synchronize the design and handoff with actual state. If automatic compact arrives while the handoff is stale, the future hook should save a mechanical snapshot, such as branch, HEAD, and changed-file state, allow compact, and require recovery. It must not invent decisions or test results, or keep blocking an unavoidable compact. Hooks are not installed in this edition; these checks currently rely on the agent following the workflow.
+Before manual compact, synchronize the design and handoff with actual state. The optional [continuity preset](references/continuity.md) can check mechanical freshness against an explicit checkpoint. On automatic compact it attempts a snapshot, allows compact, and supplies recovery instructions at session start. It does not invent decisions or test results, and cannot prove semantic recovery. Without explicit hook setup, these checks rely on the agent following the workflow.
 
 ## Use the merged result to plan the next PR
 
@@ -166,4 +166,4 @@ Review the handoff and diff when the agent reaches that point. Request repairs i
 
 The package contains the skill, explanations for people and agents, the complete prompts, and a [hook behavior specification](references/hook-contract.md). Codex and Claude Code receive the same core; packaging adds only the platform metadata each needs.
 
-The hook specification describes what future guards must check before implementation, compact/resume, and merge. No executable hooks are implemented or installed here. The skill tells the agent to perform the checks, but that instruction is not a mechanical interception of tool calls. See [platform notes](references/platforms.md) for the host integration boundaries and sources.
+The hook specification describes the full target for implementation, compact/resume, and merge checks. The optional `continuity` preset implements compact freshness checks, snapshot attempts, and recovery instructions; it is not registered by default. It is not a mutation or merge guard. `checkpoints` and `merge-guard` remain future work. See [platform notes](references/platforms.md) and the [preset interface](references/continuity.md) for opt-in installation, removal, and limitations.

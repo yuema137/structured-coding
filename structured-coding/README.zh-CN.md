@@ -113,7 +113,7 @@ Gate 跑完，读实际 log 和产物再判断有没有成功。exit code 为 0�
 
 比如 compact 时一个 Gate 还在运行，handoff 就记下这个 job 和 log。恢复以后先查原来的 job，再决定要不要启动新的。这一步能避免因为忘了前面的对话，把同一份预算花两遍。
 
-手动 compact 前，先把 design、handoff 和实际状态同步。如果自动 compact 来的时候 handoff 还旧着，未来的 hook 应保存 branch、HEAD、改动文件状态这些机械 snapshot，允许 compact，再要求恢复核对。它不能临时编造决定或 test 结果，也不能把躲不开的 compact 一直挡住。当前版本还没安装 hook，这些检查暂时靠 agent 按工作流执行。
+手动 compact 前，先把 design、handoff 和实际状态同步。可选的 [continuity preset](references/continuity.md) 能对照明确记录的 checkpoint 检查机械同步状态。自动 compact 时，它尝试保存 snapshot、允许 compact，并在 session 开始时给出恢复指令。它不会编造决定或 test 结果，也不能证明语义恢复已经完成。没有明确设置 hook 时，这些检查仍靠 agent 按 workflow 执行。
 
 ## 用 merge 后查明白的事，改下一轮计划
 
@@ -166,4 +166,4 @@ Do not merge.
 
 包里有 skill、给人和 agent 的说明、完整 prompt，以及 [hook behavior specification](references/hook-contract.md)。Codex 和 Claude Code 使用同一套核心内容，打包时只增加各自需要的 platform metadata。
 
-Hook specification 规定了将来在 implementation、compact/resume 和 merge 前要查哪些条件。这里还没有实现或安装可运行的 hook。skill 会告诉 agent 做这些检查，但它不是在工具调用前执行的机械拦截。平台集成的边界和依据见 [platform notes](references/platforms.zh-CN.md)。
+Hook specification 规定了 implementation、compact/resume 和 merge 检查的完整目标。可选 `continuity` preset 提供 compact 同步检查、snapshot 尝试和恢复指令，默认不注册。它不是修改或 merge guard。`checkpoints` 和 `merge-guard` 仍是后续工作。选装、卸载方式和限制见 [platform notes](references/platforms.zh-CN.md) 与 [preset interface](references/continuity.md)。

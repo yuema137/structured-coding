@@ -34,6 +34,8 @@ PUBLISHED_FILES = {
     "references/platforms.zh-CN.md",
     "references/hook-contract.md",
     "references/language-policy.md",
+    "references/continuity.md",
+    "scripts/continuity.py",
 }
 
 

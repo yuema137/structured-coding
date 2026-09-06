@@ -61,7 +61,7 @@
   "workflowNote": "普通 bug：修好继续。实质性改动：回来商量。",
   "loopLabel": "用 MERGE 后的事实，规划下一个 PR",
   "kitTitle": "一整套 workflow 方案。",
-  "kitLead": "不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates，以及未来 hook 检查该怎么做的建议。",
+  "kitLead": "不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates、可选 continuity hook，以及后续 guard 的行为约定。",
   "kit": [
     [
       "01",
@@ -93,10 +93,10 @@
     ],
     [
       "05",
-      "Hook 建议与约定",
-      "规定 freeze、commit、merge、compact、恢复和 handoff 时的行为。可执行 hook 尚未实现。",
-      "structured-coding/references/hook-contract.md",
-      "看 hook contract"
+      "可选 continuity hook",
+      "提供 compact 同步检查、snapshot 尝试和恢复指令。freeze 和 merge guard 仍是后续工作。",
+      "structured-coding/references/continuity.md",
+      "看设置方式和限制"
     ],
     [
       "06",
@@ -113,7 +113,8 @@
   "projectNote": "把 /path/to/your-project 换成已有项目的根目录。在刚才运行 clone 的目录里执行 installer。",
   "invokeLabel": "然后在目标项目的 agent 聊天里",
   "invoke": "Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding。说清 feature 和约束，先让它规划，不要直接开始实现。",
-  "installNote": "installer 复制完整 skill，遇到已有安装会拒绝覆盖。不安装可执行 hook，不改全局设置或权限。",
+  "installNote": "默认安装复制完整 skill，不注册 hook，也不覆盖已有副本。全局设置和权限不变。",
+  "optionalHookNote": "想加 continuity hook？下面有选装命令和限制说明。",
   "peopleTitle": "你在哪些地方参与？",
   "peopleLead": "不用每次 commit 都点头。但会改变约定的决定，得由你来做。",
   "people": [
@@ -162,7 +163,7 @@
   ],
   "recordsNote": "DESIGN FROZEN 冻结的是约定，不是过程记录。实现、验证和 review 分开记录。一个 step 如果就是一个 PR，直接扩展 step doc，别维护两份重复计划。",
   "compactTitle": "compact 或 resume 时，怎么接着干？",
-  "compactIntro": "新 PR 用新 session；compact/resume 继续的是同一个 PR。下面画的是预期 hook 行为，不是已经装好的自动化。",
+  "compactIntro": "新 PR 用新 session；compact/resume 继续的是同一个 PR。可选 continuity preset 检查机械同步状态、尝试保存 snapshot，并给出恢复指令。语义同步和恢复仍由 agent 负责。",
   "compactLanes": [
     [
       "手动 COMPACT",
@@ -178,60 +179,72 @@
     ]
   ],
   "compactNote": "恢复时，重新读取当前 design、填好的 contract 和完整 execution rules；改 code 前核对 repo 和已有任务。snapshot 不能编决定或测试结果。自动 compact 不能因为 handoff 不完美就一直卡住。",
-  "hooksTitle": "哪些功能应该由 hook 支持？",
-  "hooksStatus": "只有 SPECIFICATION · 尚无可执行 HOOK",
-  "hooksIntro": "行为约定已经提供；host adapter 尚未实现，也没做过集成测试。当前靠 agent 按指令检查。安装 skill，不会安排它动态生成或注册 hook。",
+  "hooksTitle": "可选 hook：安装、覆盖范围和限制",
+  "hooksStatus": "可选 CONTINUITY · 尚无 MERGE GUARD",
+  "hooksIntro": "Codex 和 Claude Code 都提供 continuity preset，但默认不开。它没有实现完整行为约定。Protocol 测试会在临时 Git worktree 中运行真实 hook 命令；实际事件能否送达，还要在你的 host 中核对。agent 不会动态生成或注册自己的 hook。",
+  "hookInstallTitle": "自己决定要不要加 continuity",
+  "hookInstallNote": "在 clone 的 repo 内运行，路径要填项目的 Git 根目录。Claude Code 用户把 codex 换成 claude-code。重启 host 后检查 /hooks；安装不会自动授予信任。随后由 agent 按 preset interface，把当前 execution session 绑定到对应 PR，并维护 checkpoint。已有设置会保留；卸载也会保留 skill 文件和 session 数据。",
+  "hookInstallCommands": "./scripts/install codex --project /path/to/project --hooks continuity --dry-run\n./scripts/install codex --project /path/to/project --hooks continuity\n./scripts/install codex --project /path/to/project --check-hooks\n./scripts/install codex --project /path/to/project --remove-hooks",
   "hookColumns": [
     "功能",
     "候选事件",
-    "应有的行为"
+    "应有的行为",
+    "已提供的支持"
   ],
   "hooks": [
     [
       "H1 · 实现前",
       "PreToolUse",
-      "核对已批准设计、contract、repo 状态和恢复情况。不匹配就拒绝依赖这些条件的修改；audit 和设计准备仍然允许。"
+      "核对已批准设计、contract、repo 状态和恢复情况。不匹配就拒绝依赖这些条件的修改；audit 和设计准备仍然允许。",
+      "尚未实现"
     ],
     [
       "H2 · commit 前",
       "PreToolUse",
-      "检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。"
+      "检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。",
+      "尚未实现"
     ],
     [
       "H3 · merge 前",
       "PreToolUse + merge 路径覆盖",
-      "要求来自可信通道、对应具体 PR、目标 branch 和候选 HEAD 的明确授权，并核对完成条件及 CI/Gate 证据。覆盖 CLI、API、auto-merge 和直接操作目标 branch 的绕行路径。"
+      "要求来自可信通道、对应具体 PR、目标 branch 和候选 HEAD 的明确授权，并核对完成条件及 CI/Gate 证据。覆盖 CLI、API、auto-merge 和直接操作目标 branch 的绕行路径。",
+      "尚未实现"
     ],
     [
       "H4 · 手动 compact",
       "PreCompact: manual",
-      "handoff 过时就先拦住，同步后再允许 compact。"
+      "handoff 过时就先拦住，同步后再允许 compact。",
+      "Continuity：只检查机械 checkpoint 是否仍然对应当前状态"
     ],
     [
       "H5 · 自动 compact",
       "PreCompact: auto",
-      "允许 compact；必要时保存机械 snapshot。保存失败也要留警告，并要求恢复。"
+      "允许 compact；必要时保存机械 snapshot。保存失败也要留警告，并要求恢复。",
+      "Continuity：限时尝试 snapshot，不主动阻断自动 compact"
     ],
     [
       "H6 · compact/resume",
       "SessionStart + 修改前检查",
-      "动态确认当前 PR，完整读取规则，核对 repo 和进程状态再继续，别重复启动任务。"
+      "动态确认当前 PR，完整读取规则，核对 repo 和进程状态再继续，别重复启动任务。",
+      "Continuity：提供 session 绑定的 PR 和完整读取指令；没有修改 guard，也不能证明恢复完成"
     ],
     [
       "H7 · 准备交付 review",
       "Stop / 完成事件",
-      "核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。"
+      "核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。",
+      "尚未实现"
     ],
     [
       "H7 · merge 后",
       "已观察结果 / 核对远端状态",
-      "确认 merge，再要求并检查 PR → step → overall 更新。agent 写经验，下一个 PR 用新 session。"
+      "确认 merge，再要求并检查 PR → step → overall 更新。agent 写经验，下一个 PR 用新 session。",
+      "尚未实现"
     ]
   ],
   "hooksNote": "有事件名，不等于一定能拦截。adapter 得处理各 host 的 protocol、可信授权来源和 tool 覆盖缺口。merge 后的检查不能倒过来阻止 merge。实现 adapter 前，先看 contract 的验收场景。",
   "hookExample": "比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。",
   "formatTitle": "这是 skill、skillset，还是 plugin？",
-  "format": "当前是一个独立 skill，带配套资源。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。现在先把项目安装做好，代价是不托管更新，也不自动注册 hook；未来仍然可以提供 plugin 分发。",
+  "format": "当前是一个独立 skill，带配套资源和可选 continuity hook。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。项目安装保持简单，不托管更新，hook 也需要明确选装；未来仍然可以提供 plugin 分发。",
   "promptsTitle": "具体该怎么跟 agent 说？",
   "promptLabels": [
     "规划 feature",

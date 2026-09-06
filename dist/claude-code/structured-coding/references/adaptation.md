@@ -51,4 +51,4 @@ Existing required CI checks remain binding. The prompt's selective-CI and stacke
 
 ## Skill instructions and runtime enforcement
 
-This edition supplies instructions and a hook behavior contract. It installs no host hooks and changes no permissions. Follow the procedural freeze, recovery, and merge checks now; future integration can enforce the same decisions mechanically. Do not request broad access changes solely to prevent all possible interruptions.
+This edition supplies instructions and a hook behavior contract, plus an explicitly optional [continuity preset](continuity.md). Default installation registers no host hooks; neither mode changes permissions. The preset covers compact freshness, snapshot attempts, and recovery instructions, not freeze/merge enforcement. Follow the remaining checks procedurally. Do not request broad access changes solely to prevent all possible interruptions.

@@ -145,7 +145,7 @@ Re-read the current PR design in full, the filled contract, and both execution p
 
 For planned manual compaction, synchronize the design, handoff, HEAD, and working-tree fingerprint first. For unavoidable automatic compaction, a stale semantic handoff should produce a mechanical rescue snapshot and recovery warning, not a compaction deadlock. The hook must not invent a semantic summary.
 
-Detailed event behavior and acceptance cases are in the [hook contract](hook-contract.md). In this instruction-only edition these are procedural obligations, not installed guards.
+Detailed event behavior and acceptance cases are in the [hook contract](hook-contract.md). Without explicit hook setup these remain procedural obligations. The optional [continuity preset](continuity.md) supplies mechanical compact freshness checks, snapshot attempts, and recovery instructions only; it does not enforce semantic recovery or guard implementation/merge.
 
 ## 9. Reach operator review readiness
 
