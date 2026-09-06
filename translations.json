@@ -1,0 +1,48 @@
+{
+  "authority": "English is the only authoritative source. Chinese files are synchronized explanatory mirrors.",
+  "pairs": [
+    {
+      "english": "README.md",
+      "chinese": "README.zh-CN.md",
+      "english_sha256": "6e0b3b91963db2f9f625269c6ac626ba961cb6e8e71eac47a46fdacdee25d2b4",
+      "chinese_sha256": "c1fc44f78ca5fc414067550fd054aa314129ea7cb0a109b5ef4fafb2e82b993a"
+    },
+    {
+      "english": "structured-coding/README.md",
+      "chinese": "structured-coding/README.zh-CN.md",
+      "english_sha256": "d0bd57ed45539a7afdffa164347fbd4d3e782dfc6589bf2abd16c0f5d6600fa7",
+      "chinese_sha256": "2f07997aa5e2a56d19116b66e190a5e84a208c540d8a616cb8d9d5cc3656e862"
+    },
+    {
+      "english": "structured-coding/references/agent-workflow.md",
+      "chinese": "structured-coding/references/agent-workflow.zh-CN.md",
+      "english_sha256": "fb1c452e18ee778219820bd21d8e26be690c59c54af724c022e8db8ce89a476c",
+      "chinese_sha256": "c8b199cffb87a5d7ba4ad52fddb102d948b8c4902e830d5c48b981fc4948d1c4"
+    },
+    {
+      "english": "structured-coding/references/adaptation.md",
+      "chinese": "structured-coding/references/adaptation.zh-CN.md",
+      "english_sha256": "35b5a54a2aec354da601cbaea756413d9d0d137d6be025bb7bbeb32360df4fe7",
+      "chinese_sha256": "575f3e74f5edd40e5978390be3c84278bfe78f8d003eb76c160a28e0c4773030"
+    },
+    {
+      "english": "structured-coding/references/platforms.md",
+      "chinese": "structured-coding/references/platforms.zh-CN.md",
+      "english_sha256": "f32ce785b50135b3b585af71389d17f9ee79c6da5da73627eacf8291e35d8ec9",
+      "chinese_sha256": "88ebaa7514c4e57a7284f8c3ea919f838bb8b96090fc9bf58856f2194318a4d8"
+    },
+    {
+      "english": "structured-coding/references/prompt-provenance.md",
+      "chinese": "structured-coding/references/prompt-provenance.zh-CN.md",
+      "english_sha256": "3b8eedc17b1c0981ddf2193fd50b64a29ac65482129ee2c1b297b561faae8e30",
+      "chinese_sha256": "0365d0a01f20cf63b84af71ac3dc3f0e531bc866f2874faa8c0a33d617ed8aa5"
+    }
+  ],
+  "specification_sha256": {
+    "structured-coding/SKILL.md": "e94cb9a6cda62405e9261e5472d65e193291cd673b9a26db8afb5571740550d6",
+    "structured-coding/prompts/implementation-working-rules.md": "7caa1d829fcdb0741b3b621918d6058352adcacf6c8bfee5267e37d2850debcf",
+    "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
+    "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",
+    "structured-coding/references/hook-contract.md": "73fb4d88efa3154d4ff51e59a2571d7beed1295daa12b450351a8d0065af29a6"
+  }
+}
