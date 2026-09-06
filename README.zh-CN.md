@@ -52,6 +52,8 @@
 
 这两段命令都只给当前项目安装，不动你的全局配置。想让多个项目都能用，个人级安装路径见 [platform notes](structured-coding/references/platforms.zh-CN.md)。别只复制 `SKILL.md`，prompts 和 references 也得一起带上。
 
+这些命令只安装 skill，不安装可执行 hook。具体状态和功能表放在文末的 [hook 技术附录](#hooks)。
+
 ### 2. 先给需求，不要一上来就让它执行
 
 新 feature 先说明期望行为和约束：
@@ -276,12 +278,6 @@ docs/plan/
 
 想手动下载也行：[Codex zip](dist/structured-coding-codex.zip) 和 [Claude Code zip](dist/structured-coding-claude-code.zip) 仍然提供，里面的文件和上面命令安装的一样。
 
-## 现在有哪些约束是真正生效的？
-
-skill、文档和完整 prompt 现在就能用。它们指导 agent 怎么做事，但不会增加权限，也不会机械拦截 tool call。
-
-目前没有实现或安装可执行 hook。hook contract 描述的是设计批准、compaction 恢复和 merge 授权的预期检查。在针对具体 host 的实现完成并验证之前，靠 agent 按指令执行这些检查。装好 package，不等于启用了硬性的 merge 拦截，不会替你配置 CI，也不会自动替你跑完整个 PR。
-
 ## 语言、保留的 specification，以及维护方式
 
 英文是唯一正确源。中文 `.zh-CN.md` 是解释文档的同步镜像，保留 LLM、agent、coding、bug、PR、commit、review、hook 等 English 专业术语。先改英文，再在同一次改动里同步中文。
@@ -300,3 +296,54 @@ python3 scripts/build_packages.py --check
 改源文件，不要直接改 `dist/` 里的生成副本。检查前，同步改过的翻译和对应的 fingerprint 记录。builder 会替换已知的生成文件，遇到未知文件或 symlink 会拒绝操作，不会删除文件。
 
 检查会核对受保护 specification 的 hash、镜像 fingerprint、本地链接、明确列出的可发布 skill 文件，以及源文件、package 目录和 zip 是否一致。刚 clone 下来的 repo，不需要任何私有开发材料就能构建和检查。fingerprint 只能识别文档版本，判断不了翻译是否准确。检查通过，也不等于这套 workflow 已经完成过一个真实 PR。
+
+<a id="hooks"></a>
+
+## 技术附录：hook 现在有什么，应该负责什么？
+
+### 已经提供了什么，还缺什么？
+
+**这个 package 提供的是 hook specification，没有可执行 hook。** 安装任意一套 skill package，都不会注册 hook、修改 host 设置，也不会安排 agent 开工后自动生成 hook。当前版本靠 agent 按指令执行检查；这个 repo 没有提供程序层面的强制检查。
+
+skill 告诉 agent 应该做什么。hook 则是一段由 host 在特定时机运行的 code，比如 tool call 前，或者 compact 前。如果这个事件支持拦截，hook 就可以检查前置条件，并拒绝不符合条件的操作。在 Markdown 里写明这项检查，不等于执行检查的 code 已经装好了。
+
+完整的英文 [hook behavior contract](structured-coding/references/hook-contract.md) 已经定义了 H1–H7、当前 PR 的状态、可信授权、失败处理和验收场景。[Platform notes](structured-coding/references/platforms.zh-CN.md) 也列出了这些职责可能对应的 host 事件。还没实现的是 host adapter：接收这些事件、读取真实状态，再按 host 支持的格式返回决定的那层 code。
+
+### 为啥现在没附上可执行 hook？
+
+当前版本完成了可复用的 skill 和行为约定，Codex、Claude Code 的 adapter 还没有实现，也没有做过集成测试。这是尚未完成的实现工作，不是藏在后面的安装步骤，也不是要求每个用户都让自己的 agent 临时拼一套 hook。
+
+adapter 需要的，不只是一个事件名：
+
+- 按 host 处理输入和输出。比如，当前 Codex 文档用 `continue: false` 阻止 `PreCompact`；Claude Code 文档规定用 exit code `2` 或 `decision: "block"`，并且会忽略这个事件的 `continue` 字段。事件名一样，不代表配置能直接互换。依据见 [Codex hooks](https://learn.chatgpt.com/docs/hooks#precompact) 和 [Claude Code hooks](https://code.claude.com/docs/en/hooks#precompact)。
+- 可靠地确认当前 repo、worktree、PR、design 和候选 HEAD。merge 授权必须来自可信的人或 host 通道，不能拿实现中的 agent 自己写的 `approved: true` 当批准。
+- 测试实际可用的修改和 merge 路径，包括 shell script、API 和 auto-merge 请求。只匹配 `gh pr merge` 不够。OpenAI 也列出了不会重新触发 hook 检查的 tool 路径；hook 不是完整的 sandbox。依据见 [Codex tool coverage](https://learn.chatgpt.com/docs/hooks#tool-coverage)。
+
+所以，放一个没验证过的通用 hook 文件进去，并不能证明 contract 里的保证已经成立。adapter 实现并验证之前，可以按流程检查、由人 review，但不能声称已经会自动拦截或自动恢复。
+
+### 哪些 workflow 功能应该由 hook 支持？
+
+下表每一项都是**已有 specification，但本 package 尚未实现**。事件名是 Codex、Claude Code 可能接入的位置，不是已经安装的配置，也不保证覆盖所有路径。预期行为来自现有 contract；这张表方便人阅读，不另立一份 specification。
+
+| 功能及 contract | 候选事件 / 接入位置 | hook 应有的行为 |
+| --- | --- | --- |
+| 实现前检查设计批准（[H1](structured-coding/references/hook-contract.md#h1-before-implementation-starts-or-mutates-project-behavior)） | 修改路径上的 `PreToolUse` | 检查已批准的 freeze 版本、填好的 contract、branch/base、前置条件和恢复状态。不匹配就拒绝依赖这些条件的实现操作；audit 和设计准备仍然允许。 |
+| commit 检查点（[H2](structured-coding/references/hook-contract.md#h2-before-a-semantic-commit)） | commit 路径上的 `PreToolUse` | 检查或提示 diff/staged-file review、ledger 同步、证据和偏离计划的记录。让 agent 修好再试，不增加每次 commit 都找人批准的步骤。 |
+| 阻止未经授权的 merge（[H3](structured-coding/references/hook-contract.md#h3-before-merge)） | `PreToolUse`，并覆盖所有已启用的 merge 路径 | 将可信的人类授权与具体 PR、目标 branch 和候选 HEAD 对上，再检查完成条件和必需的 CI/Gate 证据。授权缺失或不匹配就拒绝，也要覆盖 auto-merge 和直接操作目标 branch 的绕行路径。 |
+| 手动 compact 前同步（[H4](structured-coding/references/hook-contract.md#h4-before-manual-compact)） | `PreCompact`，`manual` | 核对 design 检查点、handoff 和真实 worktree fingerprint。状态过时就先拦住手动 compact，等同步好再继续，不用再找人批准。 |
+| 自动 compact 前保留状态（[H5](structured-coding/references/hook-contract.md#h5-before-automatic-compact)） | `PreCompact`，`auto` | 允许 compact。如果语义 handoff 过时，保存机械 snapshot，并标记 `RECOVERY REQUIRED`。保存失败也要留警告并放行，不能凭空编摘要或测试结果。 |
+| compact/resume 后恢复同一个 PR（[H6](structured-coding/references/hook-contract.md#h6-on-compactresume-session-start)） | `SessionStart`，`compact` / `resume`，配合后续修改前的检查 | 动态确认当前 PR，提供它的 design、contract、检查点和恢复警告。实现前要求完整读取规则、核对实际状态；已有任务接着用，别重复启动。 |
+| 核对可供 review 的 handoff（[H7](structured-coding/references/hook-contract.md#h7-at-readiness-and-after-merge)） | `Stop` 或 host 对应的完成事件 | 核对实际完成条件、最终 HEAD 的 CI、证据、限制和 handoff。缺证据就是尚未完成，不能拿一句“done”代替。通过这项检查也不等于允许 merge。 |
+| 确认 merge 后更新计划（[H7](structured-coding/references/hook-contract.md#h7-at-readiness-and-after-merge)） | 已观察到的 merge 结果，比如受支持的 `PostToolUse` 路径，或者主动核对远端状态 | 确认 merge 确实发生，再要求并检查 PR → step → overall 更新。经验和结论由 agent 写，hook 不替它编。下一个 PR 要用新的 implementation session。 |
+
+手动和自动 compact 是特意分开的：手动 compact 可以等 agent 先把 handoff 更新好；不可避免的自动 compact 要是被拦住，可能连恢复所需的 context 都没了。同样，merge 后才观察到结果，不能倒过来阻止 merge。H3 得在操作前检查，H7 则记录操作后真正发生了什么。
+
+用一个具体的 merge 例子看：你批准了 PR 12 的 HEAD `A`，review 修复后又产生了 HEAD `B`。未来的 H3 adapter 不能拿只覆盖 `A` 的批准去 merge `B`，得核对新候选版本的授权和证据。当前 package 会通过指令要求 agent 做这项检查，但没有已安装的 hook 替它执行。
+
+### 要让用户的 agent 动态配置 hook 吗？
+
+**普通 coding 任务里，不需要这么做。** 加载 skill 或批准一个 feature，不等于要求 agent 安装 hook、修改全局设置，更不等于让它自己建立 merge 授权来源。如果你明确要求接入 hook，agent 可以协助实现 host adapter，展示配置改动，并在启用前测试 contract 的验收场景。
+
+真正应该动态变化的是**当前 PR 的运行状态**：worktree、PR、文档路径、检查点、运行中的任务和候选 HEAD。H6 已经要求从当前状态解析这些信息，不能写死成旧 PR。这和每个 PR 都重新生成一套 hook 程序，是两回事。
+
+以后评估 adapter，就对照 contract 的[验收场景](structured-coding/references/hook-contract.md#acceptance-scenarios-for-future-adapters)，包括 handoff 过时、snapshot 失败、HEAD 改变、agent 自己写授权、其他 merge 路径和重复事件。不支持的路径要明确写出来。当前只靠指令运行的 workflow 不需要等 adapter 才能用，只是没有这些程序层面的保证。

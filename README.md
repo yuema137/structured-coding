@@ -52,6 +52,8 @@ Start Claude Code in this project and begin your planning message with `/structu
 
 Both commands install only for the current project and leave your global configuration alone. To make the skill available across projects, see the personal installation paths in [platform notes](structured-coding/references/platforms.md). Do not copy only `SKILL.md`: the prompts and references must stay with it.
 
+These commands install the skill only, not runtime hooks. See the [hook status and behavior table](#hooks) at the end.
+
 ### 2. Start with requirements, not an execution command
 
 For a new feature, give the agent the desired behavior and constraints:
@@ -276,12 +278,6 @@ These are illustrative paths, not a required directory layout. Follow the projec
 
 Prefer a manual download? The [Codex zip](dist/structured-coding-codex.zip) and [Claude Code zip](dist/structured-coding-claude-code.zip) remain available. They contain the same files installed by the commands above.
 
-## What is enforced today?
-
-The skills, documentation, and complete prompts are usable now. They guide the agent's behavior; they do not add permissions or mechanically intercept tool calls.
-
-No executable hooks are implemented or installed. The hook contract describes the intended checks for design approval, compaction recovery, and merge authorization. Until a host-specific integration implements and verifies them, the agent follows those checks procedurally. Installing the package does not activate a hard merge guard, configure your CI, or run a PR end to end for you.
-
 ## Languages, preserved specifications, and maintenance
 
 English is the only authoritative source. Chinese `.zh-CN.md` files are synchronized mirrors of the explanations, retaining English technical terms such as LLM, agent, coding, bug, PR, commit, review, and hook. Update English first and its Chinese mirror in the same change.
@@ -300,3 +296,54 @@ python3 scripts/build_packages.py --check
 Edit the source, not generated copies in `dist/`. Synchronize changed translations and their recorded fingerprints before checking. The builder replaces known generated files, refuses unknown files or symlinks, and deletes nothing.
 
 The checks verify protected specification hashes, mirror fingerprints, local links, the explicit list of publishable skill files, and agreement between the source, package directories, and zip files. Building and checking a fresh clone requires no private authoring material. Fingerprints identify document versions; they cannot establish translation quality. Passing these checks also does not prove that the workflow has completed a real PR.
+
+<a id="hooks"></a>
+
+## Technical appendix: hook status and intended behavior
+
+### What is present, and what is missing?
+
+**This package provides a hook specification, not executable hooks.** Installing either skill package does not register hooks, change host settings, or arrange for the agent to generate hooks when it starts working. In this edition, the agent follows the checks as instructions; there is no mechanical enforcement supplied by this repo.
+
+A skill tells the agent what to do. A hook is code the host runs at a particular event, such as before a tool call or before compact. Where that event supports blocking, the hook can reject an operation after checking its prerequisites. Describing that check in Markdown does not install the code that performs it.
+
+The full English [hook behavior contract](structured-coding/references/hook-contract.md) already defines H1–H7, the active-PR state, trusted authorization, failure behavior, and acceptance scenarios. [Platform notes](structured-coding/references/platforms.md) map those responsibilities to candidate host events. What remains unimplemented is the host adapter: code that receives those events, reads the actual state, and returns the host's supported decision format.
+
+### Why are executable hooks not included yet?
+
+The current release completed the reusable skill and behavior contract; the Codex and Claude Code adapters have not been implemented or integration-tested. This is an implementation gap, not a hidden installation step or a requirement for every user to have their agent improvise hooks.
+
+An adapter needs more than an event name:
+
+- Host-specific input and output handling. For example, current Codex documentation uses `continue: false` to stop `PreCompact`; Claude Code documents exit code `2` or `decision: "block"` and discards that event's `continue` field. The same event name does not make configuration interchangeable. See [Codex hooks](https://learn.chatgpt.com/docs/hooks#precompact) and [Claude Code hooks](https://code.claude.com/docs/en/hooks#precompact).
+- A reliable way to identify the active repo, worktree, PR, design, and candidate HEAD. Merge approval must come from a trusted human/host channel, not an `approved: true` field the implementing agent can write.
+- Tested coverage of the available edit and merge routes, including shell scripts, APIs, and auto-merge requests. Matching only `gh pr merge` is insufficient. OpenAI also documents tool paths that bypass a fresh hook check; hooks are not a complete sandbox. See [Codex tool coverage](https://learn.chatgpt.com/docs/hooks#tool-coverage).
+
+These are the reasons an untested generic hook file would not establish the guarantees in the contract. Until an adapter is implemented and verified, use the procedural checks and human review without claiming automatic blocking or recovery.
+
+### Which workflow functions should hooks support?
+
+Every row below is **specified but not implemented in this package**. Event names are candidate integration points for Codex and Claude Code, not installed configuration or a promise of full coverage. The intended behavior comes from the existing contract; the table is a reader's summary, not a second specification.
+
+| Function and contract | Candidate event / integration point | Intended hook behavior |
+| --- | --- | --- |
+| Design approval before implementation ([H1](structured-coding/references/hook-contract.md#h1-before-implementation-starts-or-mutates-project-behavior)) | `PreToolUse` on mutation routes | Check the approved freeze revision, filled contract, branch/base, prerequisites, and recovery status. Deny dependent implementation when they do not match; still allow audit and design preparation. |
+| Commit checkpoint ([H2](structured-coding/references/hook-contract.md#h2-before-a-semantic-commit)) | `PreToolUse` on commit routes | Check or surface diff/staged-file inspection, ledger synchronization, evidence, and deviations. Let the agent repair and retry; do not add per-commit human approval. |
+| Prevent unauthorized merge ([H3](structured-coding/references/hook-contract.md#h3-before-merge)) | `PreToolUse` plus coverage of every enabled merge route | Match trusted human authorization to the exact PR, target branch, and candidate HEAD; check readiness and required CI/Gate evidence. Deny missing or mismatched authorization, including attempts through auto-merge or direct target-branch operations. |
+| Synchronize before manual compact ([H4](structured-coding/references/hook-contract.md#h4-before-manual-compact)) | `PreCompact`, `manual` | Check the design checkpoint, handoff, and actual worktree fingerprint. Block stale manual compact until synchronization is repaired, without another human approval step. |
+| Preserve state before automatic compact ([H5](structured-coding/references/hook-contract.md#h5-before-automatic-compact)) | `PreCompact`, `auto` | Allow compact. If the semantic handoff is stale, save a mechanical snapshot and mark `RECOVERY REQUIRED`. If saving fails, preserve a warning and still allow compact; do not invent a summary or test results. |
+| Recover the same PR after compact/resume ([H6](structured-coding/references/hook-contract.md#h6-on-compactresume-session-start)) | `SessionStart`, `compact` / `resume`, with a dependent-mutation guard | Resolve the current PR dynamically; supply its design, contract, checkpoint, and recovery warnings. Require full rules and actual-state reconciliation before implementation; reuse existing jobs rather than starting duplicates. |
+| Verify the review-ready handoff ([H7](structured-coding/references/hook-contract.md#h7-at-readiness-and-after-merge)) | `Stop` or the host's applicable completion event | Check actual completion conditions, exact-final-HEAD CI, evidence, limitations, and handoff. Missing evidence remains a blocker, not a generic “done” marker. This does not authorize merge. |
+| Update plans after confirmed merge ([H7](structured-coding/references/hook-contract.md#h7-at-readiness-and-after-merge)) | An observed merge result, such as a supported `PostToolUse` path, or explicit remote-state reconciliation | Confirm that merge happened, then request and check PR → step → overall updates. The agent writes the lessons; the hook does not invent them. The next PR needs a fresh implementation session. |
+
+Manual and automatic compact intentionally differ: a manual compact can wait for the agent to update its handoff; blocking an unavoidable automatic compact can leave no context in which to recover. Likewise, observing a merge afterward cannot prevent it. H3 needs a check before the operation; H7 records what actually happened afterward.
+
+For a concrete merge example, suppose you approve PR 12 at HEAD `A`. A review repair produces HEAD `B`. A future H3 adapter must not reuse an approval that covers only `A` to merge `B`; it must check authorization and evidence for the new candidate. In today's package, the agent is instructed to make that check, but no installed hook performs it.
+
+### Should the user's agent configure hooks dynamically?
+
+**Not as part of an ordinary coding task.** Loading the skill or approving a feature does not ask the agent to install hooks, modify global settings, or create its own source of merge authority. If you explicitly request hook integration, an agent can help implement a host adapter, show the configuration changes, and test the contract's acceptance scenarios before it is enabled.
+
+What should be dynamic is the **runtime PR state**: the current worktree, PR, document paths, checkpoint, jobs, and candidate HEAD. H6 already requires resolving those from current state rather than hardcoding an old PR. That is different from generating new hook programs for every PR.
+
+To assess a future adapter, use the contract's [acceptance scenarios](structured-coding/references/hook-contract.md#acceptance-scenarios-for-future-adapters), including stale handoffs, snapshot failures, changed HEADs, agent-written approval, alternative merge routes, and duplicate events. Document unsupported paths explicitly. The current instruction-only workflow remains usable without an adapter; it just does not provide those mechanical guarantees.
