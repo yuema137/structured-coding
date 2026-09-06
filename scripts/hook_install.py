@@ -1,4 +1,4 @@
-"""Opt-in, project-local continuity registration. Never edits global settings."""
+"""Composable project-local hook registration with guarded transaction recovery."""
 
 import base64
 import copy
@@ -17,6 +17,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FLOORS = {"codex": (0, 153, 4), "claude-code": (2, 1, 261)}
+PRESETS = ("continuity", "checkpoints")
+MAX_FILE = 1024 * 1024
+MAX_JOURNAL = 8 * MAX_FILE
+
 PATHS = {
     "codex": (".codex/hooks.json", ".agents"),
     "claude-code": (".claude/settings.json", ".claude"),
@@ -34,9 +38,11 @@ def safe(root, relative):
     return path
 
 
-def read(path):
+def read(path, limit=MAX_FILE):
     if path.is_symlink():
         raise ValueError(f"Refusing redirected file: {path}")
+    if path.exists() and (not path.is_file() or path.stat().st_size > limit):
+        raise ValueError(f"Missing regular file or size limit exceeded: {path}")
     return path.read_bytes() if path.exists() else None
 
 
@@ -108,35 +114,61 @@ def locations(host, project):
     return project, config, skill, receipt
 
 
-def groups(host, project, skill):
-    command = [
-        sys.executable,
-        str(skill / "scripts/continuity.py"),
-        "event",
-        "--host",
-        host,
-        "--project",
-        str(project),
-        "--event",
-    ]
-    result = {}
-    for event, matcher, mode in (
-        ("PreCompact", "^manual$", "pre-manual"),
-        ("PreCompact", "^auto$", "pre-auto"),
-        ("SessionStart", "^(startup|resume|compact|clear)$", "session-start"),
-    ):
-        result.setdefault(event, []).append(
-            {
-                "matcher": matcher,
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": shlex.join(command + [mode]),
-                        "timeout": 12,
-                    }
-                ],
-            }
+def selection(presets):
+    values = tuple(presets)
+    if not values or len(set(values)) != len(values) or set(values) - set(PRESETS):
+        raise ValueError(
+            "Select each supported preset at most once: continuity checkpoints"
         )
+    return tuple(p for p in PRESETS if p in values)
+
+
+def groups(host, project, skill, presets=("continuity",)):
+    presets = selection(presets)
+    capabilities = []
+    if "continuity" in presets:
+        capabilities.extend(
+            [
+                ("PreCompact", "^manual$", "continuity", "pre-manual"),
+                ("PreCompact", "^auto$", "continuity", "pre-auto"),
+            ]
+        )
+    capabilities.append(
+        (
+            "SessionStart",
+            "^(startup|resume|compact|clear)$",
+            "continuity",
+            "session-start",
+        )
+    )
+    if "checkpoints" in presets:
+        capabilities.extend(
+            [
+                ("PreToolUse", "^Bash$", "checkpoints", "pre-commit"),
+                ("Stop", None, "checkpoints", "stop"),
+            ]
+        )
+    result = {}
+    for event, matcher, script, mode in capabilities:
+        command = [
+            sys.executable,
+            str(skill / f"scripts/{script}.py"),
+            "event",
+            "--host",
+            host,
+            "--project",
+            str(project),
+            "--event",
+            mode,
+        ]
+        group = {
+            "hooks": [
+                {"type": "command", "command": shlex.join(command), "timeout": 12}
+            ]
+        }
+        if matcher is not None:
+            group = {"matcher": matcher, **group}
+        result.setdefault(event, []).append(group)
     return result
 
 
@@ -163,54 +195,144 @@ def check_local_disablers(host, project, settings):
                 raise ValueError("Local project settings disable optional hooks")
 
 
-def prepare(host, project):
-    project, config, skill, receipt = locations(host, project)
-    host_version = version(host)
-    before = read(config)
-    settings = parse(before)
-    check_local_disablers(host, project, settings)
-    additions = groups(host, project, skill)
-    if receipt.exists():
-        installed = parse(read(receipt))
-        if installed.get("groups") == additions and all(
-            settings.get("hooks", {}).get(event, []).count(group) == 1
-            for event, entries in additions.items()
-            for group in entries
-        ):
-            return {
-                "noop": True,
-                "project": project,
-                "skill": skill,
-                "config": config,
-                "receipt": receipt,
-                "version": host_version,
-            }
+def decode(value):
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("Invalid encoded installation state")
+    data = base64.b64decode(value, validate=True)
+    if len(data) > MAX_FILE:
+        raise ValueError("Installation state exceeds 1 MiB")
+    return data
+
+
+def encode(value):
+    return None if value is None else base64.b64encode(value).decode()
+
+
+def validate_record(raw, host, project, skill, config):
+    record = parse(raw)
+    if record.get("schema") not in (1, 2) or record.get("config") != str(config):
         raise ValueError(
-            "Existing continuity registration differs; inspect it and remove hooks before reinstalling"
+            "Installation receipt does not match this project or supported schema"
         )
-    after = copy.deepcopy(settings)
-    hooks = after.setdefault("hooks", {})
+    presets = (
+        ("continuity",)
+        if record["schema"] == 1
+        else selection(record.get("presets", ()))
+    )
+    if record.get("groups") != groups(host, project, skill, presets):
+        raise ValueError(
+            "Owned capability paths/groups differ; inspect and explicitly upgrade the installation"
+        )
+    parse(decode(record["before"]))
+    return record, presets
+
+
+def validate_owned(settings, owned):
+    for event, entries in owned.items():
+        existing = settings.get("hooks", {}).get(event, [])
+        if not isinstance(existing, list) or any(
+            existing.count(g) != 1 for g in entries
+        ):
+            raise ValueError(
+                "Owned hook was changed or removed or duplicated; inspect manually instead of deleting user edits"
+            )
+
+
+def without_owned(settings, owned, original):
+    validate_owned(settings, owned)
+    result = copy.deepcopy(settings)
+    for event, entries in owned.items():
+        existing = result["hooks"][event]
+        for group in entries:
+            existing.remove(group)
+        if not existing and event not in original.get("hooks", {}):
+            del result["hooks"][event]
+    if not result.get("hooks") and "hooks" not in original:
+        result.pop("hooks", None)
+    return result
+
+
+def add_groups(settings, additions):
+    result = copy.deepcopy(settings)
     for event, entries in additions.items():
-        existing = hooks.setdefault(event, [])
+        existing = result.setdefault("hooks", {}).setdefault(event, [])
         if not isinstance(existing, list):
             raise ValueError(f"Invalid {event} hook list")
         for group in entries:
             if group in existing:
                 raise ValueError(
-                    "Continuity hook exists without its installation receipt; inspect manually"
+                    "Owned hook exists without matching receipt; inspect manually"
                 )
             existing.append(group)
-    return {
-        "noop": False,
-        "project": project,
-        "skill": skill,
-        "config": config,
-        "receipt": receipt,
-        "version": host_version,
-        "before": before,
-        "after": serialize(after),
-        "groups": additions,
-    }
+    return result
+
+
+def journal_path(receipt):
+    return safe(receipt.parent, receipt.name + ".transaction.json")
+
+
+def pending(receipt):
+    return read(journal_path(receipt), MAX_JOURNAL) is not None
+
+
+def prepare(host, project, presets=("continuity",)):
+    requested = selection(presets)
+    project, config, skill, receipt = locations(host, project)
+    if pending(receipt):
+        raise ValueError(
+            "Pending installation recovery; retry an explicit mutating install/removal"
+        )
+    host_version = version(host)
+    before, old_receipt = read(config), read(receipt)
+    settings = parse(before)
+    check_local_disablers(host, project, settings)
+    original = before
+    installed = ()
+    if old_receipt is not None:
+        record, installed = validate_record(old_receipt, host, project, skill, config)
+        validate_owned(settings, record["groups"])
+        original = decode(record["before"])
+    selected = tuple(p for p in PRESETS if p in set(installed) | set(requested))
+    additions = groups(host, project, skill, selected)
+    noop = bool(old_receipt is not None and selected == installed)
+    clean = (
+        without_owned(settings, record["groups"], parse(original))
+        if installed
+        else settings
+    )
+    after = before if noop else serialize(add_groups(clean, additions))
+    updated = (
+        old_receipt
+        if noop
+        else serialize(
+            {
+                "schema": 2,
+                "presets": list(selected),
+                "groups": additions,
+                "config": str(config),
+                "before": encode(original),
+                "after_sha256": hashlib.sha256(after).hexdigest(),
+                "host_version": host_version,
+            }
+        )
+    )
+    return dict(
+        noop=noop,
+        host=host,
+        project=project,
+        skill=skill,
+        config=config,
+        receipt=receipt,
+        version=host_version,
+        presets=selected,
+        before=before,
+        after=after,
+        groups=additions,
+        old_receipt=old_receipt,
+        new_receipt=updated,
+    )
 
 
 @contextmanager
@@ -231,7 +353,7 @@ def locked(receipt):
 def replace(path, expected, replacement):
     """Atomic file replacement with a last-moment stale-plan check."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    if read(path) != expected:
+    if read(path, MAX_JOURNAL) != expected:
         raise ValueError(
             "Configuration changed during installation; no overwrite attempted"
         )
@@ -247,7 +369,7 @@ def replace(path, expected, replacement):
             stream.close()
             if expected is not None:
                 os.chmod(temporary, path.stat().st_mode & 0o777)
-            if read(path) != expected:
+            if read(path, MAX_JOURNAL) != expected:
                 raise ValueError("Configuration changed during installation; retry")
             os.replace(temporary, path)
         finally:
@@ -256,102 +378,197 @@ def replace(path, expected, replacement):
 
 def verify_skill(plan):
     source = ROOT / "structured-coding"
-    for relative in ("scripts/continuity.py", "references/continuity.md"):
+    dependencies = {"scripts/continuity.py", "references/continuity.md"}
+    if "checkpoints" in plan.get("presets", ("continuity",)):
+        dependencies.update({"scripts/checkpoints.py", "references/checkpoints.md"})
+    for relative in sorted(dependencies):
         path = safe(plan["skill"], relative)
         if read(path) != (source / relative).read_bytes():
             raise ValueError(
-                "Installed skill lacks this continuity version; compare/back up and update the skill first"
+                "Installed skill lacks this preset version; compare/back up and update the skill first"
             )
+
+
+def finish_transaction(host, project, config, skill, receipt):
+    path = journal_path(receipt)
+    raw = read(path, MAX_JOURNAL)
+    if raw is None:
+        return
+    record = parse(raw)
+    if (
+        record.get("schema") != 1
+        or record.get("config") != str(config)
+        or record.get("receipt") != str(receipt)
+    ):
+        raise ValueError("Transaction journal does not match installation paths/schema")
+    states = {}
+    for name, target in (("config", config), ("receipt", receipt)):
+        before, after = (
+            decode(record[f"{name}_{phase}"]) for phase in ("before", "after")
+        )
+        if name == "config":
+            parse(before)
+            parse(after)
+        else:
+            for value in (before, after):
+                if value is not None:
+                    validate_record(value, host, project, skill, config)
+        current = read(target)
+        if current != before and current != after:
+            raise ValueError(
+                f"Pending recovery conflict in {name}; preserve user edits and reconcile manually"
+            )
+        states[name] = (target, current, after)
+    # Both files were checked before changing either. Each replace checks again.
+    for name in ("config", "receipt"):
+        target, current, after = states[name]
+        if current != after:
+            replace(target, current, after)
+    if read(config) != states["config"][2] or read(receipt) != states["receipt"][2]:
+        raise ValueError(
+            "Installation changed before transaction cleanup; recovery retained"
+        )
+    replace(path, raw, None)
+
+
+def recover(host, project):
+    """Only explicit mutating callers may complete an interrupted operation."""
+    project, config, skill, receipt = locations(host, project)
+    if pending(receipt):
+        with locked(receipt):
+            finish_transaction(host, project, config, skill, receipt)
+        return True
+    return False
+
+
+def transaction(plan):
+    host = plan["host"]
+    project, config, skill, receipt = locations(host, plan["project"])
+    with locked(receipt):
+        if pending(receipt):
+            finish_transaction(host, project, config, skill, receipt)
+        if read(config) == plan["after"] and read(receipt) == plan["new_receipt"]:
+            return
+        if read(config) != plan["before"] or read(receipt) != plan["old_receipt"]:
+            raise ValueError(
+                "Hook installation state changed; retry without overwriting it"
+            )
+        if plan["noop"]:
+            return
+        if any(
+            value is not None and len(value) > MAX_FILE
+            for value in (
+                plan["before"],
+                plan["after"],
+                plan["old_receipt"],
+                plan["new_receipt"],
+            )
+        ):
+            raise ValueError(
+                "Configuration/receipt exceeds 1 MiB; no transaction started"
+            )
+        journal = serialize(
+            {
+                "schema": 1,
+                "config": str(config),
+                "receipt": str(receipt),
+                "config_before": encode(plan["before"]),
+                "config_after": encode(plan["after"]),
+                "receipt_before": encode(plan["old_receipt"]),
+                "receipt_after": encode(plan["new_receipt"]),
+            }
+        )
+        if len(journal) > MAX_JOURNAL:
+            raise ValueError("Installation journal exceeds 8 MiB")
+        replace(journal_path(receipt), None, journal)
+        finish_transaction(host, project, config, skill, receipt)
 
 
 def apply(plan):
     verify_skill(plan)
-    if plan["noop"]:
-        return
-    # Recheck parents after the skill copy; never follow a newly redirected path.
-    _, config, _, receipt = locations(
-        "codex" if plan["config"].name == "hooks.json" else "claude-code",
-        plan["project"],
-    )
-    with locked(receipt):
-        if read(receipt) is not None or read(config) != plan["before"]:
-            raise ValueError(
-                "Hook installation state changed; retry without overwriting it"
-            )
-        backup = {
-            "schema": 1,
-            "groups": plan["groups"],
-            "config": str(config),
-            "before": None
-            if plan["before"] is None
-            else base64.b64encode(plan["before"]).decode(),
-            "after_sha256": hashlib.sha256(plan["after"]).hexdigest(),
-            "host_version": plan["version"],
-        }
-        replace(receipt, None, serialize(backup))
-        try:
-            replace(config, plan["before"], plan["after"])
-        except (OSError, ValueError):
-            # This receipt belongs to this operation. The skill copy remains inert.
-            receipt.unlink()
-            raise
+    transaction(plan)
 
 
-def remove(host, project, dry_run=False):
-    project, config, _, receipt = locations(host, project)
+def remove(host, project, dry_run=False, presets=None):
+    requested = selection(presets) if presets is not None else None
+    recovered = recover(host, project) if not dry_run else False
+    project, config, skill, receipt = locations(host, project)
+    if pending(receipt):
+        raise ValueError("Pending installation recovery; dry-run never changes it")
     raw_receipt = read(receipt)
     if raw_receipt is None:
-        raise ValueError("No owned continuity registration found; nothing was removed")
-    record = parse(raw_receipt)
-    if record.get("schema") != 1 or record.get("config") != str(config):
-        raise ValueError("Installation receipt does not match this project")
+        if recovered:
+            return config
+        raise ValueError("No owned hook registration found; nothing was removed")
+    record, installed = validate_record(raw_receipt, host, project, skill, config)
     current = read(config)
     settings = parse(current)
-    before = (
-        base64.b64decode(record["before"], validate=True)
-        if record["before"] is not None
-        else None
+    original = decode(record["before"])
+    remaining = tuple(
+        p for p in installed if requested is not None and p not in requested
     )
-    # Recover an interrupted install that wrote only the receipt.
-    if current == before:
+    # Legacy receipt-first interrupted installation remains removable without config writes.
+    legacy_interrupted = record["schema"] == 1 and current == original
+    if legacy_interrupted:
+        remaining = ()
         after = current
     else:
-        after_settings = copy.deepcopy(settings)
-        for event, entries in record["groups"].items():
-            existing = after_settings.get("hooks", {}).get(event, [])
-            for group in entries:
-                if existing.count(group) != 1:
-                    raise ValueError(
-                        "Owned hook was changed or removed; inspect manually instead of deleting user edits"
-                    )
-                existing.remove(group)
-            if not existing and event not in parse(before).get("hooks", {}):
-                del after_settings["hooks"][event]
-        if not after_settings.get("hooks") and "hooks" not in parse(before):
-            after_settings.pop("hooks", None)
-        after = before if after_settings == parse(before) else serialize(after_settings)
+        clean = without_owned(settings, record["groups"], parse(original))
+        after_settings = (
+            add_groups(clean, groups(host, project, skill, remaining))
+            if remaining
+            else clean
+        )
+        after = (
+            current
+            if remaining == installed
+            else (
+                original
+                if not remaining and after_settings == parse(original)
+                else serialize(after_settings)
+            )
+        )
+    updated = raw_receipt
+    if not remaining:
+        updated = None
+    elif remaining != installed:
+        updated = serialize(
+            {
+                **record,
+                "schema": 2,
+                "presets": list(remaining),
+                "groups": groups(host, project, skill, remaining),
+                "after_sha256": hashlib.sha256(after).hexdigest(),
+            }
+        )
     if not dry_run:
-        with locked(receipt):
-            if read(receipt) != raw_receipt:
-                raise ValueError("Installation receipt changed; retry")
-            replace(config, current, after)
-            receipt.unlink()
+        transaction(
+            dict(
+                host=host,
+                project=project,
+                before=current,
+                after=after,
+                old_receipt=raw_receipt,
+                new_receipt=updated,
+                noop=remaining == installed,
+            )
+        )
     return config
 
 
 def doctor(host, project):
     project, config, skill, receipt = locations(host, project)
+    if pending(receipt):
+        raise ValueError(
+            "Pending installation recovery; doctor is read-only; retry an explicit mutating operation"
+        )
     current = parse(read(config))
     check_local_disablers(host, project, current)
     version_string = version(host)
-    record = parse(read(receipt))
-    if record.get("config") != str(config) or record.get("schema") != 1:
-        raise ValueError("No matching installation receipt")
-    for event, entries in record["groups"].items():
-        for group in entries:
-            if current.get("hooks", {}).get(event, []).count(group) != 1:
-                raise ValueError(
-                    "A registered continuity hook is missing, changed, or duplicated"
-                )
-    verify_skill({"skill": skill})
-    return f"Registration and runtime files match ({host} {version_string}). Trust/enabled state and real host delivery still require /hooks verification."
+    record, presets = validate_record(read(receipt), host, project, skill, config)
+    validate_owned(current, record["groups"])
+    verify_skill({"skill": skill, "presets": presets})
+    return (
+        f"Installed presets: {', '.join(presets)}. Registration and runtime files match "
+        f"({host} {version_string}). Trust/enabled state and real host delivery still require /hooks verification."
+    )
