@@ -115,6 +115,8 @@ Freeze 语义需求和 acceptance，同时允许 live ledger 持续写入。整�
 
 每个 semantic commit 前，检查准确的 diff 和 staged files，确认 scope，记录 test 和 deviation，并同步 ledger。随后自主 commit 并继续。为了便于 review，一个计划中的 commit 可以拆成多个连贯的 commit；记录它们与原计划的对应关系。
 
+明确启用 checkpoints 时，在选择 commit 命令前运行 `checkpoints.py inspect`，按 [preset interface](checkpoints.md) 完成语义同步，再刷新机械 checkpoint。
+
 在 semantic milestone 和重要 checkpoint 变化时刷新 handoff。通常最多落后一个 milestone。记录后台 job 标识、log/artifact 路径、预计 runtime 和下一步，防止恢复后的 session 重复启动工作。
 
 ### 不确定性与 deviation
@@ -150,6 +152,8 @@ Compaction 不重置进度，也不初始化新 PR。通过 handoff 恢复 activ
 ## 9. 达到 operator review 条件
 
 完成 implementation、计划中的 review、ledger 更新和必需 validation。commit 预期最终内容，执行已授权的发布与 PR 工作，检查 PR diff/body，并跟踪准确最终 PR HEAD 的 canonical CI。修复普通失败，push 新 head，再核对新 CI 证据。
+
+启用 checkpoints 时，在撰写 handoff 前调用 `prepare-review`，取得检查清单并设置一次面向 operator 的提醒，不自动续跑。它不能替代实际完成条件的证据；用 `cancel-review` 取消待发送的提醒。
 
 operator 可以在 CI 运行时 review。不能只因 PR 已存在或 CI 已启动就结束自主 execution。不能把旧 head 的绿色 CI 当成当前 head 的证据。
 

@@ -22,7 +22,7 @@
 
 ## 一整套 workflow 方案。
 
-不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates、可选 continuity hook，以及后续 guard 的行为约定。
+不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates、可选 hook preset，以及后续 guard 的行为约定。
 
 | 资源 | 提供什么 |
 | --- | --- |
@@ -30,7 +30,7 @@
 | [PR specification](structured-coding/prompts/pr-design-requirements.md) | 基于 audit 的 commit 计划、能观察到结果的验收条件，以及分开的实现、验证和 review 证据。 |
 | [Execution templates](structured-coding/prompts/implementation-working-rules.md) | 执行用的 working rules，加上项目自己的 contract，定下范围、权限、预算和停止条件。 |
 | [Validation rules](structured-coding/prompts/test-ci-gate-rules.md) | Static checks、Unit、真实 Gate 和最终 HEAD 的 CI。要证明什么，就检查实际发生了什么。 |
-| [可选 continuity hook](structured-coding/references/continuity.md) | 提供 compact 同步检查、snapshot 尝试和恢复指令。freeze 和 merge guard 仍是后续工作。 |
+| [可选 hook preset](structured-coding/references/platforms.zh-CN.md) | Continuity 提供 compact 恢复；checkpoints 提供 commit 和 review 提醒。freeze 和 merge guard 仍是后续工作。 |
 | [两套平台 package](structured-coding/references/platforms.zh-CN.md) | Codex 和 Claude Code 共用一个 skill，提供项目 installer，不改全局配置。 |
 
 ## 装好，再给一个需求。
@@ -59,7 +59,7 @@ Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding
 
 默认安装复制完整 skill，不注册 hook，也不覆盖已有副本。全局设置和权限不变。
 
-[想加 continuity hook？下面有选装命令和限制说明。](#hooks)
+[想加 continuity 或 checkpoints？下面有选装命令和限制说明。](#hooks)
 
 ## 你在哪些地方参与？
 
@@ -92,10 +92,12 @@ Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding
 <details id="hooks">
 <summary>可选 hook：安装、覆盖范围和限制</summary>
 
-<p class="status">可选 CONTINUITY · 尚无 MERGE GUARD</p><p>Codex 和 Claude Code 都提供 continuity preset，但默认不开。它没有实现完整行为约定。Protocol 测试会在临时 Git worktree 中运行真实 hook 命令；实际事件能否送达，还要在你的 host 中核对。agent 不会动态生成或注册自己的 hook。</p><h4>自己决定要不要加 continuity</h4><pre><code>./scripts/install codex --project /path/to/project --hooks continuity --dry-run
-./scripts/install codex --project /path/to/project --hooks continuity
+<p class="status">可选 CONTINUITY + CHECKPOINTS · 尚无 MERGE GUARD</p><p>需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，也可同时安装。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。</p><h4>选择需要的 preset</h4><pre><code>./scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+./scripts/install codex --project /path/to/project --hooks checkpoints
+./scripts/install codex --project /path/to/project --hooks continuity checkpoints
 ./scripts/install codex --project /path/to/project --check-hooks
-./scripts/install codex --project /path/to/project --remove-hooks</code></pre><p>在 clone 的 repo 内运行，路径要填项目的 Git 根目录。Claude Code 用户把 codex 换成 claude-code。重启 host 后检查 /hooks；安装不会自动授予信任。随后由 agent 按 preset interface，把当前 execution session 绑定到对应 PR，并维护 checkpoint。已有设置会保留；卸载也会保留 skill 文件和 session 数据。</p><a href="https://github.com/yuema137/structured-coding/blob/main/structured-coding/references/continuity.md">Continuity preset interface →</a><div class="table-wrap"><table><thead><tr><th scope='col'>功能</th><th scope='col'>候选事件</th><th scope='col'>应有的行为</th><th scope='col'>已提供的支持</th></tr></thead><tbody><tr><td>H1 · 实现前</td><td>PreToolUse</td><td>核对已批准设计、contract、repo 状态和恢复情况。不匹配就拒绝依赖这些条件的修改；audit 和设计准备仍然允许。</td><td>尚未实现</td></tr><tr><td>H2 · commit 前</td><td>PreToolUse</td><td>检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。</td><td>尚未实现</td></tr><tr><td>H3 · merge 前</td><td>PreToolUse + merge 路径覆盖</td><td>要求来自可信通道、对应具体 PR、目标 branch 和候选 HEAD 的明确授权，并核对完成条件及 CI/Gate 证据。覆盖 CLI、API、auto-merge 和直接操作目标 branch 的绕行路径。</td><td>尚未实现</td></tr><tr><td>H4 · 手动 compact</td><td>PreCompact: manual</td><td>handoff 过时就先拦住，同步后再允许 compact。</td><td>Continuity：只检查机械 checkpoint 是否仍然对应当前状态</td></tr><tr><td>H5 · 自动 compact</td><td>PreCompact: auto</td><td>允许 compact；必要时保存机械 snapshot。保存失败也要留警告，并要求恢复。</td><td>Continuity：限时尝试 snapshot，不主动阻断自动 compact</td></tr><tr><td>H6 · compact/resume</td><td>SessionStart + 修改前检查</td><td>动态确认当前 PR，完整读取规则，核对 repo 和进程状态再继续，别重复启动任务。</td><td>Continuity：提供 session 绑定的 PR 和完整读取指令；没有修改 guard，也不能证明恢复完成</td></tr><tr><td>H7 · 准备交付 review</td><td>Stop / 完成事件</td><td>核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。</td><td>尚未实现</td></tr><tr><td>H7 · merge 后</td><td>已观察结果 / 核对远端状态</td><td>确认 merge，再要求并检查 PR → step → overall 更新。agent 写经验，下一个 PR 用新 session。</td><td>尚未实现</td></tr></tbody></table></div><p>有事件名，不等于一定能拦截。adapter 得处理各 host 的 protocol、可信授权来源和 tool 覆盖缺口。merge 后的检查不能倒过来阻止 merge。实现 adapter 前，先看 contract 的验收场景。</p><p>比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。</p><a href="https://github.com/yuema137/structured-coding/blob/main/structured-coding/references/hook-contract.md">Hook behavior contract →</a>
+./scripts/install codex --project /path/to/project --remove-hooks checkpoints
+./scripts/install codex --project /path/to/project --remove-hooks</code></pre><p>使用准确的项目 Git 根目录；Claude Code 用户把 codex 换成 claude-code。安装会追加 preset，选择移除一个时另一个仍可用。裸 --remove-hooks 移除全部自有 preset。重启 host 后检查 /hooks；安装不授予信任。agent 绑定 session，在 commit 前检查 staged 改动，并明确准备 review handoff。提醒不能把 pending、inconclusive 或未运行的检查变成 pass。已有设置、skill 文件和 session 数据会保留。</p><a href="https://github.com/yuema137/structured-coding/blob/main/structured-coding/references/continuity.md">Continuity preset interface →</a> · <a href="https://github.com/yuema137/structured-coding/blob/main/structured-coding/references/checkpoints.md">Checkpoints preset interface →</a><div class="table-wrap"><table><thead><tr><th scope='col'>功能</th><th scope='col'>候选事件</th><th scope='col'>应有的行为</th><th scope='col'>已提供的支持</th></tr></thead><tbody><tr><td>H1 · 实现前</td><td>PreToolUse</td><td>核对已批准设计、contract、repo 状态和恢复情况。不匹配就拒绝依赖这些条件的修改；audit 和设计准备仍然允许。</td><td>尚未实现</td></tr><tr><td>H2 · commit 前</td><td>PreToolUse</td><td>检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。</td><td>Checkpoints：明确的准备步骤，以及 Bash 直接 git commit 的提示；不强制执行</td></tr><tr><td>H3 · merge 前</td><td>PreToolUse + merge 路径覆盖</td><td>要求来自可信通道、对应具体 PR、目标 branch 和候选 HEAD 的明确授权，并核对完成条件及 CI/Gate 证据。覆盖 CLI、API、auto-merge 和直接操作目标 branch 的绕行路径。</td><td>尚未实现</td></tr><tr><td>H4 · 手动 compact</td><td>PreCompact: manual</td><td>handoff 过时就先拦住，同步后再允许 compact。</td><td>Continuity：只检查机械 checkpoint 是否仍然对应当前状态</td></tr><tr><td>H5 · 自动 compact</td><td>PreCompact: auto</td><td>允许 compact；必要时保存机械 snapshot。保存失败也要留警告，并要求恢复。</td><td>Continuity：限时尝试 snapshot，不主动阻断自动 compact</td></tr><tr><td>H6 · compact/resume</td><td>SessionStart + 修改前检查</td><td>动态确认当前 PR，完整读取规则，核对 repo 和进程状态再继续，别重复启动任务。</td><td>Continuity：提供 session 绑定的 PR 和完整读取指令；没有修改 guard，也不能证明恢复完成</td></tr><tr><td>H7 · 准备交付 review</td><td>Stop / 完成事件</td><td>核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。</td><td>Checkpoints：明确 intent 后最多一次 operator 提醒；不自动续跑，也不判定证据通过</td></tr><tr><td>H7 · merge 后</td><td>已观察结果 / 核对远端状态</td><td>确认 merge，再要求并检查 PR → step → overall 更新。agent 写经验，下一个 PR 用新 session。</td><td>尚未实现</td></tr></tbody></table></div><p>有事件名，不等于一定能拦截。adapter 得处理各 host 的 protocol、可信授权来源和 tool 覆盖缺口。merge 后的检查不能倒过来阻止 merge。实现 adapter 前，先看 contract 的验收场景。</p><p>比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。</p><a href="https://github.com/yuema137/structured-coding/blob/main/structured-coding/references/hook-contract.md">Hook behavior contract →</a>
 
 </details>
 
@@ -120,7 +122,7 @@ Do not merge.</code></pre>
 <details id="format">
 <summary>这是 skill、skillset，还是 plugin？</summary>
 
-<p>当前是一个独立 skill，带配套资源和可选 continuity hook。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。项目安装保持简单，不托管更新，hook 也需要明确选装；未来仍然可以提供 plugin 分发。</p>
+<p>当前是一个独立 skill，带配套资源和可选 hook preset。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。项目安装保持简单，不托管更新，hook 也需要明确选装；未来仍然可以提供 plugin 分发。</p>
 
 </details>
 

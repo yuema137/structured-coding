@@ -115,6 +115,8 @@ Keep the primary design current throughout the work. Record new findings when di
 
 Before each semantic commit, inspect the exact diff and staged files, confirm scope, record tests and deviations, and synchronize the ledger. Commit and continue autonomously. A planned commit can become several coherent commits when that improves reviewability; record the mapping back to the plan.
 
+If checkpoints is explicitly enabled, run `checkpoints.py inspect` before selecting the commit; follow [the preset interface](checkpoints.md), then refresh the mechanical checkpoint after semantic synchronization.
+
 Refresh the handoff at semantic milestones and material checkpoint changes. It should normally be no more than one milestone stale. Record background job identifiers, log/artifact paths, runtime expectations, and next actions so a resumed session does not start duplicate work.
 
 ### Uncertainty and deviation
@@ -150,6 +152,8 @@ Detailed event behavior and acceptance cases are in the [hook contract](hook-con
 ## 9. Reach operator review readiness
 
 Finish implementation, planned reviews, ledger updates, and required validation. Commit the intended final content, perform authorized publication/PR work, inspect the PR diff/body, and track canonical CI for the exact final PR HEAD. Repair routine failures, push the resulting head, and verify the new CI evidence.
+
+With checkpoints enabled, call `prepare-review` before composing the handoff to receive its checklist and arm one non-continuing operator notice. It does not replace the actual terminal evidence; use `cancel-review` to cancel pending intent.
 
 Operator review can happen while CI runs. Do not stop the autonomous execution loop merely because the PR exists or CI has started. Do not treat old-head green CI as proof of the current head.
 

@@ -2,7 +2,7 @@
 
 [Chinese mirror](platforms.zh-CN.md)
 
-Both packages use the same `SKILL.md`, agent workflow, human guide, and complete prompts. The Codex package adds `agents/openai.yaml` for display metadata. The Claude Code package uses the common skill entry point without adding fork, subagent, model, or permission settings. Neither package registers hooks by default. The repository installer can opt in to the [continuity preset](continuity.md) with `--hooks continuity`, and supports `--dry-run`, `--check-hooks`, and `--remove-hooks`. Existing hook groups and unrelated project settings are preserved; global settings, permissions, and trust are not changed.
+Both packages use the same `SKILL.md`, agent workflow, human guide, and complete prompts. The Codex package adds `agents/openai.yaml` for display metadata. The Claude Code package uses the common skill entry point without adding fork, subagent, model, or permission settings. Neither package registers hooks by default. The installer can explicitly select [continuity](continuity.md), [checkpoints](checkpoints.md), or both. Existing hook groups and unrelated project settings are preserved; global settings, permissions, and trust are not changed.
 
 ## Placement and invocation
 
@@ -17,9 +17,31 @@ Codex paths and invocation follow the [official OpenAI skills documentation](htt
 
 For a new PR, prepare the complete approved design and filled contract in the planning session, then invoke the skill with those paths in a fresh implementation session. For compact/resume, read the current PR's handoff and continue the same PR.
 
+## Optional preset installation
+
+From the cloned repository, use the exact project Git root (quote paths with spaces):
+
+```sh
+./scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+./scripts/install codex --project /path/to/project --hooks checkpoints
+./scripts/install codex --project /path/to/project --hooks continuity checkpoints
+./scripts/install codex --project /path/to/project --check-hooks
+./scripts/install codex --project /path/to/project --remove-hooks checkpoints --dry-run
+./scripts/install codex --project /path/to/project --remove-hooks checkpoints
+./scripts/install codex --project /path/to/project --remove-hooks
+```
+
+Use `claude-code` for Claude Code. Python 3.9+, Git and macOS/Linux/WSL are required. Current conservative host floors are Codex 0.153.4 and Claude Code 2.1.261; host delivery needs separate native verification. Restart the host and inspect `/hooks` after changes; the installer does not grant trust or enable disabled hooks.
+
+Installation is additive. Checkpoints alone registers shared SessionStart, PreToolUse and Stop, without compact handlers. Continuity alone registers shared SessionStart and manual/automatic PreCompact. Both use five groups, with SessionStart exactly once. Removing one keeps the other usable. Bare `--remove-hooks` removes all owned presets and preserves the skill and session data. Repeating a selection is a byte-preserving no-op; duplicate/unknown names are rejected.
+
+One aggregate receipt owns the original settings backup. Legacy continuity receipts remain readable and migrate only on an explicit state change; check, preview and unchanged reinstall do not rewrite them. Existing customized runtime dependencies are never overwritten: compare/back up the installed skill and explicitly update it first. Missing, changed or duplicate owned groups, unknown receipt schemas, and redirected/unverifiable paths cause refusal. Moving the project/interpreter needs explicit inspection and reinstallation.
+
+Settings and receipt are published as separate atomic replacements under the shared lock, with an 8 MiB private transaction journal (config and receipt each at most 1 MiB). A retry reconciles only exact known before/after combinations. Unknown user edits are preserved and reported as conflicts. `--check-hooks` and dry-runs report pending recovery without writing; an explicit install/removal retry can complete it. Avoid concurrent settings edits: this is not an atomic transaction with an unrelated editor or host. Original bytes are restored only after the last preset is removed and remaining settings equal the original parsed settings. No old whole-config backup is restored over a surviving preset.
+
 ## Mapping hooks to platforms
 
-This table maps the full target contract; it is not a configuration file. The optional continuity adapter covers compact freshness, snapshot attempts, and recovery instructions only. Freeze/merge guards and enforced recovery remain future work. The [preset interface](continuity.md) lists supported versions, setup, tests, and coverage limits. Host protocol tests do not establish real lifecycle delivery; verify the installed registration in `/hooks`.
+This table maps the full target contract; it is not a configuration file. Continuity covers compact freshness, snapshot attempts, and recovery instructions. Checkpoints adds direct-commit advisory context and one explicit, non-continuing review-intent notice; it does not enforce H2/H7 evidence. Freeze/merge guards and enforced recovery remain future work. The [continuity interface](continuity.md) and [checkpoints interface](checkpoints.md) describe setup, tests, output audience/timing and coverage limits. Host protocol tests do not establish real lifecycle delivery; verify the installed registration in `/hooks`.
 
 | Workflow behavior | Candidate Codex event | Candidate Claude Code event |
 | --- | --- | --- |

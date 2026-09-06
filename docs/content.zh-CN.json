@@ -61,7 +61,7 @@
   "workflowNote": "普通 bug：修好继续。实质性改动：回来商量。",
   "loopLabel": "用 MERGE 后的事实，规划下一个 PR",
   "kitTitle": "一整套 workflow 方案。",
-  "kitLead": "不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates、可选 continuity hook，以及后续 guard 的行为约定。",
+  "kitLead": "不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates、可选 hook preset，以及后续 guard 的行为约定。",
   "kit": [
     [
       "01",
@@ -93,9 +93,9 @@
     ],
     [
       "05",
-      "可选 continuity hook",
-      "提供 compact 同步检查、snapshot 尝试和恢复指令。freeze 和 merge guard 仍是后续工作。",
-      "structured-coding/references/continuity.md",
+      "可选 hook preset",
+      "Continuity 提供 compact 恢复；checkpoints 提供 commit 和 review 提醒。freeze 和 merge guard 仍是后续工作。",
+      "structured-coding/references/platforms.zh-CN.md",
       "看设置方式和限制"
     ],
     [
@@ -114,7 +114,7 @@
   "invokeLabel": "然后在目标项目的 agent 聊天里",
   "invoke": "Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding。说清 feature 和约束，先让它规划，不要直接开始实现。",
   "installNote": "默认安装复制完整 skill，不注册 hook，也不覆盖已有副本。全局设置和权限不变。",
-  "optionalHookNote": "想加 continuity hook？下面有选装命令和限制说明。",
+  "optionalHookNote": "想加 continuity 或 checkpoints？下面有选装命令和限制说明。",
   "peopleTitle": "你在哪些地方参与？",
   "peopleLead": "不用每次 commit 都点头。但会改变约定的决定，得由你来做。",
   "people": [
@@ -180,11 +180,11 @@
   ],
   "compactNote": "恢复时，重新读取当前 design、填好的 contract 和完整 execution rules；改 code 前核对 repo 和已有任务。snapshot 不能编决定或测试结果。自动 compact 不能因为 handoff 不完美就一直卡住。",
   "hooksTitle": "可选 hook：安装、覆盖范围和限制",
-  "hooksStatus": "可选 CONTINUITY · 尚无 MERGE GUARD",
-  "hooksIntro": "Codex 和 Claude Code 都提供 continuity preset，但默认不开。它没有实现完整行为约定。Protocol 测试会在临时 Git worktree 中运行真实 hook 命令；实际事件能否送达，还要在你的 host 中核对。agent 不会动态生成或注册自己的 hook。",
-  "hookInstallTitle": "自己决定要不要加 continuity",
-  "hookInstallNote": "在 clone 的 repo 内运行，路径要填项目的 Git 根目录。Claude Code 用户把 codex 换成 claude-code。重启 host 后检查 /hooks；安装不会自动授予信任。随后由 agent 按 preset interface，把当前 execution session 绑定到对应 PR，并维护 checkpoint。已有设置会保留；卸载也会保留 skill 文件和 session 数据。",
-  "hookInstallCommands": "./scripts/install codex --project /path/to/project --hooks continuity --dry-run\n./scripts/install codex --project /path/to/project --hooks continuity\n./scripts/install codex --project /path/to/project --check-hooks\n./scripts/install codex --project /path/to/project --remove-hooks",
+  "hooksStatus": "可选 CONTINUITY + CHECKPOINTS · 尚无 MERGE GUARD",
+  "hooksIntro": "需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，也可同时安装。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。",
+  "hookInstallTitle": "选择需要的 preset",
+  "hookInstallNote": "使用准确的项目 Git 根目录；Claude Code 用户把 codex 换成 claude-code。安装会追加 preset，选择移除一个时另一个仍可用。裸 --remove-hooks 移除全部自有 preset。重启 host 后检查 /hooks；安装不授予信任。agent 绑定 session，在 commit 前检查 staged 改动，并明确准备 review handoff。提醒不能把 pending、inconclusive 或未运行的检查变成 pass。已有设置、skill 文件和 session 数据会保留。",
+  "hookInstallCommands": "./scripts/install codex --project /path/to/project --hooks checkpoints --dry-run\n./scripts/install codex --project /path/to/project --hooks checkpoints\n./scripts/install codex --project /path/to/project --hooks continuity checkpoints\n./scripts/install codex --project /path/to/project --check-hooks\n./scripts/install codex --project /path/to/project --remove-hooks checkpoints\n./scripts/install codex --project /path/to/project --remove-hooks",
   "hookColumns": [
     "功能",
     "候选事件",
@@ -202,7 +202,7 @@
       "H2 · commit 前",
       "PreToolUse",
       "检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。",
-      "尚未实现"
+      "Checkpoints：明确的准备步骤，以及 Bash 直接 git commit 的提示；不强制执行"
     ],
     [
       "H3 · merge 前",
@@ -232,7 +232,7 @@
       "H7 · 准备交付 review",
       "Stop / 完成事件",
       "核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。",
-      "尚未实现"
+      "Checkpoints：明确 intent 后最多一次 operator 提醒；不自动续跑，也不判定证据通过"
     ],
     [
       "H7 · merge 后",
@@ -244,7 +244,7 @@
   "hooksNote": "有事件名，不等于一定能拦截。adapter 得处理各 host 的 protocol、可信授权来源和 tool 覆盖缺口。merge 后的检查不能倒过来阻止 merge。实现 adapter 前，先看 contract 的验收场景。",
   "hookExample": "比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。",
   "formatTitle": "这是 skill、skillset，还是 plugin？",
-  "format": "当前是一个独立 skill，带配套资源和可选 continuity hook。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。项目安装保持简单，不托管更新，hook 也需要明确选装；未来仍然可以提供 plugin 分发。",
+  "format": "当前是一个独立 skill，带配套资源和可选 hook preset。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。项目安装保持简单，不托管更新，hook 也需要明确选装；未来仍然可以提供 plugin 分发。",
   "promptsTitle": "具体该怎么跟 agent 说？",
   "promptLabels": [
     "规划 feature",
