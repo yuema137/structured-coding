@@ -1,0 +1,258 @@
+{
+  "navigation": "Navigation",
+  "navKit": "The kit",
+  "navInstall": "Install",
+  "lang": "en",
+  "switch": "中文",
+  "label": "A WORKFLOW FOR AGENT CODING",
+  "title": "More than a plan.md.",
+  "subtitle": "Agree on the change. Let the agent build it. Bring the result back into the plan.",
+  "whyTitle": "Why use Structured Coding?",
+  "why": "A plan describes what you intend to build. It does not, on its own, tell an agent how to execute, what counts as evidence, when to ask you, or how to resume after losing context. This skill connects those decisions into one repeatable workflow.",
+  "benefits": [
+    [
+      "Plan what is knowable",
+      "Keep the overall direction clear. Audit real code before detailing the next PR."
+    ],
+    [
+      "Keep the work recoverable",
+      "Record discoveries and evidence in the PR design, not only in the chat."
+    ],
+    [
+      "Give autonomy a boundary",
+      "Let the agent fix ordinary bugs and commit. Keep material decisions and merge authorization with you."
+    ]
+  ],
+  "workflowTitle": "One PR at a time. One continuous loop.",
+  "workflowLabel": "THE WORKFLOW",
+  "workflowCaption": "Follow 01 → 06. After a confirmed merge, use the findings to design the next PR.",
+  "steps": [
+    [
+      "HUMAN + AGENT",
+      "Agree on direction",
+      "Requirements → overall → step"
+    ],
+    [
+      "AGENT",
+      "Design the next PR",
+      "Audit code, commits, acceptance"
+    ],
+    [
+      "HUMAN",
+      "Approve the boundaries",
+      "Freeze design + filled contract"
+    ],
+    [
+      "AGENT",
+      "Execute autonomously",
+      "Fresh session · code · test · commit"
+    ],
+    [
+      "HUMAN",
+      "Review, then authorize merge",
+      "Required CI green on final HEAD"
+    ],
+    [
+      "AGENT",
+      "Update the parent plans",
+      "After merge: PR → step → overall"
+    ]
+  ],
+  "workflowNote": "Ordinary bugs: repair and continue. Material changes: return for approval.",
+  "loopLabel": "MERGED FACTS INFORM THE NEXT PR",
+  "kitTitle": "A complete workflow kit.",
+  "kitLead": "Not just a place to write a plan. A process, its specifications, the prompts to run it, and recommendations for future hook enforcement.",
+  "kit": [
+    [
+      "01",
+      "Workflow",
+      "Overall → step → PR, autonomous execution, and post-merge plan updates.",
+      "structured-coding/references/agent-workflow.md",
+      "Read the workflow"
+    ],
+    [
+      "02",
+      "PR specification",
+      "An audited commit plan, observable acceptance, and separate implementation, validation, and review evidence.",
+      "structured-coding/prompts/pr-design-requirements.md",
+      "Read the specification"
+    ],
+    [
+      "03",
+      "Execution templates",
+      "Execution working rules and a project-specific contract for scope, permissions, budget, and stopping.",
+      "structured-coding/prompts/implementation-working-rules.md",
+      "Read the templates"
+    ],
+    [
+      "04",
+      "Validation rules",
+      "Static checks, Unit, real Gates, and final-HEAD CI. Choose evidence that actually observes the claim.",
+      "structured-coding/prompts/test-ci-gate-rules.md",
+      "Read the test rules"
+    ],
+    [
+      "05",
+      "Hook recommendations",
+      "Specified behavior for freeze, commit, merge, compact, recovery, and handoff. Runtime hooks are not implemented.",
+      "structured-coding/references/hook-contract.md",
+      "Read the hook contract"
+    ],
+    [
+      "06",
+      "Two platform packages",
+      "One shared skill for Codex and Claude Code, with a project installer. No global configuration changes.",
+      "structured-coding/references/platforms.md",
+      "Read the platform notes"
+    ]
+  ],
+  "startTitle": "Install it. Start with a request.",
+  "startLead": "Git + Python 3.9 or later. Install Codex or Claude Code first. These commands work on macOS/Linux and in WSL.",
+  "cloneLabel": "Get the repo once",
+  "installLabel": "Choose your agent",
+  "projectNote": "Replace /path/to/your-project with your existing project root. Run the installer from the directory where you cloned this repo.",
+  "invokeLabel": "Then, in the target project's agent chat",
+  "invoke": "Prefix your request with $structured-coding in Codex or /structured-coding in Claude Code. Describe the feature and its constraints; ask for planning first, not implementation.",
+  "installNote": "The installer copies the full skill and refuses to overwrite an existing installation. No runtime hooks, global settings, or permissions are changed.",
+  "peopleTitle": "Where you step in.",
+  "peopleLead": "You do not need to approve every commit. You do need to own the decisions that change the agreement.",
+  "people": [
+    [
+      "01",
+      "Set the goal",
+      "Requirements, constraints, tradeoffs"
+    ],
+    [
+      "02",
+      "Approve the design",
+      "Scope, invariants, acceptance, budget"
+    ],
+    [
+      "03",
+      "Review the result",
+      "Deviations, evidence, explicit merge approval"
+    ]
+  ],
+  "autonomy": "Between approval and review: the agent investigates, implements, validates, reviews, records, and commits. Authorized PR/CI work continues too.",
+  "escalation": "A material scope change or an action outside existing authorization comes back to you with evidence and a proposal.",
+  "technicalTitle": "The details, when you need them.",
+  "technicalLead": "Open the part relevant to your current question. Use the resource links above for the complete specifications.",
+  "recordsTitle": "What documents does the agent maintain?",
+  "records": [
+    [
+      "Overall",
+      "Direction, requirements, and step boundaries"
+    ],
+    [
+      "Step",
+      "PR boundaries, dependencies, and integration checkpoints"
+    ],
+    [
+      "PR design",
+      "Audited commit plan + live decisions, progress, and evidence"
+    ],
+    [
+      "Execution contract",
+      "The approved scope, authority, budget, and stopping conditions"
+    ],
+    [
+      "Handoff",
+      "Current PR, branch/HEAD, jobs, logs, checkpoint, and next action"
+    ]
+  ],
+  "recordsNote": "DESIGN FROZEN freezes the agreement, not the running record. Track implementation, validation, and review separately. If one step is one PR, expand the step doc in place instead of duplicating it.",
+  "compactTitle": "What happens at compact or resume?",
+  "compactIntro": "A new PR starts in a fresh session. A compact/resume continues the same PR. The following is the intended hook behavior, not an installed automation.",
+  "compactLanes": [
+    [
+      "MANUAL COMPACT",
+      "Check handoff",
+      "Stale? Sync first",
+      "Then compact"
+    ],
+    [
+      "AUTOMATIC COMPACT",
+      "Save snapshot / warning",
+      "Allow compact",
+      "Recover actual state"
+    ]
+  ],
+  "compactNote": "On resume, reload the current design, filled contract, and full execution rules; check the repo and existing jobs before editing. A snapshot cannot invent decisions or test results. Automatic compact must not get stuck waiting for a perfect handoff.",
+  "hooksTitle": "Which functions should hooks support?",
+  "hooksStatus": "SPECIFICATION ONLY · NO RUNTIME HOOKS",
+  "hooksIntro": "The behavior contract is provided; the host adapters are not implemented or integration-tested. The agent follows these checks as instructions today. Installing the skill does not ask it to generate or register hooks dynamically.",
+  "hookColumns": [
+    "Function",
+    "Candidate event",
+    "Intended behavior"
+  ],
+  "hooks": [
+    [
+      "H1 · Before implementation",
+      "PreToolUse",
+      "Check approved design, contract, repo state, and recovery. Deny dependent mutations when they do not match; still allow audit/design preparation."
+    ],
+    [
+      "H2 · Before commit",
+      "PreToolUse",
+      "Check or surface diff inspection, ledger, evidence, and deviations. Repair and retry autonomously; no per-commit human gate."
+    ],
+    [
+      "H3 · Before merge",
+      "PreToolUse + merge-route coverage",
+      "Require trusted explicit approval for the exact PR, target branch, and candidate HEAD, plus readiness and CI/Gate evidence. Cover CLI, API, auto-merge, and direct target-branch bypasses."
+    ],
+    [
+      "H4 · Manual compact",
+      "PreCompact: manual",
+      "Block a stale handoff until synchronized, then allow compact."
+    ],
+    [
+      "H5 · Automatic compact",
+      "PreCompact: auto",
+      "Allow compact; save a mechanical snapshot when needed. Preserve failures as warnings and require recovery."
+    ],
+    [
+      "H6 · Compact/resume",
+      "SessionStart + mutation guard",
+      "Resolve the current PR dynamically. Reload full rules and reconcile repo/process state before continuing; do not duplicate jobs."
+    ],
+    [
+      "H7 · Review readiness",
+      "Stop / completion event",
+      "Verify real completion conditions, exact-final-HEAD CI, evidence, and handoff. Readiness does not authorize merge."
+    ],
+    [
+      "H7 · After merge",
+      "Observed result / remote-state check",
+      "Confirm merge, then request and verify PR → step → overall updates. The agent writes the lessons; the next PR uses a fresh session."
+    ]
+  ],
+  "hooksNote": "An event name alone does not guarantee blocking. Adapters must handle each host's protocol, trusted approval source, and tool-coverage gaps. A check after merge cannot prevent it. Read the contract's acceptance scenarios before implementing an adapter.",
+  "hookExample": "Example: approval for PR 12 at HEAD A does not authorize merging a later HEAD B. The implementing agent cannot turn its own “approved” field into human authorization.",
+  "formatTitle": "A skill, a skillset, or a plugin?",
+  "format": "Today this is one standalone skill with supporting resources. A skillset would contain several independently useful skills; a plugin can package those skills and other host integrations. We keep project installation simple for now. The tradeoff is no managed updates or automatic hook registration; plugin packaging remains an option for future distribution.",
+  "promptsTitle": "What should I say to the agent?",
+  "promptLabels": [
+    "Plan the feature",
+    "Prepare the next PR",
+    "Execute after approval, in a fresh session"
+  ],
+  "promptNote": "These are entry requests, not substitutes for the preserved prompts. The agent still reads the complete required files.",
+  "fitTitle": "When is the full workflow worth it?",
+  "fit": "Use it for substantial changes spanning PRs or sessions. A typo fix or isolated small bug usually does not need this ceremony. Plans, tests, and LLM reviews can still be wrong; the workflow makes their assumptions and evidence inspectable.",
+  "footer": "English is the authoritative source; Chinese is a synchronized mirror with English technical terms. The human explanation follows DongbeiGPT. Specifications and reusable prompts are in English.",
+  "guideLabel": "Detailed human guide",
+  "repoLabel": "GitHub",
+  "htmlLabel": "Visual HTML guide",
+  "htmlNote": "After cloning, open docs/index.html or docs/index.zh-CN.html in a browser. GitHub shows HTML source rather than this page layout.",
+  "detailsLabel": "Human decisions and technical details",
+  "copy": "Copy",
+  "copied": "Copied",
+  "skip": "Skip to content",
+  "prompts": [
+    "Use the structured-coding workflow for this feature. First agree with me on\nrequirements, module-level direction, and overall step boundaries; then detail\nthe current step. Work on planning for now.\nRequirements: ...",
+    "Read the overall and step documents, audit the current code, and prepare the\nPR 01a design doc and filled execution contract. Follow the original PR\nrequirements for the commit checklist. Separate implementation, validation,\nand review, and prepare the design for my approval.",
+    "Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,\nand the filled contract is docs/plan/pr-01a-contract.md.\nUse structured-coding. Read Implementation Working Rules and TEST / CI / GATE\nin full, reconcile actual state, and begin.\nContinue autonomously to READY FOR OPERATOR REVIEW under the contract.\nDo not merge."
+  ]
+}

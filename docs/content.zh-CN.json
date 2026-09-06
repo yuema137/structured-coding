@@ -1,0 +1,258 @@
+{
+  "navigation": "导航",
+  "navKit": "提供什么",
+  "navInstall": "安装",
+  "lang": "zh-CN",
+  "switch": "English",
+  "label": "一套可复用的 AGENT CODING WORKFLOW",
+  "title": "不止一份 plan.md。",
+  "subtitle": "先商量好要改什么，让 agent 放手做，再把结果写回计划。",
+  "whyTitle": "为啥要用 Structured Coding？",
+  "why": "计划能写清想做什么，但光有计划，还没说清 agent 怎么执行、拿什么证据算完成、什么时候找你，以及 context 丢了以后怎么接着干。这个 skill 把这些决定连成一套能反复使用的 workflow。",
+  "benefits": [
+    [
+      "眼前的工作，才写细",
+      "整体方向先定好；下一个 PR 的细节，先审查真实 code 再写。"
+    ],
+    [
+      "做过的事，能接得上",
+      "发现和证据写进 PR design，不只留在聊天里。"
+    ],
+    [
+      "放手执行，也有边界",
+      "普通 bug 和 commit 交给 agent；实质性决定和 merge 授权由你来。"
+    ]
+  ],
+  "workflowTitle": "一次一个 PR，把整个过程接成闭环。",
+  "workflowLabel": "WORKFLOW",
+  "workflowCaption": "顺着 01 → 06 看。确认 merge 后，用这次的发现设计下一个 PR。",
+  "steps": [
+    [
+      "人 + AGENT",
+      "商量整体方向",
+      "需求 → overall → step"
+    ],
+    [
+      "AGENT",
+      "设计下一个 PR",
+      "审查 code、规划 commit、确定验收"
+    ],
+    [
+      "人",
+      "批准执行边界",
+      "冻结 design，填好 contract"
+    ],
+    [
+      "AGENT",
+      "自主执行",
+      "新 session · coding · 验证 · commit"
+    ],
+    [
+      "人",
+      "review，再授权 merge",
+      "最终 HEAD 的必需 CI 通过"
+    ],
+    [
+      "AGENT",
+      "把结果写回计划",
+      "merge 后：PR → step → overall"
+    ]
+  ],
+  "workflowNote": "普通 bug：修好继续。实质性改动：回来商量。",
+  "loopLabel": "用 MERGE 后的事实，规划下一个 PR",
+  "kitTitle": "一整套 workflow 方案。",
+  "kitLead": "不只是找个地方写计划。这里有流程、具体 specification、执行用的 prompt templates，以及未来 hook 检查该怎么做的建议。",
+  "kit": [
+    [
+      "01",
+      "Workflow",
+      "从 overall、step 到 PR，自主执行，再把 merge 后的结果写回计划。",
+      "structured-coding/references/agent-workflow.zh-CN.md",
+      "看完整流程"
+    ],
+    [
+      "02",
+      "PR specification",
+      "基于 audit 的 commit 计划、能观察到结果的验收条件，以及分开的实现、验证和 review 证据。",
+      "structured-coding/prompts/pr-design-requirements.md",
+      "看设计要求"
+    ],
+    [
+      "03",
+      "Execution templates",
+      "执行用的 working rules，加上项目自己的 contract，定下范围、权限、预算和停止条件。",
+      "structured-coding/prompts/implementation-working-rules.md",
+      "看执行模板"
+    ],
+    [
+      "04",
+      "Validation rules",
+      "Static checks、Unit、真实 Gate 和最终 HEAD 的 CI。要证明什么，就检查实际发生了什么。",
+      "structured-coding/prompts/test-ci-gate-rules.md",
+      "看测试规则"
+    ],
+    [
+      "05",
+      "Hook 建议与约定",
+      "规定 freeze、commit、merge、compact、恢复和 handoff 时的行为。可执行 hook 尚未实现。",
+      "structured-coding/references/hook-contract.md",
+      "看 hook contract"
+    ],
+    [
+      "06",
+      "两套平台 package",
+      "Codex 和 Claude Code 共用一个 skill，提供项目 installer，不改全局配置。",
+      "structured-coding/references/platforms.zh-CN.md",
+      "看平台说明"
+    ]
+  ],
+  "startTitle": "装好，再给一个需求。",
+  "startLead": "需要 Git、Python 3.9 或更新版本，以及已安装的 Codex 或 Claude Code。命令适用于 macOS/Linux 和 WSL。",
+  "cloneLabel": "获取 repo，只做一次",
+  "installLabel": "选你用的 agent",
+  "projectNote": "把 /path/to/your-project 换成已有项目的根目录。在刚才运行 clone 的目录里执行 installer。",
+  "invokeLabel": "然后在目标项目的 agent 聊天里",
+  "invoke": "Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding。说清 feature 和约束，先让它规划，不要直接开始实现。",
+  "installNote": "installer 复制完整 skill，遇到已有安装会拒绝覆盖。不安装可执行 hook，不改全局设置或权限。",
+  "peopleTitle": "你在哪些地方参与？",
+  "peopleLead": "不用每次 commit 都点头。但会改变约定的决定，得由你来做。",
+  "people": [
+    [
+      "01",
+      "定目标",
+      "需求、约束和取舍"
+    ],
+    [
+      "02",
+      "批准设计",
+      "范围、invariants、验收和预算"
+    ],
+    [
+      "03",
+      "review 结果",
+      "偏离计划的地方、证据、明确 merge 授权"
+    ]
+  ],
+  "autonomy": "批准设计到最终 review 之间：agent 自己调查、实现、验证、review、记录和 commit。获得授权的 PR/CI 工作也接着做。",
+  "escalation": "遇到实质性范围变化，或者现有授权以外的操作，agent 带着证据和方案回来找你。",
+  "technicalTitle": "细节，用到时再展开。",
+  "technicalLead": "按你现在的问题往下看。完整 specification 可以从上面的资源链接打开。",
+  "recordsTitle": "agent 到底维护哪些文档？",
+  "records": [
+    [
+      "Overall",
+      "方向、需求和 step 边界"
+    ],
+    [
+      "Step",
+      "PR 边界、依赖和集成检查点"
+    ],
+    [
+      "PR design",
+      "基于 audit 的 commit 计划，加上持续更新的决定、进度和证据"
+    ],
+    [
+      "Execution contract",
+      "已批准的范围、权限、预算和停止条件"
+    ],
+    [
+      "Handoff",
+      "当前 PR、branch/HEAD、任务、日志、检查点和下一步"
+    ]
+  ],
+  "recordsNote": "DESIGN FROZEN 冻结的是约定，不是过程记录。实现、验证和 review 分开记录。一个 step 如果就是一个 PR，直接扩展 step doc，别维护两份重复计划。",
+  "compactTitle": "compact 或 resume 时，怎么接着干？",
+  "compactIntro": "新 PR 用新 session；compact/resume 继续的是同一个 PR。下面画的是预期 hook 行为，不是已经装好的自动化。",
+  "compactLanes": [
+    [
+      "手动 COMPACT",
+      "检查 handoff",
+      "过时？先同步",
+      "再 compact"
+    ],
+    [
+      "自动 COMPACT",
+      "保存 snapshot / 警告",
+      "允许 compact",
+      "恢复真实状态"
+    ]
+  ],
+  "compactNote": "恢复时，重新读取当前 design、填好的 contract 和完整 execution rules；改 code 前核对 repo 和已有任务。snapshot 不能编决定或测试结果。自动 compact 不能因为 handoff 不完美就一直卡住。",
+  "hooksTitle": "哪些功能应该由 hook 支持？",
+  "hooksStatus": "只有 SPECIFICATION · 尚无可执行 HOOK",
+  "hooksIntro": "行为约定已经提供；host adapter 尚未实现，也没做过集成测试。当前靠 agent 按指令检查。安装 skill，不会安排它动态生成或注册 hook。",
+  "hookColumns": [
+    "功能",
+    "候选事件",
+    "应有的行为"
+  ],
+  "hooks": [
+    [
+      "H1 · 实现前",
+      "PreToolUse",
+      "核对已批准设计、contract、repo 状态和恢复情况。不匹配就拒绝依赖这些条件的修改；audit 和设计准备仍然允许。"
+    ],
+    [
+      "H2 · commit 前",
+      "PreToolUse",
+      "检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。"
+    ],
+    [
+      "H3 · merge 前",
+      "PreToolUse + merge 路径覆盖",
+      "要求来自可信通道、对应具体 PR、目标 branch 和候选 HEAD 的明确授权，并核对完成条件及 CI/Gate 证据。覆盖 CLI、API、auto-merge 和直接操作目标 branch 的绕行路径。"
+    ],
+    [
+      "H4 · 手动 compact",
+      "PreCompact: manual",
+      "handoff 过时就先拦住，同步后再允许 compact。"
+    ],
+    [
+      "H5 · 自动 compact",
+      "PreCompact: auto",
+      "允许 compact；必要时保存机械 snapshot。保存失败也要留警告，并要求恢复。"
+    ],
+    [
+      "H6 · compact/resume",
+      "SessionStart + 修改前检查",
+      "动态确认当前 PR，完整读取规则，核对 repo 和进程状态再继续，别重复启动任务。"
+    ],
+    [
+      "H7 · 准备交付 review",
+      "Stop / 完成事件",
+      "核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。"
+    ],
+    [
+      "H7 · merge 后",
+      "已观察结果 / 核对远端状态",
+      "确认 merge，再要求并检查 PR → step → overall 更新。agent 写经验，下一个 PR 用新 session。"
+    ]
+  ],
+  "hooksNote": "有事件名，不等于一定能拦截。adapter 得处理各 host 的 protocol、可信授权来源和 tool 覆盖缺口。merge 后的检查不能倒过来阻止 merge。实现 adapter 前，先看 contract 的验收场景。",
+  "hookExample": "比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。",
+  "formatTitle": "这是 skill、skillset，还是 plugin？",
+  "format": "当前是一个独立 skill，带配套资源。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。现在先把项目安装做好，代价是不托管更新，也不自动注册 hook；未来仍然可以提供 plugin 分发。",
+  "promptsTitle": "具体该怎么跟 agent 说？",
+  "promptLabels": [
+    "规划 feature",
+    "准备下一个 PR",
+    "批准后，用新 session 执行"
+  ],
+  "promptNote": "这些是启动请求，不替代保留的完整 prompt。agent 仍然需要完整读取对应文件。",
+  "fitTitle": "什么工作值得走完整流程？",
+  "fit": "适合跨 PR 或 session 的较大改动。改错别字、修一个独立小 bug，通常不用搬出整套流程。计划、测试和 LLM review 仍可能出错；这套 workflow 让假设和证据能被检查。",
+  "footer": "英文是唯一正确源；中文是同步镜像，保留英文专业术语。给人看的解释沿用 DongbeiGPT。specification 和可复用 prompt 全部使用英文。",
+  "guideLabel": "完整 human guide",
+  "repoLabel": "GitHub",
+  "htmlLabel": "图文 HTML 阅读页",
+  "htmlNote": "clone 后，用浏览器打开 docs/index.html 或 docs/index.zh-CN.html。GitHub 文件页显示的是 HTML 源码，不是网页排版。",
+  "detailsLabel": "人的参与点和 technical 细节",
+  "copy": "复制",
+  "copied": "已复制",
+  "skip": "跳到正文",
+  "prompts": [
+    "Use the structured-coding workflow for this feature. First agree with me on\nrequirements, module-level direction, and overall step boundaries; then detail\nthe current step. Work on planning for now.\nRequirements: ...",
+    "Read the overall and step documents, audit the current code, and prepare the\nPR 01a design doc and filled execution contract. Follow the original PR\nrequirements for the commit checklist. Separate implementation, validation,\nand review, and prepare the design for my approval.",
+    "Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,\nand the filled contract is docs/plan/pr-01a-contract.md.\nUse structured-coding. Read Implementation Working Rules and TEST / CI / GATE\nin full, reconcile actual state, and begin.\nContinue autonomously to READY FOR OPERATOR REVIEW under the contract.\nDo not merge."
+  ]
+}
