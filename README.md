@@ -8,51 +8,41 @@ A reusable workflow for human-guided planning, autonomous agent coding, and revi
 
 ### 1. Install for your agent
 
-Run **one** of the following blocks in a terminal at the root of the project where you want to use the skill. These commands require Git and a POSIX shell, such as bash or zsh on macOS/Linux, or bash in WSL. Have Codex or Claude Code installed already; the commands below install this skill, not the agent itself.
+You need Git, Python 3.9 or later, and an installed Codex or Claude Code. The commands below work on macOS/Linux or inside WSL.
 
-Each block downloads the public repo's current `main` into a temporary directory and copies the complete platform package into your project. No GitHub SSH setup, zip download, or build step is needed. An existing skill directory, file, or symlink stops the command before copying, so it will not overwrite your installation.
+Get this repo once. If you already have a current clone, skip this step:
+
+```sh
+git clone --depth 1 https://github.com/yuema137/structured-coding.git
+```
+
+Then choose your agent. Replace `/path/to/your-project` with an existing project's root directory; quote the path if it contains spaces. Run the commands below from the directory where you cloned this repo.
 
 #### Codex
 
 ```sh
-(
-  set -e
-  skill_dir=".agents/skills/structured-coding"
-  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
-    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
-    exit 1
-  fi
-  skill_tmp="$(mktemp -d)"
-  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
-  mkdir -p ".agents/skills"
-  cp -R "$skill_tmp/source/dist/codex/structured-coding" "$skill_dir"
-)
+./structured-coding/scripts/install codex --project /path/to/your-project
 ```
 
-Open this project in Codex and start your planning message with `$structured-coding`. The project-local location is `.agents/skills/structured-coding/`. If the skill does not appear, restart Codex. See the [official Codex skills documentation](https://learn.chatgpt.com/docs/build-skills).
+Open the target project in Codex and start your planning message with `$structured-coding`. The project-local location is `.agents/skills/structured-coding/`. If the skill does not appear, restart Codex. See the [official Codex skills documentation](https://learn.chatgpt.com/docs/build-skills).
 
 #### Claude Code
 
 ```sh
-(
-  set -e
-  skill_dir=".claude/skills/structured-coding"
-  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
-    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
-    exit 1
-  fi
-  skill_tmp="$(mktemp -d)"
-  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
-  mkdir -p ".claude/skills"
-  cp -R "$skill_tmp/source/dist/claude-code/structured-coding" "$skill_dir"
-)
+./structured-coding/scripts/install claude-code --project /path/to/your-project
 ```
 
-Start Claude Code in this project and begin your planning message with `/structured-coding`. The project-local location is `.claude/skills/structured-coding/`. If you created the project's first skills directory during an existing session, restart Claude Code. See the [official Claude Code skills documentation](https://code.claude.com/docs/en/skills).
+Start Claude Code in the target project and begin your planning message with `/structured-coding`. The project-local location is `.claude/skills/structured-coding/`. If you created the project's first skills directory during an existing session, restart Claude Code. See the [official Claude Code skills documentation](https://code.claude.com/docs/en/skills).
 
-Both commands install only for the current project and leave your global configuration alone. To make the skill available across projects, see the personal installation paths in [platform notes](structured-coding/references/platforms.md). Do not copy only `SKILL.md`: the prompts and references must stay with it.
+Already working in the target project? Use the installer's full path and `--project .`, for example:
 
-These commands install the skill only, not runtime hooks. See the [hook status and behavior table](#hooks) at the end.
+```sh
+/path/to/structured-coding/scripts/install codex --project .
+```
+
+The installer copies the complete public skill resources, works offline after cloning, and refuses to overwrite an existing installation. It does not create a symlink to the clone, so moving the clone afterward will not break the installed skill. It also does not automatically update that copy: compare and back up an existing installation before replacing it. Use `scripts/install --help` from the clone for usage.
+
+Installation is project-local and does not change global settings, permissions, or runtime hooks. See the [hook status and behavior table](#hooks) at the end. Personal installation paths remain documented in [platform notes](structured-coding/references/platforms.md); this installer deliberately requires an explicit project.
 
 ### 2. Start with requirements, not an execution command
 
@@ -102,6 +92,14 @@ Do not carry straight on with the next PR in the previous implementation session
 Structured Coding packages a personal agent-coding workflow into a reusable skill for Codex and Claude Code. You and the agent agree on what to build and the boundaries of the next PR. The agent then implements, tests, reviews, records its findings, and commits within that agreement. You review the result before merge. The merged code and lessons from that PR become the basis for planning the next one.
 
 This repo provides the instructions, preserved prompt templates, and document requirements for that process. It does **not** contain a design for your particular project, and installing it does not start work automatically. You bring a feature or substantial change; the agent helps you prepare the project-specific plans and then execute them.
+
+### Why a standalone skill package for now?
+
+This release is one skill with supporting prompts and references, not several independently invoked skills. A collection of such skills could become a skillset; a plugin is a host-managed distribution format that can contain those skills. They are not mutually exclusive ways to design the workflow.
+
+For now, this project chooses a standalone package with an explicit installer: the same instructions work on both hosts, the installed files are visible in the target project, and no marketplace setup is needed. The tradeoff is that this installer does not provide managed updates or register hooks.
+
+Plugins are worth considering when we want host-managed distribution and updates or to ship additional components together. OpenAI recommends plugins for reusable skill distribution, and Claude Code also documents plugins for sharing and versioned releases. Keeping the current release standalone is a scoped simplicity choice, not a claim that plugins are unsuitable. See [OpenAI's distribution guidance](https://learn.chatgpt.com/docs/build-skills#distribute-skills-with-plugins) and [Claude Code's comparison](https://code.claude.com/docs/en/plugins#when-to-use-plugins-vs-standalone-configuration).
 
 ## The workflow at a glance
 
@@ -289,6 +287,7 @@ Specifications stay English-only: `SKILL.md`, PR requirements, execution prompts
 Both packages are built from the maintained `structured-coding/` folder. Codex additionally receives UI metadata. To rebuild after a source change and check consistency, run from the repo root:
 
 ```sh
+python3 scripts/test_install.py
 python3 scripts/build_packages.py
 python3 scripts/build_packages.py --check
 ```

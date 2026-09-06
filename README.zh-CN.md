@@ -8,51 +8,41 @@
 
 ### 1. 给你用的 agent 安装 skill
 
-先在 terminal 里进入**要使用这个 skill 的项目根目录**，再选下面一段命令运行。需要 Git 和 POSIX shell，比如 macOS/Linux 上的 bash、zsh，或者 WSL 里的 bash。Codex 或 Claude Code 要事先装好；下面装的是这个 skill，不是 agent 本身。
+需要 Git、Python 3.9 或更新版本，以及已经装好的 Codex 或 Claude Code。下面的命令适用于 macOS/Linux，也可以在 WSL 里运行。
 
-每段命令都会把公开 repo 当前的 `main` 下载到临时目录，再把完整的平台 package 复制进你的项目。不用配置 GitHub SSH，不用手动下载 zip，也不用先 build。目标位置如果已经有同名目录、文件或 symlink，命令会在复制前停下来，不会覆盖已有安装。
+先获取这个 repo，只做一次。已经有当前版本的 clone，就跳过这步：
+
+```sh
+git clone --depth 1 https://github.com/yuema137/structured-coding.git
+```
+
+然后选你用的 agent。把 `/path/to/your-project` 换成已有项目的根目录；路径里有空格就加引号。下面两条安装命令，在刚才执行 clone 的目录里运行。
 
 #### Codex
 
 ```sh
-(
-  set -e
-  skill_dir=".agents/skills/structured-coding"
-  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
-    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
-    exit 1
-  fi
-  skill_tmp="$(mktemp -d)"
-  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
-  mkdir -p ".agents/skills"
-  cp -R "$skill_tmp/source/dist/codex/structured-coding" "$skill_dir"
-)
+./structured-coding/scripts/install codex --project /path/to/your-project
 ```
 
-用 Codex 打开这个项目，在规划请求开头加上 `$structured-coding`。项目内的安装位置是 `.agents/skills/structured-coding/`。如果没看到这个 skill，重启 Codex 再看。依据见 [Codex 官方 skills 文档](https://learn.chatgpt.com/docs/build-skills)。
+用 Codex 打开目标项目，在规划请求开头加上 `$structured-coding`。项目内的安装位置是 `.agents/skills/structured-coding/`。如果没看到这个 skill，重启 Codex 再看。依据见 [Codex 官方 skills 文档](https://learn.chatgpt.com/docs/build-skills)。
 
 #### Claude Code
 
 ```sh
-(
-  set -e
-  skill_dir=".claude/skills/structured-coding"
-  if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
-    printf 'Already exists: %s. Compare your installation before updating.\n' "$skill_dir" >&2
-    exit 1
-  fi
-  skill_tmp="$(mktemp -d)"
-  git clone --depth 1 --branch main https://github.com/yuema137/structured-coding.git "$skill_tmp/source"
-  mkdir -p ".claude/skills"
-  cp -R "$skill_tmp/source/dist/claude-code/structured-coding" "$skill_dir"
-)
+./structured-coding/scripts/install claude-code --project /path/to/your-project
 ```
 
-在这个项目里启动 Claude Code，在规划请求开头加上 `/structured-coding`。项目内的安装位置是 `.claude/skills/structured-coding/`。如果你是在已有 session 运行时，才创建了项目的第一个 skills 目录，重启 Claude Code 再用。依据见 [Claude Code 官方 skills 文档](https://code.claude.com/docs/en/skills)。
+在目标项目里启动 Claude Code，在规划请求开头加上 `/structured-coding`。项目内的安装位置是 `.claude/skills/structured-coding/`。如果你是在已有 session 运行时，才创建了项目的第一个 skills 目录，重启 Claude Code 再用。依据见 [Claude Code 官方 skills 文档](https://code.claude.com/docs/en/skills)。
 
-这两段命令都只给当前项目安装，不动你的全局配置。想让多个项目都能用，个人级安装路径见 [platform notes](structured-coding/references/platforms.zh-CN.md)。别只复制 `SKILL.md`，prompts 和 references 也得一起带上。
+已经在目标项目里了？那就写 installer 的完整路径，配上 `--project .`，比如：
 
-这些命令只安装 skill，不安装可执行 hook。具体状态和功能表放在文末的 [hook 技术附录](#hooks)。
+```sh
+/path/to/structured-coding/scripts/install codex --project .
+```
+
+installer 会复制完整的公开 skill 资源，clone 之后离线也能安装，遇到已有安装会拒绝覆盖。它不会创建指向 clone 的 symlink，所以以后移动 clone，不会把装好的 skill 弄坏。不过，这份副本也不会自动更新；替换已有安装前，先比较、备份。在 clone 里运行 `scripts/install --help` 可以查看用法。
+
+安装只针对指定项目，不改全局设置、权限，也不安装可执行 hook。具体状态和功能表放在文末的 [hook 技术附录](#hooks)。个人级安装路径仍在 [platform notes](structured-coding/references/platforms.zh-CN.md) 里说明；这个 installer 特意要求你明确指定项目。
 
 ### 2. 先给需求，不要一上来就让它执行
 
@@ -102,6 +92,14 @@ review diff 和记录的证据。需要修就让 agent 修，可以接受就明�
 Structured Coding 把我自己整理的一套 agent coding workflow 做成了可复用的 skill，供 Codex 和 Claude Code 使用。你和 agent 先商量好要做啥，以及下一个 PR 的边界。agent 在这个约定里完成实现、测试、review、记录和 commit。merge 前，你来 review 结果。这个 PR merge 后的 code，加上实现中得到的新认识，再用来规划下一个 PR。
 
 这个 repo 提供的是这套流程需要的指令、保留下来的 prompt 模板和文档要求。它**不包含你自己项目的设计方案**，装好以后也不会自动开工。你带着一个 feature 或较大的改动来，agent 帮你准备项目自己的计划，再按计划执行。
+
+### 为啥当前先用独立 skill package？
+
+这一版是一个 skill，配上 prompts 和 references，不是好几个要分别调用的 skill。多个这样的 skill 可以组成 skillset；plugin 则是由 host 管理的分发格式，可以把这些 skill 装进去。它们不是两条互相排斥的 workflow 设计路线。
+
+当前项目选择独立 package 加显式 installer：两个 host 用同一套指令，装进去的文件在目标项目里看得见，也不用先配置 marketplace。代价是，这个 installer 不负责自动管理更新，也不注册 hook。
+
+以后如果需要由 host 管理分发和更新，或者把更多组件一起发布，就值得考虑 plugin。OpenAI 推荐用 plugin 分发可复用 skill，Claude Code 也把 plugin 用于共享和带版本的发布。当前先保留独立形式，是为了把这版做得简单，不是说 plugin 不适合。依据见 [OpenAI 分发指引](https://learn.chatgpt.com/docs/build-skills#distribute-skills-with-plugins) 和 [Claude Code 的比较](https://code.claude.com/docs/en/plugins#when-to-use-plugins-vs-standalone-configuration)。
 
 ## 先看一遍完整流程
 
@@ -289,6 +287,7 @@ Specification 保持全英文，包括 `SKILL.md`、PR requirements、execution 
 两个 package 都从维护中的 `structured-coding/` 文件夹构建，Codex 额外包含 UI metadata。源文件改完以后，在 repo 根目录运行下面的命令，重新构建并检查一致性：
 
 ```sh
+python3 scripts/test_install.py
 python3 scripts/build_packages.py
 python3 scripts/build_packages.py --check
 ```
