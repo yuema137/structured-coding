@@ -16,8 +16,8 @@
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "461ab381231672826ba19d6075b004137c0b129f378cfb66798609896f436506",
-      "chinese_sha256": "e1c4fe6200ae71eb79f326bf1b066055fff3d605e1fad03a93baf5e6a71a3325"
+      "english_sha256": "f05d4621955d07fb21ac576800957e2cdbd830961accc8ab6bf728509eb87f3d",
+      "chinese_sha256": "1850dd3e7484d9dccfdf31888dec7a5cca543f0be78d1c974bc8807ed744e225"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
@@ -28,8 +28,8 @@
     {
       "english": "structured-coding/references/adaptation.md",
       "chinese": "structured-coding/references/adaptation.zh-CN.md",
-      "english_sha256": "4d74ac1d1bf7986d2b1ba51e1f5d9b84cac752a944733ee15f2599a47257d552",
-      "chinese_sha256": "0f32a429da57d51f05909bfe9e4503267193f2f0fdcf9c4eac0091e0dd504cfc"
+      "english_sha256": "8f84c9f914b078bc184f3dd881e6c8ae61a71f69f6563d7333bc43bf926d9f90",
+      "chinese_sha256": "1ff742848a6b03087687a00230eed95588eb123c0bb16b80993b267ad423a61c"
     },
     {
       "english": "structured-coding/references/platforms.md",

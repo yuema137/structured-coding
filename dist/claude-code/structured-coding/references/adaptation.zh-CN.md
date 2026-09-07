@@ -35,6 +35,14 @@ Working rules 描述了约一小时的自主运行总范围。更具体的 test 
 
 Real-training approval 可以在 execution 前通过 implementation contract 给出。每次已授权且有界的运行前无需重复请求。项目没有该授权时，不能仅凭继承示例模板措辞而获得授权。
 
+在已授权任务内做 model validation 时，把计费方式和 test 本身分开看：
+
+- **已有 subscription：** 当前 session 使用 subscription，且这次有界 validation 在 subscription 覆盖范围内，就直接运行。不必另问费用授权，也不用让用户重新指定 provider/账户，或给已包含的用量设一个金额上限。已有 task scope、runtime 限制、subscription 配额和 operator 明确规定的限制仍然有效。
+- **按量计费 API 或其他额外费用：** 没有适用的已批准费用额度时，产生费用前先问。这也包括单独收费的 credits 和 subscription 超额用量。如果运行已在批准额度内，就继续，不必重复询问；retry 也计入该额度。
+- **计费方式不明确：** 先复用已知 session 信息，或检查可用且不含秘密的配置。查完仍不清楚，再问。不能擅自切换账户/provider、购买 credits，或启用付费 fallback 来绕过限制。
+
+填写或恢复 contract 时也按这个区别处理：不要把指定 provider、账户和预算变成每次真实 model test 的统一前置条件。有 subscription 不等于可以做无关任务，也不能免去任务另行要求的真实 training 授权。
+
 ## Freeze 与持续更新
 
 `DESIGN FROZEN` 固定已商定的 objective、scope、invariants、acceptance 和重要约束。Checklist、audit 发现、实现事实、test evidence 和有界 design 修正仍可写入。记录改变的假设及其原因，不要将其伪装成原计划。

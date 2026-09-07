@@ -35,6 +35,14 @@ The ten-minute default is not a requirement to fake a real lifecycle. Reduce the
 
 Real-training approval can be granted in the implementation contract before execution. It need not be requested again before each already-authorized bounded run. A project with no such authorization cannot obtain it merely by inheriting example template language.
 
+For model validation within an authorized task, distinguish the billing route from the test itself:
+
+- **Existing subscription:** Use the current subscription-backed session for bounded validation covered by that subscription. Do not require separate billing approval, a newly designated provider/account, or a monetary cap for included usage. Existing task scope, runtime limits, subscription quotas, and explicit operator restrictions still apply.
+- **Metered API or other additional charges:** Ask before incurring charges without an applicable approved spend envelope. This includes separately billed credits and subscription overage. If the run is already covered by an approved envelope, proceed without asking again; count retries toward it.
+- **Uncertain billing route:** Reuse known session information or inspect available non-secret configuration first. Ask only if the billing route remains unclear. Do not switch accounts/providers, buy credits, or enable paid fallback to bypass a limit without authorization.
+
+Apply this distinction when filling or resuming a contract: do not make provider/account/budget selection a blanket prerequisite for every real-model test. Subscription access does not authorize unrelated work or waive a task's separate real-training approval requirement.
+
 ## Freeze and continuous updates
 
 `DESIGN FROZEN` freezes the agreed objective, scope, invariants, acceptance, and material constraints. Checklists, audit findings, implementation facts, test evidence, and bounded design corrections remain writable. Record changed assumptions and their reasons rather than presenting them as the original plan.
