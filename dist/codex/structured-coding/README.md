@@ -2,136 +2,96 @@
 
 [Chinese mirror](README.zh-CN.md)
 
-You give an agent a feature to build. It changes several files, tests fail, and the implementation uncovers something the plan missed. You need to know whether it can fix that detail and continue, or whether the discovery changes what you agreed to build.
+Agree on the change. Let the agent build it. Bring the result back into the plan.
 
-Structured Coding makes that decision easier. You and the agent agree on the goal and boundaries of one PR. The agent implements it, checks the result, and records what happened. You review the finished change before merge. What you learn from that PR then shapes the next one.
+[Install](#start) · [How many conversations do you need?](#sessions) · [Step-by-step tutorial](#tutorial) · [Optional hooks: installation, coverage, and limits](#hooks)
 
-This guide explains how to work with the agent. The detailed instructions are in [SKILL.md](SKILL.md) and [agent workflow](references/agent-workflow.md). The complete [PR requirements](prompts/pr-design-requirements.md), [execution prompt](prompts/implementation-working-rules.md), and [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) remain separate.
+## Why use Structured Coding?
 
-English is the only authoritative version. The Chinese mirror keeps the same meaning and English technical terms. Specifications and execution prompts remain English-only.
+A plan describes what you intend to build. It does not, on its own, tell an agent how to execute, what counts as evidence, when to ask you, or how to resume after losing context. This skill connects those decisions into one repeatable workflow.
 
-## Plan the next change at the level you can actually inspect
+## Here is what the package provides.
 
-At the start, you may know what the feature should do and which modules it will involve. You usually know less about the exact functions a later PR will need. If you write those details now, later discoveries can make you rewrite a plan that never matched the code.
+The package gives you a workflow to follow, specifications that define acceptable work, prompt templates that tell the agent how to execute, and optional hooks that help at specific moments. You do not have to assemble these pieces yourself. Installing them does not, however, turn every written rule into an enforced check.
 
-The workflow keeps three levels of detail. Work further away gets a direction and boundaries. The current PR gets a plan based on inspected code.
+| Resource | What it provides |
+| --- | --- |
+| [Workflow](references/agent-workflow.md) | You and the agent plan the overall change, divide it into steps, and detail the next PR. After merge, the agent updates those plans with what it learned. |
+| [PR specification](prompts/pr-design-requirements.md) | The PR requirements tell the agent what a design must contain: inspected code, a commit plan, observable acceptance criteria, and separate evidence for implementation, validation, and review. |
+| [Execution templates](prompts/implementation-working-rules.md) | The working rules tell the agent how to proceed. A filled execution contract records what your project authorizes, what must stay unchanged, what budget applies, and when to stop. |
+| [Validation rules](prompts/test-ci-gate-rules.md) | The test rules help the agent choose checks that observe the promised behavior. A passing Unit test is not a substitute for a real model or lifecycle test when the claim depends on one. |
+| [Optional hook presets](references/platforms.md) | The continuity preset helps preserve and recover work around compact. The checkpoints preset gives commit and review reminders. Neither supplies a merge guard. |
+| [Two platform packages](references/platforms.md) | The project installer copies the same core skill for Codex or Claude Code. You can use either host; you do not need both, and installation does not change global settings. |
 
-| Document | Question it answers | Detail to include |
-| --- | --- | --- |
-| Overall doc | What are we building, and what are the main steps? | Requirements, modules, major capabilities, risks, and step boundaries |
-| Step doc | Which PRs will complete this step, and how do they fit together? | Files or file groups, their relationships, PR scope, dependencies, and checkpoints |
-| PR design doc | What will we change next, and how will we know it is done? | Audited files and functions, commit plan, validation, review, and acceptance criteria |
+<a id="start"></a>
 
-An audit means reading the relevant code, its callers, and its tests to check the plan's assumptions. The agent does that before naming the exact files and functions to change.
+## Install it. Start with a request.
 
-Take a hypothetical feature: add an alphabetical reading mode while preserving the current default. One PR connects the CLI option to the reader. Its checkpoint should establish that the option reaches the reader and changes what it visits. A test could supply files `[c, a, b]`, enable the new mode, and observe visits `[a, b, c]`. Merely finding the new value in configuration would leave the main claim untested. The existing default needs its own unchanged-behavior evidence.
+You need Git, Python 3.9 or later, and either Codex or Claude Code. Open a terminal on macOS, Linux, or WSL. The commands below download this toolkit and install it into an existing project; they do not create the application you want to build.
 
-An integration checkpoint is a result that shows the relevant parts working together. Its adversarial criteria describe a broken implementation that the checks must catch. Here, dropping the option between configuration and reader should make the check fail. Each PR gets such a checkpoint so you can judge what it delivered.
-
-If a step takes only one PR, expand its step doc in place into the PR design doc. You still answer all three levels of questions without keeping duplicate plans.
-
-## Follow one PR from agreement to merge
-
-```mermaid
-flowchart TD
-    A[Human and agent agree on overall requirements and direction] --> B[Step: define PR scope and checkpoints]
-    B --> C[Current PR: audit code and prepare the commit plan]
-    C --> D[Human approves the design and execution contract]
-    D --> E[Fresh session: load the approved design and contract]
-    E --> F[Agent implements, validates, reviews, records findings, and commits]
-    F --> G[Open or update the PR and check CI on its final HEAD]
-    G --> H[Human reviews and explicitly decides whether to merge]
-    H --> I[After confirmed merge: update PR, step, and overall]
-    I --> J[Use the findings to detail the next PR]
-    J --> C
+```sh
+git clone --depth 1 https://github.com/yuema137/structured-coding.git
 ```
 
-The execution contract records what this PR may change, what must stay true, which actions and validation runs are authorized, and where the agent should stop. Fill it before execution so the agent can make local decisions against an agreed boundary.
+Keep the terminal in the parent directory that now contains the cloned structured-coding folder. Replace /path/to/your-project with the project you want the agent to work on, not the toolkit folder. Choose one of the following commands. Quote the path if it contains spaces. If you have already downloaded the toolkit, skip the clone command and use the existing copy.
 
-An ordinary bug keeps the agent in the implementation loop: investigate, fix, validate, and continue. A discovery that requires a different public interface or acceptance criterion brings the affected decision back to you. CI runs the repo's automated checks on the change. You can start reviewing while those checks run, but the agent still has to reach the contract's completion conditions.
+Codex:
 
-This workflow takes effort to maintain. The agent must keep the design and evidence current, and you must review the scope and final result. That effort gives you a record you can inspect and a place from which the agent can resume. It does not guarantee that every plan, test, or LLM review is correct.
+```sh
+./structured-coding/scripts/install codex --project /path/to/your-project
+```
 
-## Decide the boundaries, then let the agent work inside them
+Claude Code:
 
-At the beginning, explain the behavior you want, the existing behavior that must survive, what is outside scope, and the cost limits. The agent can inspect the repo, trace callers, propose PR boundaries, and point out risks. You decide product requirements, direction, and tradeoffs that would lead to materially different results.
+```sh
+./structured-coding/scripts/install claude-code --project /path/to/your-project
+```
 
-Before execution, review the current PR design. Check that its goal matches yours and that its acceptance criteria describe an observable result. Identify the conditions that must remain true during the change; these are the frozen invariants. You do not have to settle every local implementation detail in advance.
+Prefix your request with $structured-coding in Codex or /structured-coding in Claude Code. Describe the feature and its constraints; ask for planning first, not implementation.
 
-Once that design and contract are approved, the agent can implement, add tests, consult official sources, repair ordinary bugs, review logic, update the PR design, and create commits. It can also publish the branch, open or update the PR, and repair CI when those actions are authorized. Before each commit it checks the diff, staged files, tests, and deviations, then continues without asking you to approve that commit.
+For Codex, the installed folder is .agents/skills/structured-coding inside your project; for Claude Code, it is .claude/skills/structured-coding. Start a new agent session in that project and explicitly invoke the skill. The default installation includes the instructions and supporting resources but registers no hooks. If installation reports an existing copy, compare or back it up before updating; the installer will not overwrite your changes. Global settings and permissions stay unchanged.
 
-| What the agent finds | What it does next | When you participate |
+<a id="roles"></a>
+
+## What do you, the specification, the agent, and the hooks each do?
+
+Think of the specification as the written requirements, not a program watching every action. The agent reads those requirements and applies them to your project. A hook is a small program the host runs at a supported event, such as compact or a tool call. It can check or remind only where its implementation actually provides that behavior.
+
+| Who or what | What it is responsible for | What it does not replace |
 | --- | --- | --- |
-| A function lives in a different module | Inspect it, correct the plan's path, record the finding, and continue | Usually no decision needed |
-| An extra caller needs to pass the option | Trace its consumers, complete the change and validation, and continue | No decision needed while scope and invariants hold |
-| A Unit test or CI exposes an ordinary bug | Read the full error, diagnose it, repair it, and revalidate | Usually no decision needed |
-| The solution requires a public schema or frozen metric change | Prepare evidence, consequences, and a concrete proposal | Decide whether to change the approved design |
-| A meaningful real run exceeds the approved budget | Estimate the smallest useful run and its cost | Decide whether to authorize the larger run |
-| The PR meets acceptance and final-HEAD CI is green | Present the complete review handoff | Review the result and explicitly authorize any merge |
+| You | You define the intended behavior, approve the current PR design, decide material changes, and explicitly authorize merge after review. | You do not have to approve each ordinary fix, test, or commit that is already inside the agreed scope. |
+| Specifications and prompt templates | They define what belongs in a PR design, how the agent executes, what counts as validation, and where authorization is required. | Written rules do not automatically block tools. The hook contract includes future requirements, not only features that are shipped. |
+| The agent | It reads the full applicable rules, inspects code, drafts the plan, implements, tests, reviews logic, and keeps the design and handoff current. | A completed checklist or confident answer cannot replace test evidence or your approval. The agent remains responsible for following rules even without hooks. |
+| Optional hooks | Continuity checks a recorded checkpoint before manual compact, attempts a rescue snapshot for automatic compact, and supplies recovery instructions. Checkpoints supplies commit-preparation advice and a review-intent notice. | They do not understand every design decision, prove tests passed, enforce design freeze, or prevent every merge. They do not run an automatic continuation loop. |
 
-Existing authorization still counts. If the contract already permits a bounded real-training run, the agent need not ask again for that same run. An example budget printed in a template does not grant authorization by itself.
+For example, the specification requires the PR design to record validation evidence. The agent runs the test and records its result. A checkpoints reminder can tell it to inspect missing evidence, but cannot decide that the test passed. You review the result before authorizing merge. Installing more hooks does not remove any of those responsibilities.
 
-For model validation within the approved task, the agent uses the existing subscription without asking you to approve included usage or name a provider/account again. Metered API calls or other extra charges need an approved spending limit; once that approval exists, bounded runs do not need repeated permission. Runtime limits and subscription quotas still apply, and reaching a limit does not authorize switching accounts or enabling paid fallback. See the [billing and approval rules](references/adaptation.md#budget-and-approval-interpretation).
+<a id="sessions"></a>
 
-At final review, compare the delivered behavior with the agreed goal. Read the deviations and their evidence, check any remaining limitations, and then decide whether to merge. Passing CI is evidence for that review; merge still needs your explicit authorization.
+## How many conversations do you need?
 
-## Freeze the agreement and keep the record current
+A practical arrangement is one planning conversation and one fresh implementation conversation for each PR. The planning conversation can cover requirements, the overall plan, the current step, and the next PR design; these do not each need their own chat. The workflow requires a fresh implementation context for each new PR, not a separate chat for every commit or test. This separation matters because planning often contains rejected proposals and superseded assumptions. A fresh implementation session starts from the approved files and current code, reducing the chance that an old discussion is mistaken for the final requirement.
 
-After you approve a PR design, it gets a `DESIGN FROZEN` header. The goal, scope, invariants, and acceptance criteria are now agreed. The document continues to record progress, discoveries, decisions, and evidence as implementation proceeds. That running record is its live ledger.
+| Conversation | What you do there | When to switch |
+| --- | --- | --- |
+| Planning conversation | Discuss requirements, ask the agent to inspect the repo and write the plans, review the current PR design, and approve its execution contract. | When that PR is approved, ask for a kickoff with the actual document paths and open a fresh implementation conversation. |
+| Implementation conversation for PR A | Give the approved design and contract to the agent. Let it implement, validate, review, commit, and handle authorized PR/CI work. | Keep ordinary fixes, commits, and compact/resume in the same PR context. Do not start PR B here. |
+| Review of PR A | Read the diff and handoff. Request repairs in the same implementation conversation, or explicitly authorize merge after you are satisfied. | A separate reviewer conversation is optional, not required. Repairs need updated evidence and CI for the final HEAD. |
+| Planning and implementation for PR B | After A is confirmed merged, have the agent update A, its parent step, and the overall plan. Use those records to detail and approve B. | You can return to the planning conversation or open a replacement that reads the saved plans. Start B in another fresh implementation conversation. |
 
-Suppose the reading-mode plan names a path from CLI configuration to the reader. During implementation, the agent finds a job builder between them. That builder also needs to carry the option. If this preserves the approved behavior and scope, the agent records the old assumption, the actual path, its correction, and the validation, then continues. If the solution instead requires changing a public protocol, it prepares that decision for you.
+For a feature with two PRs, that usually means three working conversations: planning, implementation A, and implementation B. This is an example, not a fixed quota. A long planning conversation may need replacement, and an interrupted implementation may need recovery. Saved project documents, rather than another chat's memory, carry the agreement between sessions. A handoff is the agent's saved continuation note: what is done, what is still running, and what to do next.
 
-Track implementation, validation, and review separately for each commit. Implementation records the change. Validation records what a test or real run observed. Review records the LLM's inspection of logic, contracts, callers, and possible omissions. Each checked item needs its own evidence. Passing a test does not tell you that the planned review happened.
+<a id="tutorial"></a>
 
-At the end, the design doc should let you follow what was planned, what was discovered, and why the final code looks the way it does. Record failed assumptions when they matter; silently replacing them with the final answer would remove information you need for review.
+## Your first feature, from installation to the next PR
 
-## Choose a check that observes the property you need
+Follow this example in order. Suppose your application reads files and you want an optional alphabetical order while preserving the current default. The paths and PR label in the sample messages are placeholders, not files supplied by this toolkit. Ask the planning agent to create the real documents first, then replace the placeholders before execution. The English entry messages below are identical in both language versions; they do not replace the full original prompts.
 
-For the reading-mode example, checking a configuration value answers whether the option was stored. Observing the reader visit `[a, b, c]` answers whether the option affected reading. Choose evidence that reaches the behavior your acceptance criterion promises.
+### 1. Open the planning conversation and explain the result you want.
 
-Other claims need other checks. A Unit test can prove a calculation for supplied inputs. A mock that writes a file immediately cannot establish whether a real training process writes that file in time. The latter needs a run through the actual process.
+Open your target project in your chosen agent host. Invoke $structured-coding in Codex or /structured-coding in Claude Code, then send the planning request below with your actual requirements.
 
-| Layer | What it checks |
-| --- | --- |
-| Static tools | Types, formatting, and call errors the tools can detect without running the behavior |
-| Unit | Deterministic rules, local calculations, boundaries, and failure classification for explicit inputs |
-| Gate 1 | Whether a real LLM responds to the prompt and crosses the required protocol boundaries |
-| Gate 2 | Whether real data, files, processes, training, or inference follow the required lifecycle and timing |
-| CI | Whether the final commit passes the repo's required automated checks |
-
-Gate 1 and Gate 2 are the workflow's labels for real-LLM and real-lifecycle checks. Use the project's corresponding commands. A backend change with no LLM behavior does not need to introduce a model test just to use the skill. Record a layer as not required when no acceptance claim needs it.
-
-During development, run the checks relevant to each change. Expensive full-suite checks normally belong to the final PR's canonical CI, the run used as its final CI evidence. Keep existing required checks; avoid rerunning the same expensive suite without a new reason.
-
-Read the actual Gate logs and artifacts before calling a run successful. An exit code of zero does not establish that the intended path ran. CI evidence also belongs to the HEAD it tested: if review leads to another code change, revalidate the affected behavior and obtain CI evidence for the new final HEAD.
-
-## Start the next PR fresh, and resume the current PR where it stopped
-
-The previous PR's chat can contain abandoned approaches, temporary state, and assumptions that changed during implementation. A new PR should begin from merged code and updated parent plans, so each new PR uses a fresh implementation session with its own filled contract.
-
-Compaction during the same PR is different. The host shortens the conversation to free context, but the implementation task and completed work remain. The agent checks the repo and running processes, reloads the current design and execution rules, and continues from the recorded checkpoint.
-
-The handoff file holds the details needed to continue: current PR, branch and HEAD, completed checkpoint, running jobs and logs, unresolved issues, and the exact next action. The PR design retains the goals, decisions, and validation evidence. Together they let the next continuation establish what is actually happening without relying on chat memory alone.
-
-For example, if a Gate is still running at compact time, the handoff identifies that job and its log. On resume, the agent checks the job before starting another. That prevents it from spending the budget twice because it lost conversational context.
-
-Before manual compact, synchronize the design and handoff with actual state. The optional [continuity preset](references/continuity.md) can check mechanical freshness against an explicit checkpoint. On automatic compact it attempts a snapshot, allows compact, and supplies recovery instructions at session start. It does not invent decisions or test results, and cannot prove semantic recovery. Without explicit hook setup, these checks rely on the agent following the workflow.
-
-## Use the merged result to plan the next PR
-
-After a confirmed merge, mark the PR merged and update its parent step, then the overall doc. Record both what was delivered and what the findings change about future work. This is the backward update: facts from implementation go back into the plans that led to it.
-
-Return to the reading feature. PR A connects the new option to the reader; PR B will handle resume. While implementing A, the agent discovers that resume remembers a filename. A list such as `[a, b, a]` shows the missing distinction: the filename `a` alone cannot say which occurrence should resume. This is a hypothetical example of the kind of finding the ledger should preserve.
-
-After A merges, the step doc records the actual data path and adjusts B to address occurrence identity and resume position. The overall doc records progress and the newly discovered risk. B now has a concrete issue to audit before its detailed design is frozen.
-
-Detail that next PR using the merged code. More distant performance work can keep a dependency note until B supplies further evidence. If a finding already invalidates the overall direction, report it now. Planning one step ahead does not excuse hiding a wider problem.
-
-## Start with a request, then prepare the execution session
-
-Install the complete skill folder as described in [platform notes](references/platforms.md). In Codex, prefix your message with `$structured-coding`; in Claude Code, use `/structured-coding`.
-
-Start from requirements:
+For the example, say that alphabetical mode must visit [c, a, b] as [a, b, c], and that leaving the option off must preserve the old behavior. Explain what is outside scope, such as changing the resume mechanism in this PR. The agent should inspect the repo, ask about unresolved product decisions, and propose an overall direction. It should not start implementing merely because you asked for a plan.
 
 ```text
 Use the structured-coding workflow for this feature. First agree with me on
@@ -140,7 +100,15 @@ the current step. Work on planning for now.
 Requirements: ...
 ```
 
-Prepare the current PR:
+**Before you move on**
+
+Before moving on, you should be able to explain the goal and main steps in your own words. Ask the agent to rewrite anything you cannot review; you do not have to author its design document yourself.
+
+### 2. Ask the same planning agent to detail only the next PR.
+
+The overall plan describes the feature and its main steps. A step plan explains which PRs fit together. The current PR design goes deeper: the agent reads real code and callers before naming the files, functions, commits, and checks. Later PRs can remain less detailed because this implementation may reveal new facts. The PR requirements define the detailed format. Ask the agent to follow that complete specification; you do not need to reconstruct the template yourself.
+
+For the alphabetical-order PR, acceptance must observe the reader visiting [a, b, c], not just a configuration value being stored. Ask for a check that would fail if a caller silently dropped the option. Each commit needs separate implementation, validation, and logic-review items. If a step needs only one PR, the agent can expand the step document in place instead of maintaining a duplicate.
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
@@ -149,7 +117,27 @@ requirements for the commit checklist. Separate implementation, validation,
 and review, and prepare the design for my approval.
 ```
 
-Review the concrete design and contract before approving execution. Put the actual paths, implementation base, scope, budget, and stop conditions into the contract. Then open a fresh implementation session:
+**Before you move on**
+
+The agent should give you the real PR design path and a filled execution contract. Agree where these records live and which, if any, belong in Git. Private planning notes and raw logs do not automatically belong in the published product.
+
+### 3. Review the agreement and explicitly approve this PR.
+
+Check what changes, what stays unchanged, what is excluded, and what observable result will count as done. The execution contract should also say whether the agent may commit, push a branch, open or update a PR, and repair CI, and where it must stop. These are separate permissions; asking for local implementation alone does not authorize publication.
+
+When the design matches your intent, explicitly approve that concrete design and contract. The agent records DESIGN FROZEN and the approval reference. Freeze protects the agreed scope, invariants, and acceptance, not the whole file: the agent must still update discoveries, progress, and evidence. Approval of implementation is not approval to merge.
+
+For authorized validation, existing subscription-covered usage does not need another provider/account or billing question. Metered API calls and separately charged usage need applicable spending authorization. Existing time limits, quotas, and explicit restrictions still apply; the agent must not switch accounts or enable paid fallback to evade them. Separate approval requirements for real training still apply when the task has them.
+
+**Before you move on**
+
+Ask for a kickoff that identifies the approved design, filled contract, implementation base, next action, and stopping condition. Do not copy a template containing unresolved paths into execution and assume it is ready.
+
+### 4. Open a fresh implementation conversation for this PR.
+
+Start a genuinely new conversation in the same target project. Do not just rename the planning conversation. Invoke the skill again and give it the kickoff with the actual paths. The new agent does not need the entire planning chat: it needs the durable agreement and the source files that establish current state.
+
+Before editing, the agent must read the approved design, filled contract, and complete execution and test rules. It checks the branch, HEAD, existing edits, merged prerequisites, and relevant running jobs. It preserves unrelated work. If you explicitly enabled a preset, it also reads that preset's interface and binds this session to the current PR; it must not assume installation selected an active PR for it.
 
 ```text
 Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
@@ -160,12 +148,100 @@ Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```
 
-These messages are entry points, not replacements for the complete prompts. The agent still reads the current contract and full execution rules. `READY FOR OPERATOR REVIEW` means the agreed implementation, review, and validation are complete, the PR is opened or updated, and required CI is green on its exact final HEAD.
+**Before you move on**
 
-Review the handoff and diff when the agent reaches that point. Request repairs if needed, or explicitly authorize merge. After merge is confirmed, have the agent update the parent plans and prepare the next PR design. Start that PR's execution in another fresh session.
+Confirm that the agent is working on the intended PR and has loaded the approved paths. The kickoff delegates execution within the contract; it does not grant extra host permissions or enable hooks.
 
-## Know what the package provides
+### 5. Let the agent complete the agreed implementation loop.
 
-The package contains the skill, explanations for people and agents, the complete prompts, and a [hook behavior specification](references/hook-contract.md). Codex and Claude Code receive the same core; packaging adds only the platform metadata each needs.
+The agent implements a coherent piece, runs relevant checks, reviews the logic and callers, records what happened, and commits. A Unit test failure or an extra caller inside the agreed scope normally means investigate, fix, and continue. It should not ask you to approve every commit. If branch publication and PR/CI work are authorized, it continues through those steps too.
 
-The hook specification describes the full target for implementation, compact/resume, and merge checks. The optional `continuity` preset implements compact freshness checks, snapshot attempts, and recovery instructions; it is not registered by default. It is not a mutation or merge guard. The optional [checkpoints preset](references/checkpoints.md) adds commit-preparation advice and one review-intent notice with no automatic continuation. Its mechanical freshness and intent records do not prove test success or readiness. Merge protection remains future work. See [platform notes](references/platforms.md) and the [preset interface](references/continuity.md) for opt-in installation, removal, and limitations.
+You step in when the proposed solution changes a frozen requirement, public interface, material scope, or approved budget. The agent should bring evidence and a concrete choice, not merely say it is blocked. Review that choice before the dependent work proceeds.
+
+If the conversation reaches compact, you are still working on the same PR. Before manual compact, the agent updates its design and handoff. After compact or resume, it rereads the full rules and checks actual Git and process state. A running test must be checked before launching a duplicate. Continuity helps with mechanical checks and recovery instructions; it does not write a correct semantic handoff for the agent.
+
+**Before you move on**
+
+You should be able to ask for the current milestone, evidence, and next action and get an answer grounded in saved records. A hook notice is not proof that the agent performed a review or completed a test.
+
+### 6. Review the finished PR, then decide whether to merge.
+
+For an authorized PR workflow, READY FOR OPERATOR REVIEW means the agreed implementation, validation, and logic review are complete, the PR is published or updated, and required CI passes on its exact final HEAD. HEAD identifies the current commit. A green result for an earlier commit does not prove a later edit passed.
+
+Read the diff alongside the promised behavior, deviations, test evidence, and remaining limits. If something is wrong, request repairs in the same implementation conversation. The agent should update the evidence and final-head CI before handing it back. You can use a separate reviewer agent, but the workflow does not require another conversation for review.
+
+When satisfied, explicitly authorize merging the specific PR and reviewed candidate. Without that approval, the agent stops at review readiness. The shipped presets do not provide a merge guard, so this boundary remains an instruction and any separately configured host/repository protection. A local-only contract has a local endpoint; the agent must not pretend it created or validated a remote PR.
+
+**Before you move on**
+
+After an authorized merge, require confirmation of the actual remote result and merge commit. A merge command being requested is not the same as a completed merge.
+
+### 7. Update the plans before starting the next PR.
+
+After merge is confirmed, ask the agent to mark the current PR merged, update its parent step, and update the overall plan. The updates should record both completed work and discoveries that change what comes next. Hooks do not currently verify this post-merge planning work.
+
+For example, the alphabetical-order implementation may reveal that resume stores only a filename. A later PR may need a clearer way to identify the next occurrence of a repeated filename. Bring that discovery into the next PR's design instead of continuing from an old assumption.
+
+Return to your planning conversation, or open a new planning conversation that reads the updated files. Detail and approve the next PR, then start another fresh implementation conversation. The previous PR's agent may finish its records and prepare a handoff; it must not quietly begin implementing the next PR in the old context.
+
+**Before you move on**
+
+One PR is finished when its result and implications are recorded, not merely when a merge notification appears. You now repeat the same cycle with a smaller amount of uncertainty.
+
+## What documents does the agent maintain?
+
+| Document | Purpose |
+| --- | --- |
+| Overall | It records the overall goal, requirements, and main steps so each PR has a clear purpose. |
+| Step | It explains which PRs complete this step, their dependencies, and how to observe their integration. |
+| PR design | It records audited code and the commit plan, then keeps decisions, progress, and evidence current during implementation. |
+| Execution contract | It records this PR's approved scope, permitted actions, budget, and stopping conditions. |
+| Handoff | It identifies the current PR, branch and HEAD, running jobs, logs, and the exact next action after recovery. |
+
+DESIGN FROZEN protects the requirements you approved, not the entire document. The agent still records discoveries and progress. Implementation, validation, and review stay separate; each item is checked only when that work has actually been completed. If one step needs one PR, expand the step document instead of keeping two copies.
+
+## What happens at compact or resume?
+
+Compact is the host's process of shortening conversation history to free context; it does not create a new PR. A new PR starts in a fresh implementation session, while compact or resume continues the current PR. The optional continuity preset checks recorded mechanical freshness, attempts snapshots, and supplies recovery instructions. The agent still has to keep the design and handoff accurate and actually reconcile state after recovery.
+
+On resume, reload the current design, filled contract, and full execution rules; check the repo and existing jobs before editing. A snapshot cannot invent decisions or test results. Automatic compact must not get stuck waiting for a perfect handoff.
+
+<a id="hooks"></a>
+
+## Optional hooks: installation, coverage, and limits
+
+Choose continuity for compact recovery, checkpoints for commit/review reminders, or both. Both are off by default. Checkpoints advises; it does not enforce commits or certify readiness. Protocol tests do not establish native event delivery or model compliance. The agent does not dynamically register its own hooks.
+
+```sh
+./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints
+./structured-coding/scripts/install codex --project /path/to/project --hooks continuity checkpoints
+./structured-coding/scripts/install codex --project /path/to/project --check-hooks
+./structured-coding/scripts/install codex --project /path/to/project --remove-hooks checkpoints
+./structured-coding/scripts/install codex --project /path/to/project --remove-hooks
+```
+
+Run these commands from the same parent directory used for the basic installation. Replace /path/to/project with the target project's exact Git root; use claude-code instead of codex for Claude Code. Preview with --dry-run, then run the installation you chose; this list is a set of alternatives, not a sequence you must run in full. Installation adds selected presets, and removing one leaves the other usable. Bare --remove-hooks removes all hooks owned by this installer. Restart the host and inspect registration and trust in /hooks; the installer does not grant trust. The agent must still bind the current session, inspect staged changes before commit, and explicitly prepare its review handoff. Reminders cannot turn pending, inconclusive, or unrun checks into passes. Existing settings, skill files, and session data are preserved.
+
+| Function | Candidate event | Intended behavior | Shipped support |
+| --- | --- | --- | --- |
+| H1 · Before implementation | PreToolUse | Check approved design, contract, repo state, and recovery. Deny dependent mutations when they do not match; still allow audit/design preparation. | Not implemented |
+| H2 · Before commit | PreToolUse | Check or surface diff inspection, ledger, evidence, and deviations. Repair and retry autonomously; no per-commit human gate. | Checkpoints: explicit preparation and advice for direct git commit via Bash; no enforcement |
+| H3 · Before merge | PreToolUse + merge-route coverage | Require trusted explicit approval for the exact PR, target branch, and candidate HEAD, plus readiness and CI/Gate evidence. Cover CLI, API, auto-merge, and direct target-branch bypasses. | Not implemented |
+| H4 · Manual compact | PreCompact: manual | Block a stale handoff until synchronized, then allow compact. | Continuity: mechanical checkpoint freshness only |
+| H5 · Automatic compact | PreCompact: auto | Allow compact; save a mechanical snapshot when needed. Preserve failures as warnings and require recovery. | Continuity: bounded snapshot attempt; never intentionally blocks automatic compact |
+| H6 · Compact/resume | SessionStart + mutation guard | Resolve the current PR dynamically. Reload full rules and reconcile repo/process state before continuing; do not duplicate jobs. | Continuity: session-bound PR and full-read instructions; no mutation guard or proof of recovery |
+| H7 · Review readiness | Stop / completion event | Verify real completion conditions, exact-final-HEAD CI, evidence, and handoff. Readiness does not authorize merge. | Checkpoints: explicit intent and at-most-once operator notice; no automatic continuation or evidence verdict |
+| H7 · After merge | Observed result / remote-state check | Confirm merge, then request and verify PR → step → overall updates. The agent writes the lessons; the next PR uses a fresh session. | Not implemented |
+
+An event name alone does not guarantee blocking. Adapters must handle each host's protocol, trusted approval source, and tool-coverage gaps. A check after merge cannot prevent it. Read the contract's acceptance scenarios before implementing an adapter.
+
+Example: approval for PR 12 at HEAD A does not authorize merging a later HEAD B. The implementing agent cannot turn its own “approved” field into human authorization.
+
+[Hook contract](references/hook-contract.md) · [Continuity](references/continuity.md) · [Checkpoints](references/checkpoints.md) · [Platform setup](references/platforms.md) · [Approval rules](references/adaptation.md)
+
+## When is the full workflow worth it?
+
+Use it for substantial changes spanning PRs or sessions. A typo fix or isolated small bug usually does not need this ceremony. Plans, tests, and LLM reviews can still be wrong; the workflow makes their assumptions and evidence inspectable.
+
+English is the authoritative source; Chinese is a synchronized mirror with English technical terms. The human explanation follows DongbeiGPT. Specifications and reusable prompts are in English.
