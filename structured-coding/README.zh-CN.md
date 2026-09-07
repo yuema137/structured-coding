@@ -71,6 +71,8 @@ Design 和 contract 批准以后，agent 就可以实现、补 test、查官方�
 
 已经给过的授权照样算数。contract 如果允许一次有界的真实 training，就不用为了同一次运行再问一遍。可模板里写了一个示例预算，不等于当前项目已经拿到了这份授权。
 
+已批准任务里的 model validation，现有 subscription 能覆盖，就直接用，不用再让你批准已包含的用量，也不用重新指定 provider/账户。按量计费 API 或其他额外费用，需要先有批准的费用上限；额度已经给过、运行没超范围，就别反复问。Runtime 限制和 subscription 配额照样算数，用到上限也不能擅自换账户或启用付费 fallback。具体见[计费与授权规则](references/adaptation.zh-CN.md#budget-与-approval-的解释)。
+
 最后 review 时，把实际交付的行为和原先商定的 goal 对一下，再看偏离的理由、证据和剩余限制，决定是否 merge。CI 通过是供你判断的证据；merge 仍然需要你的明确授权。
 
 ## 商定的要求 freeze，执行记录接着写

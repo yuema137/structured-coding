@@ -71,6 +71,8 @@ Once that design and contract are approved, the agent can implement, add tests, 
 
 Existing authorization still counts. If the contract already permits a bounded real-training run, the agent need not ask again for that same run. An example budget printed in a template does not grant authorization by itself.
 
+For model validation within the approved task, the agent uses the existing subscription without asking you to approve included usage or name a provider/account again. Metered API calls or other extra charges need an approved spending limit; once that approval exists, bounded runs do not need repeated permission. Runtime limits and subscription quotas still apply, and reaching a limit does not authorize switching accounts or enabling paid fallback. See the [billing and approval rules](references/adaptation.md#budget-and-approval-interpretation).
+
 At final review, compare the delivered behavior with the agreed goal. Read the deviations and their evidence, check any remaining limitations, and then decide whether to merge. Passing CI is evidence for that review; merge still needs your explicit authorization.
 
 ## Freeze the agreement and keep the record current
