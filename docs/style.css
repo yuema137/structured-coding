@@ -435,6 +435,29 @@ section.block {
   border-top: 1px solid var(--line);
   padding: 0;
 }
+.tutorial-step {
+  max-width: 820px;
+  padding: 30px 0;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 24px;
+}
+.tutorial-step h3 {
+  font-size: 23px;
+  line-height: 1.4;
+  font-weight: 550;
+  margin: 0 0 18px;
+}
+.tutorial-step p {
+  max-width: 76ch;
+  margin: 0 0 18px;
+}
+.tutorial-step .callout {
+  background: var(--mint);
+  padding: 18px 22px;
+}
+.tutorial-step .callout p {
+  margin: 8px 0 0;
+}
 .technical details:last-child {
   border-bottom: 1px solid var(--line);
 }

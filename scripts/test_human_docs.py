@@ -5,6 +5,8 @@ Run with: python3 scripts/test_human_docs.py
 No browser, network, or third-party dependencies are required.
 """
 
+import copy
+import html
 import json
 import re
 import tempfile
@@ -27,7 +29,7 @@ class HumanDocsTests(unittest.TestCase):
 
     def test_generated_outputs_are_current(self):
         docs.check()
-        self.assertEqual(len(self.outputs), 10)
+        self.assertEqual(len(self.outputs), 12)
 
     def test_mirror_structure_and_preserved_prompts(self):
         english, chinese = self.sources
@@ -49,16 +51,61 @@ class HumanDocsTests(unittest.TestCase):
             page = docs.render_html(source)
             order = [
                 page.index(f'id="{key}"')
-                for key in ("why", "workflow", "kit", "start", "people", "technical")
+                for key in ("why", "workflow", "kit", "start", "roles", "sessions", "tutorial", "people", "technical")
             ]
             self.assertEqual(order, sorted(order))
             self.assertEqual(page.count('class="flow-node"'), 6)
             self.assertEqual(page.count('class="kit-card"'), 6)
-            self.assertEqual(page.count("<details "), 6)
+            self.assertEqual(page.count("<details "), 5)
             self.assertNotRegex(page, r"<details[^>]*\bopen\b")
             self.assertEqual(page.count("<h1>"), 1)
             self.assertIn(f'<html lang="{source["lang"]}"', page)
             self.assertNotRegex(page, r'<(?:script|link)[^>]*(?:src|href)="https?://')
+
+    def test_complete_tutorial_reaches_all_human_formats(self):
+        for source in self.sources:
+            page = docs.render_html(source)
+            visible = page[:page.index('<section class="block technical"')]
+            readmes = (docs.render_readme(source), docs.render_package_guide(source))
+            for step in source["tutorial"]:
+                for value in [step["title"], *step["paragraphs"], step["checkpoint"]]:
+                    self.assertIn(html.escape(value, quote=True), visible)
+                    for readme in readmes:
+                        self.assertIn(value, readme)
+                index = step["promptIndex"]
+                if index is not None:
+                    self.assertIn(html.escape(source["prompts"][index], quote=True), visible)
+                    for readme in readmes:
+                        self.assertIn(source["prompts"][index], readme)
+            self.assertNotIn("docs/assets/", readmes[1])
+            self.assertNotIn("](structured-coding/", readmes[1])
+
+    def test_tutorial_mirror_errors_are_rejected(self):
+        english, chinese = self.sources
+        shortened = copy.deepcopy(chinese)
+        shortened["tutorial"].pop()
+        with self.assertRaises(ValueError):
+            docs.check_tutorial_mirrors(english, shortened)
+        for mutation in ("paragraph", "prompt", "fields", "index"):
+            mirror = copy.deepcopy(chinese)
+            step = mirror["tutorial"][0]
+            if mutation == "paragraph":
+                step["paragraphs"].pop()
+            elif mutation == "prompt":
+                step["promptIndex"] = 1
+            elif mutation == "fields":
+                step["extra"] = "unexpected"
+            else:
+                step["promptIndex"] = len(mirror["prompts"])
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                docs.check_tutorial_mirrors(english, mirror)
+
+    def test_tutorial_html_escapes_content(self):
+        source = copy.deepcopy(self.sources[0])
+        source["tutorial"][0]["paragraphs"] = ['<script>alert("x")</script>']
+        rendered = docs.tutorial_html(source)
+        self.assertNotIn("<script>", rendered)
+        self.assertIn("&lt;script&gt;", rendered)
 
     def test_diagrams_are_portable_and_have_connected_arrows(self):
         namespace = {"svg": "http://www.w3.org/2000/svg"}

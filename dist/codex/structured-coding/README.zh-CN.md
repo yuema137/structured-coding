@@ -1,137 +1,97 @@
 # Structured Coding
 
-[English source](README.md) · 英文是唯一权威源，本页是中文镜像。
+[English source](README.md)
 
-你让 agent 做一个功能。它改了几个文件，test 没过，又发现原计划漏了一件事。到这儿，你得判断：这个细节它能自己修完接着干，还是说，发现的问题已经改变了你们原来要做的东西？
+先商量好要改什么，让 agent 放手做，再把结果写回计划。
 
-Structured Coding 把这个判断提前讲清楚。你和 agent 先商定一个 PR 要完成什么、哪些地方不能越界。接下来它自己实现、检查，把途中发生的事记下来。做完以后，你 review，再决定是否 merge。这一轮查明白的事，接着用来改下一轮计划。
+[安装](#start) · [到底要开几个会话？](#sessions) · [一步一步使用](#tutorial) · [可选 hook：安装、覆盖范围和限制](#hooks)
 
-这份指南讲你怎么跟 agent 配合。给 agent 的详细指令放在 [SKILL.md](SKILL.md) 和 [agent workflow](references/agent-workflow.zh-CN.md)。完整的 [PR requirements](prompts/pr-design-requirements.md)、[execution prompt](prompts/implementation-working-rules.md) 和 [TEST / CI / GATE rules](prompts/test-ci-gate-rules.md) 单独保留。
+## 为啥要用 Structured Coding？
 
-英文是唯一权威版本。中文镜像保持同样的含义，专业术语保留英文。specification 和 execution prompt 只维护英文。
+计划能写清想做什么，但光有计划，还没说清 agent 怎么执行、拿什么证据算完成、什么时候找你，以及 context 丢了以后怎么接着干。这个 skill 把这些决定连成一套能反复使用的 workflow。
 
-## 眼前能查到哪一步，计划就细到哪一步
+## 这套 package 具体提供什么？
 
-刚开始做一个大功能，你通常知道它最后该干什么，也大致知道会涉及哪些模块。可后面几个 PR 具体要改哪些函数，现在未必查得准。提前写得越细，后面发现实际 code 对不上，回头改计划的活儿就越多。
+我们提供的是一套能接着用的东西：工作流告诉你怎么推进，specification 规定什么才算合格，prompt template 告诉 agent 怎么执行，可选 hook 在特定时刻帮忙检查或提醒。你不用自己把这些零件拼起来。不过，装好了 skill，不代表每条文字规则都已经变成程序强制检查。
 
-所以这套工作流保留三层。离得远的工作，先定方向和边界；眼前这个 PR，读过相关 code 以后再细化。
+| 资源 | 提供什么 |
+| --- | --- |
+| [Workflow](references/agent-workflow.zh-CN.md) | 你和 agent 先规划整体目标，再拆 step、细化下一个 PR。Merge 后，agent 把新发现写回这些计划。 |
+| [PR specification](prompts/pr-design-requirements.md) | PR requirements 告诉 agent，design 必须包括已检查的 code、commit plan、可观察的验收要求，以及分别记录的 implementation、validation 和 review 证据。 |
+| [Execution templates](prompts/implementation-working-rules.md) | Working rules 告诉 agent 怎么推进。填好的 execution contract 记录你的项目允许做什么、什么必须不变、预算是多少，以及在哪里停止。 |
+| [Validation rules](prompts/test-ci-gate-rules.md) | Test rules 帮助 agent 选择能观察到承诺行为的检查。如果一个结论依赖真实 model 或完整 lifecycle，Unit test 通过不能替代相应的真实验证。 |
+| [可选 hook preset](references/platforms.zh-CN.md) | Continuity 帮助 agent 在 compact 前后保存和恢复工作。Checkpoints 提供 commit 和 review 提醒。两者都不提供 merge guard。 |
+| [两套平台 package](references/platforms.zh-CN.md) | 项目 installer 给 Codex 和 Claude Code 安装相同的核心 skill。你选一个 host 就行，不需要两个都用，也不会修改全局设置。 |
 
-| 文档 | 它要回答什么 | 细到哪里 |
-| --- | --- | --- |
-| Overall doc | 最后要做出什么，主要分几步？ | 需求、模块、大功能、风险和 step 边界 |
-| Step doc | 这一步需要几个 PR，它们怎么接上？ | 文件或文件组、彼此关系、PR scope、依赖和 checkpoint |
-| PR design doc | 接下来具体改哪里，怎么知道做完了？ | audit 过的文件和函数、commit plan、validation、review 和验收条件 |
+<a id="start"></a>
 
-这里的 audit，就是去读相关 code、调用它的地方和 test，核对计划里的假设。agent 先查这些，再写具体要改哪些文件和函数。
+## 装好，再给一个需求。
 
-拿个假设的功能走一遍：给 reader 加一个按字母顺序读取的模式，原来的默认行为保持不变。一个 PR 负责把 CLI 选项传到 reader。验收时得看到选项真的传到了，而且 reader 的读取顺序也变了。比如输入文件是 `[c, a, b]`，打开新模式以后，实际访问顺序应该是 `[a, b, c]`。光看配置里多了个值，这一步还没证明。原来的默认行为，也得另外拿证据确认没变。
+你需要 Git、Python 3.9 或更新版本，以及 Codex 或 Claude Code 中的一个。在 macOS、Linux 或 WSL 里打开 terminal。下面的命令会下载这个 toolkit，并把 skill 安装到已有项目里，不会替你创建要开发的应用。
 
-把相关部分接起来，观察它们是否一起完成了预期动作，这就是 integration checkpoint。还要想好一种错误实现，确认检查能把它抓出来，这里叫 adversarial criteria。放到这个例子里，如果配置到 reader 的中间某一层没把选项传下去，检查就应该失败。每个 PR 都有这样的 checkpoint，你才好判断这一轮到底交付了什么。
-
-一个 step 如果只需要一个 PR，就把 step doc 原地补成 PR design doc。三层要回答的问题照样回答，不用为同一份计划维护两个副本。
-
-## 跟着一个 PR 从商量走到 merge
-
-```mermaid
-flowchart TD
-    A[人与 agent 商定 overall 需求和方向] --> B[Step：划分 PR scope 和 checkpoint]
-    B --> C[当前 PR：audit code，准备 commit plan]
-    C --> D[人批准 design 和 execution contract]
-    D --> E[Fresh session：读取已批准的 design 和 contract]
-    E --> F[Agent 实现、validation、review、记录发现、自主 commit]
-    F --> G[创建或更新 PR，核对最终 HEAD 的 CI]
-    G --> H[人 review，明确决定是否 merge]
-    H --> I[确认 merge 后，更新 PR、step 和 overall]
-    I --> J[用这次发现细化下一个 PR]
-    J --> C
+```sh
+git clone --depth 1 https://github.com/yuema137/structured-coding.git
 ```
 
-Execution contract 里写清楚：这个 PR 允许改什么、哪些条件必须保持、哪些操作和 validation 已经授权，以及 agent 应该停在哪儿。execution 开始前先填好，agent 遇到局部问题时就有依据可查。
+Terminal 保持在刚才 clone 所在的父目录，里面现在应该有 structured-coding 文件夹。把 /path/to/your-project 换成你要让 agent 修改的项目，不是 toolkit 目录。下面两条安装命令选一条就行，路径有空格就加引号。已经下载过 toolkit 的话，跳过 clone，使用现有副本。
 
-普通 bug 出现了，agent 留在实现流程里查原因、修复、validation，然后继续。如果必须换一个 public interface，或者验收条件得跟着变，就把受影响的决定带回来找你。CI 会针对这次改动运行 repo 的自动检查。检查跑着的时候，你可以先 review，不过 agent 仍然得把 contract 里约定的完成条件满足。
+Codex:
 
-这套流程也有成本。agent 得持续更新 design 和证据，你得 review scope 和最终结果。这些工作让你有记录可查，也让 agent 中断以后知道从哪儿接着做。计划、test 和 LLM review 本身仍然可能出错，不能因为流程走全了，就认定结果一定对。
+```sh
+./structured-coding/scripts/install codex --project /path/to/your-project
+```
 
-## 你把边界定清楚，范围内的事让 agent 接着干
+Claude Code:
 
-开始时，你说清楚想要什么行为、哪些旧行为必须保留、哪些事不在 scope 里，以及成本上限。agent 可以读 repo、顺着调用关系查、建议怎么拆 PR、指出风险。产品需求、大方向，以及会带来明显不同结果的取舍，由你决定。
+```sh
+./structured-coding/scripts/install claude-code --project /path/to/your-project
+```
 
-Execution 前，review 当前 PR design。先看 goal 和你的要求是不是一回事，再看验收条件能不能观察到实际结果。把改动过程中必须始终成立的条件列出来，这些就是 frozen invariants。至于每个局部函数究竟怎么写，没必要现在全钉死。
+Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding。说清 feature 和约束，先让它规划，不要直接开始实现。
 
-Design 和 contract 批准以后，agent 就可以实现、补 test、查官方资料、修普通 bug、review 逻辑、更新 PR design 和自主 commit。已经授权的话，它也可以发布 branch、创建或更新 PR、修复 CI。每个 commit 前，仍然要看 diff、staged files、test 和偏离情况。检查完就继续，不用每次再等你点头。
+Codex 安装后，文件夹在目标项目的 .agents/skills/structured-coding；Claude Code 则在 .claude/skills/structured-coding。接着在目标项目里开新的 agent 会话，明确调用 skill。默认安装带上完整指令和资源，但不注册 hook。如果提示已经有一份，先比较或备份再更新，installer 不会覆盖你的修改。全局设置和权限都不变。
 
-| Agent 查到了什么 | 接下来怎么做 | 什么时候找你 |
+<a id="roles"></a>
+
+## 你、specification、agent 和 hook，到底各管什么？
+
+Specification 是写下来的要求，不是一个盯着所有操作的程序。agent 读这些要求，再结合你的项目执行。Hook 则是 host 在特定事件发生时运行的小程序，比如 compact 或调用工具的时候。它能检查什么、提醒什么，要看我们实际实现了什么，不能光看 specification 里写了什么。
+
+| 谁来负责 | 具体做什么 | 不能替代什么 |
 | --- | --- | --- |
-| 函数实际在另一个模块 | 读 code，修正计划里的路径，记下来，继续 | 通常不用你决定 |
-| 还有一个调用方得传这个选项 | 顺着查到使用选项的地方，补齐改动和 validation | scope 和 invariants 没变，就继续 |
-| Unit test 或 CI 暴露普通 bug | 读完整错误，定位，修复，再验证 | 通常不用你决定 |
-| 解决办法要求改变 public schema 或冻结的 metric | 准备证据、影响和具体建议 | 由你决定是否改已批准的 design |
-| 有意义的真实运行超出预算 | 估算最小可用的运行规模和成本 | 由你决定是否增加授权 |
-| PR 达到验收条件，最终 HEAD 的 CI 通过 | 交付完整 review handoff | 你 review，并明确授权是否 merge |
+| 你 | 你决定要做出什么行为，批准当前 PR design，对实质变化作出选择，并在 review 后明确授权 merge。 | 已经在约定范围内的普通修复、test 和 commit，不用每次再等你点头。 |
+| Specification 和 prompt template | 它们规定 PR design 要写什么、agent 怎么执行、什么算有效的验证，以及哪些地方必须有授权。 | 文字规则不会自动拦住工具。Hook contract 还包括未来要实现的要求，不全是已经提供的功能。 |
+| Agent | 它读完整的相关规则，检查 code，写计划，实现、运行 test、review 逻辑，并持续更新 design 和 handoff。 | 打完勾或说得很有把握，都不能替代 test evidence 和你的批准。即使没装 hook，agent 也得遵守工作流。 |
+| 可选 hook | Continuity 在手动 compact 前检查已记录的 checkpoint，自动 compact 时尝试保存现场，并在恢复时提供读文档的指令。Checkpoints 提供 commit 准备提醒和 review 提醒。 | 它们不能理解每项设计取舍，不能证明 test 通过，不能强制 design freeze，也不能拦住所有 merge。它们不会让 agent 自动一轮接一轮地继续。 |
 
-已经给过的授权照样算数。contract 如果允许一次有界的真实 training，就不用为了同一次运行再问一遍。可模板里写了一个示例预算，不等于当前项目已经拿到了这份授权。
+比如，specification 要求 PR design 里记录验证证据。agent 得真的运行 test，再把结果写进去。Checkpoints 可以提醒它检查缺失的证据，但不能替它认定 test 通过。最后你看结果，再决定是否批准 merge。多装几个 hook，也不能省掉这些责任。
 
-已批准任务里的 model validation，现有 subscription 能覆盖，就直接用，不用再让你批准已包含的用量，也不用重新指定 provider/账户。按量计费 API 或其他额外费用，需要先有批准的费用上限；额度已经给过、运行没超范围，就别反复问。Runtime 限制和 subscription 配额照样算数，用到上限也不能擅自换账户或启用付费 fallback。具体见[计费与授权规则](references/adaptation.zh-CN.md#budget-与-approval-的解释)。
+<a id="sessions"></a>
 
-最后 review 时，把实际交付的行为和原先商定的 goal 对一下，再看偏离的理由、证据和剩余限制，决定是否 merge。CI 通过是供你判断的证据；merge 仍然需要你的明确授权。
+## 到底要开几个会话？
 
-## 商定的要求 freeze，执行记录接着写
+一个方便的安排是：保留一个 planning 会话，每个 PR 再开一个新的 implementation 会话。需求、overall plan、当前 step 和下一个 PR design，可以在同一个 planning 会话里讨论，不用各开一个。工作流要求的是每个新 PR 用新的 implementation context，不是每次 commit 或 test 都换聊天。 这样分开，是因为 planning 里常有被否决的方案和后来改变的假设。新的 implementation 会话从已批准的文件和当前 code 开始，减少把讨论中的旧想法当成最终要求的机会。
 
-PR design 获得批准后，加上 `DESIGN FROZEN` header。这时，goal、scope、invariants 和验收条件已经商定。文档还得继续记进度、新发现、决定和证据。这份边做边更新的记录，就是 live ledger。
+| 会话 | 你在这里做什么 | 什么时候切换 |
+| --- | --- | --- |
+| Planning 会话 | 讨论需求，让 agent 检查 repo、写计划，review 当前 PR design，并批准 execution contract。 | 当前 PR 批准后，让 agent 准备带真实文档路径的 kickoff，再开新的 implementation 会话。 |
+| PR A 的 implementation 会话 | 把已批准的 design 和 contract 交给 agent，让它实现、验证、review、commit，并完成已授权的 PR 和 CI 工作。 | 普通修复、commit、compact 和 resume 都继续处理这个 PR，不在这里启动 PR B。 |
+| PR A 的 review | 你看 diff 和 handoff。有问题，就在原 implementation 会话里要求修复；满意以后，再明确授权 merge。 | 可以另开 reviewer 会话，但不是必须。修复后，要更新证据，并确认最终 HEAD 的 CI。 |
+| PR B 的 planning 和 implementation | 确认 A 已 merge 后，让 agent 更新 A 的记录、所属 step 和 overall plan，再据此设计并批准 B。 | 你可以回原 planning 会话，也可以新开一个，让它读已保存的计划。B 的 implementation 必须另开新会话。 |
 
-还看读取顺序这个例子。计划里写着 CLI 配置传给 reader，真正实现时，agent 查到中间还有一个创建 job 的环节。这个环节也得把选项带过去。如果这样改没有动已批准的行为和 scope，agent 就把原假设、真实路径、修正办法和 validation 记下来，然后继续。如果解决办法要求改变 public protocol，就先把这个决定准备好，交给你判断。
+比如一个功能拆成两个 PR，通常就是三个工作会话：planning、implementation A、implementation B。这是示例，不是硬性数量限制。Planning 聊得太长可以换会话，implementation 中断了也可以恢复。会话之间传递约定，靠的是项目里保存的文档，不是指望另一个聊天自动记得前面的事。 Handoff 就是 agent 保存的接续说明，告诉恢复后的会话：做到哪儿了、什么还在跑、下一步是什么。
 
-每个 commit 的 implementation、validation 和 review 分开记录。Implementation 说明改动做完了；validation 记录 test 或真实运行观察到了什么；review 记录 LLM 对逻辑、contract、调用关系和遗漏的检查。每一项打勾，都得有对应证据。一个 test 过了，不能顺手把还没做的 review 也勾上。
+<a id="tutorial"></a>
 
-到最后，你应该能顺着 design doc 看明白：原来打算怎么做，中间发现了什么，最后的 code 为啥写成这样。有影响的失败假设也留着，直接用最终答案把它盖掉，你 review 时就少了一段来龙去脉。
+## 第一次使用，照着走完一个功能
 
-## 想证明哪件事，就让检查真走到那一步
+下面按实际操作顺序走一遍。假设你的应用会读取文件，你想加一个可选的字母排序模式，同时保留当前默认行为。示例消息里的路径和 PR 编号都需要替换，不是这个 toolkit 已经替你创建好的文件。先让 planning agent 写出真实文档，再把真实路径填进 execution 消息。下面的英文入口消息在中英文页面里完全相同，也不能代替原始长 prompt。
 
-读取顺序这个例子里，检查配置值，只能说明选项存进去了。观察 reader 实际按 `[a, b, c]` 访问，才能说明选项影响了读取。验收答应交付什么行为，证据就得跟到那里。
+### 1. 开 planning 会话，先说清楚你要什么结果。
 
-别的结论要用别的检查。Unit test 可以证明给定输入时计算结果正确。可你让 mock 立刻写出一个文件，不能据此判断真实 training process 会不会及时写出来。后面这件事，得让真实 process 跑一遍。
+在选好的 agent host 里打开目标项目。Codex 用 $structured-coding，Claude Code 用 /structured-coding 调用 skill，然后发送下面的 planning 请求，把需求换成你自己的。
 
-| 层次 | 具体检查什么 |
-| --- | --- |
-| Static tools | 不运行这段行为也能查出的类型、格式和调用错误 |
-| Unit | 明确输入下的确定性规则、局部计算、边界和失败分类 |
-| Gate 1 | 真实 LLM 是否按 prompt 响应，并通过所需的 protocol 边界 |
-| Gate 2 | 真实 dataset、文件、process、training 或 inference 是否按要求运行，时序是否满足要求 |
-| CI | 最终 commit 是否通过 repo 要求的自动检查 |
-
-Gate 1 和 Gate 2 是这套工作流给两类检查起的名字：前一个查真实 LLM，后一个查真实运行过程。执行时对应到项目自己的 command。backend 改动没涉及 LLM，就不用为了套这个 skill 额外加 model test。没有哪条验收要求需要这一层，就记录为不需要。
-
-开发过程中，运行与当前改动相关的检查。昂贵的 full-suite 检查通常放到最终 PR 的 canonical CI，也就是这轮 PR 最后采用的 CI 证据。repo 已有的必需检查照样保留；没有新理由，就别把同一套昂贵检查反复跑。
-
-Gate 跑完，读实际 log 和产物再判断有没有成功。exit code 为 0，不代表要验证的那条路径一定跑到了。CI 证据也只对应它测过的 HEAD。review 后又改了 code，就重验受影响的行为，并取得新最终 HEAD 的 CI 证据。
-
-## 下一个 PR 开 fresh session，当前 PR 从停下的地方续上
-
-上一个 PR 的聊天里，可能还留着放弃的方案、临时状态，以及实现过程中已经改掉的假设。下一个 PR 应该从 merged code 和更新后的 parent 计划出发，所以每个新 PR 都开 fresh implementation session，加载自己那份填好的 contract。
-
-同一个 PR 中途 compact，情况就不一样了。平台缩短对话来腾出 context，但任务还是这个任务，做完的工作也还在。agent 检查 repo 和运行中的 process，重新读当前 design 和 execution rules，再从记录的 checkpoint 继续。
-
-要续上，得知道眼下做到哪儿。handoff 文件就记这些：当前 PR、branch 和 HEAD、完成到哪个 checkpoint、哪些 job 还在跑、log 在哪儿、什么问题没解决，以及下一步准确要做什么。PR design 则保留 goal、决定和 validation 证据。恢复时把两边和实际状态对一下，才能接着干，不用全靠聊天记忆。
-
-比如 compact 时一个 Gate 还在运行，handoff 就记下这个 job 和 log。恢复以后先查原来的 job，再决定要不要启动新的。这一步能避免因为忘了前面的对话，把同一份预算花两遍。
-
-手动 compact 前，先把 design、handoff 和实际状态同步。可选的 [continuity preset](references/continuity.md) 能对照明确记录的 checkpoint 检查机械同步状态。自动 compact 时，它尝试保存 snapshot、允许 compact，并在 session 开始时给出恢复指令。它不会编造决定或 test 结果，也不能证明语义恢复已经完成。没有明确设置 hook 时，这些检查仍靠 agent 按 workflow 执行。
-
-## 用 merge 后查明白的事，改下一轮计划
-
-确认 merge 以后，先标记 PR 已 merge，再更新它的 parent step，最后更新 overall doc。两件事都要记：这次交付了什么，以及查到的事情会怎样影响后续工作。这就是 backward update，把实现得到的事实写回当初制定的计划。
-
-回到读取功能。PR A 把新选项接到 reader，PR B 准备处理 resume。假设实现 A 时发现，resume 只记住了文件名。拿 `[a, b, a]` 往下走一步，问题就出来了：光有文件名 `a`，到底该从哪一次出现的位置继续？这是一个假设场景，用来说明 ledger 应该保留哪类发现。
-
-A merge 以后，step doc 记下真实的数据路径，并调整 B，让它处理“同一个文件出现了几次、从哪个位置 resume”。overall doc 记录进度和新发现的风险。这样 B 在详细 design freeze 之前，就有一个具体问题要先 audit。
-
-接下来重点细化这个 PR，依据是 merged code。更远的性能工作，可以先留一条依赖说明，等 B 做完再补细节。如果这次发现已经推翻了整体方向，现在就说。只详细往前计划一步，不代表更大的问题可以先藏着。
-
-## 先提出需求，再准备 execution session
-
-按 [platform notes](references/platforms.zh-CN.md) 安装完整 skill 文件夹。Codex 消息前加 `$structured-coding`；Claude Code 用 `/structured-coding`。
-
-先从需求开始：
+拿这个例子来说，你要说明：输入是 [c, a, b]，启用字母排序后应按 [a, b, c] 读取；不开这个选项，旧行为必须不变。也要说清楚这次不做什么，比如这个 PR 先不改 resume 机制。Agent 应该先检查 repo，把未确定的产品问题问清楚，再提出整体方向。你说的是做计划，它就不能直接开始 implementation。
 
 ```text
 Use the structured-coding workflow for this feature. First agree with me on
@@ -140,7 +100,15 @@ the current step. Work on planning for now.
 Requirements: ...
 ```
 
-准备当前 PR：
+**进入下一步前，确认这件事**
+
+进入下一步前，你应该能用自己的话讲清楚目标和主要步骤。哪里看不懂，就让 agent 重写到你能 review 为止，不需要你替它写 design doc。
+
+### 2. 让同一个 planning agent 细化下一个 PR。
+
+Overall plan 讲整个功能和主要步骤，step plan 讲几个 PR 怎么配合，当前 PR design 才深入到具体修改。Agent 先读真实 code 和调用方，再写要改的文件、函数、commit 和检查。后面的 PR 可以先粗一些，因为这次 implementation 可能会带来新发现。 具体格式由 PR requirements 管；你让 agent 按完整 specification 准备，不需要自己重新拼一份模板。
+
+字母排序这个 PR，验收要观察 reader 是否真的按 [a, b, c] 读取，不能只检查配置里存进了一个值。你可以要求：如果某个调用方漏传了选项，这个检查必须失败。每个 commit 的 implementation、validation 和逻辑 review 要分别记录。一个 step 如果只需要一个 PR，就把 step doc 直接展开，不用再维护一份重复计划。
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
@@ -149,7 +117,27 @@ requirements for the commit checklist. Separate implementation, validation,
 and review, and prepare the design for my approval.
 ```
 
-先 review 具体 design 和 contract，再批准 execution。contract 里填真实路径、implementation base、scope、预算和停止条件。准备好了，开一个 fresh implementation session：
+**进入下一步前，确认这件事**
+
+Agent 应该交给你真实的 PR design 路径和填好的 execution contract。一起确定这些记录放在哪儿、哪些需要进 Git。私下的 planning 笔记和原始 log，不会因为产生了就自动成为对外发布的内容。
+
+### 3. Review 这份约定，明确批准当前 PR。
+
+你要看清楚：这次改什么、保留什么、不做什么，以及观察到什么结果才算完成。Execution contract 还得写明，agent 能不能 commit、push branch、创建或更新 PR、修复 CI，以及应该停在哪儿。这些是不同的授权。只让它在本地实现，不代表允许它发布到远程。
+
+Design 符合你的意思后，明确批准这份具体的 design 和 contract。Agent 再记录 DESIGN FROZEN 和批准依据。Freeze 固定的是已约定的 scope、invariants 和验收要求，不是把整份文件锁住。新发现、进度和证据仍然要接着写。批准 implementation，也不等于批准 merge。
+
+已授权的验证，现有 subscription 能覆盖，就不用再问一次 provider、账户或费用。按量计费 API 和其他额外收费，需要适用的费用授权。已有时间限制、配额和明确约束仍然有效；agent 不能为了绕过限制就换账户或启用付费 fallback。任务如果另有真实 training 的授权要求，也仍然要遵守。
+
+**进入下一步前，确认这件事**
+
+让 agent 准备一份 kickoff，写清已批准的 design、填好的 contract、implementation base、下一步和停止条件。不要把还留着占位路径的模板直接粘过去，就当 execution 已经准备好了。
+
+### 4. 为这个 PR 新开一个 implementation 会话。
+
+在同一个目标项目里，真正新开一个会话，不是给 planning 会话改个名字。重新调用 skill，把带真实路径的 kickoff 发过去。新的 agent 不需要整段 planning 聊天记录，但需要已经保存的约定，以及能确认当前状态的源文件。
+
+修改前，agent 必须读已批准的 design、填好的 contract，以及完整的 execution 和 test rules。它还要检查 branch、HEAD、已有改动、前置 PR 是否 merge，以及相关 job 是否仍在运行。无关改动要保留。如果你明确启用了某个 preset，它还要读对应说明，把当前 session 绑定到这个 PR。安装了 hook，不等于已经替它选好了当前 PR。
 
 ```text
 Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
@@ -160,12 +148,100 @@ Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```
 
-这些消息只负责启动工作流，不替代完整 prompt。agent 仍然要读当前 contract 和完整 execution rules。`READY FOR OPERATOR REVIEW` 表示约定的 implementation、review 和 validation 已完成，PR 已创建或更新，而且必需 CI 在准确的最终 HEAD 上通过。
+**进入下一步前，确认这件事**
 
-到这个节点，你 review handoff 和 diff。需要修就提出修改；准备 merge 就明确授权。merge 确认后，让 agent 更新 parent 计划、准备下一个 PR design。下一个 PR 的 execution，再开一个 fresh session。
+确认 agent 找对了 PR，也读到了已批准的真实路径。Kickoff 让它在 contract 范围内执行，不会额外授予 host 权限，也不会替你启用 hook。
 
-## 这个包已经提供了什么
+### 5. 让 agent 把约定范围内的实现循环做完。
 
-包里有 skill、给人和 agent 的说明、完整 prompt，以及 [hook behavior specification](references/hook-contract.md)。Codex 和 Claude Code 使用同一套核心内容，打包时只增加各自需要的 platform metadata。
+Agent 做完一块有意义的修改，运行相关检查，review 逻辑和调用方，记录结果，然后 commit。Unit test 失败，或者在约定范围内发现漏掉的调用方，通常就是查原因、修复、继续。不该每个 commit 都来问你一次。发布 branch、创建 PR 和处理 CI 已经授权的话，它也应该接着做完。
 
-Hook specification 规定了 implementation、compact/resume 和 merge 检查的完整目标。可选 `continuity` preset 提供 compact 同步检查、snapshot 尝试和恢复指令，默认不注册。它不是修改或 merge guard。可选 [checkpoints preset](references/checkpoints.md) 提供 commit 准备提示，以及明确准备 review 后的一次提醒，不自动续跑。机械同步状态和 intent 记录不能证明测试成功或已达到交付条件。Merge protection 仍是后续工作。选装、卸载方式和限制见 [platform notes](references/platforms.zh-CN.md) 与 [preset interface](references/continuity.md)。
+需要你回来决定的是：解决办法要改变已冻结的要求、public interface、重要 scope，或者超出批准预算。Agent 应该带上证据和具体选择，而不是只说一句卡住了。你决定以后，它才能继续受影响的工作。
+
+聊到需要 compact 时，做的还是同一个 PR。手动 compact 前，agent 更新 design 和 handoff。Compact 或 resume 后，它重新读完整规则，核对真实 Git 状态和 process 状态。原来有 test 在跑，就先检查它，别直接再开一份。Continuity 能帮助做机械检查、提供恢复指令，但不会替 agent 写出语义正确的 handoff。
+
+**进入下一步前，确认这件事**
+
+你问当前做到哪一步、有什么证据、接下来做什么，agent 应该能根据已保存的记录回答。收到 hook 提醒，不代表它已经 review，也不代表某个 test 已完成。
+
+### 6. Review 做完的 PR，再决定是否 merge。
+
+对于已授权的 PR 工作流，READY FOR OPERATOR REVIEW 表示约定的 implementation、validation 和逻辑 review 已完成，PR 已创建或更新，而且准确最终 HEAD 的必需 CI 已通过。HEAD 标识当前 commit。旧 commit 的 CI 绿了，不能证明后来又改的内容也通过了。
+
+你把 diff 和原先答应交付的行为对起来，看偏离原因、test evidence 和剩余限制。有问题，就在原 implementation 会话里要求修复。Agent 要更新证据和最终 HEAD 的 CI，再交回来。你可以另找一个 reviewer agent，但工作流不要求必须为 review 多开一个会话。
+
+满意后，明确授权 merge 这个 PR 和你 review 过的版本。没拿到这份授权，agent 就停在可 review 的状态。目前提供的 preset 没有 merge guard，所以这条边界仍靠指令，以及另外配置的 host 或 repo 保护来维持。Contract 如果只授权本地工作，就按本地终点交付，不能假装已经创建或验证了远程 PR。
+
+**进入下一步前，确认这件事**
+
+授权 merge 后，要确认远程确实完成了，并拿到 merge commit。发起了 merge 请求，不等于 merge 已经成功。
+
+### 7. 更新计划，再开始下一个 PR。
+
+确认 merge 后，让 agent 把当前 PR 标为已 merge，再更新所属 step，最后更新 overall plan。不光写完成了什么，还要写这次发现会怎样影响后面的工作。目前 hook 不会验证这些 merge 后的 planning 更新。
+
+比如实现字母排序时，发现 resume 只保存一个文件名。后面的 PR 可能需要更明确地标识：同名文件重复出现时，下次到底从哪一次继续。把这个发现带进下一个 PR design，别沿着已经过时的假设接着做。
+
+你可以回原 planning 会话，也可以新开一个，让它读更新后的文件。细化并批准下一个 PR，再开新的 implementation 会话。上一个 PR 的 agent 可以把记录补完、准备交接，但不能在旧 context 里悄悄开始实现下一个 PR。
+
+**进入下一步前，确认这件事**
+
+一个 PR 的收尾，不只是收到 merge 通知，还要把结果和对后续工作的影响写下来。接着重复这套流程时，你就比上次少了一些没弄清楚的问题。
+
+## agent 到底维护哪些文档？
+
+| 文档 | 作用 |
+| --- | --- |
+| Overall | 它记录整体目标、需求和主要步骤，让后面的 PR 知道在完成哪件事。 |
+| Step | 它说明当前步骤要拆成哪些 PR、谁依赖谁，以及怎样观察到它们配合起来了。 |
+| PR design | 它记录检查过的 code、commit plan，以及实施中持续更新的决定、进度和证据。 |
+| Execution contract | 它记录当前 PR 允许改什么、允许执行哪些操作、预算和停止条件是什么。 |
+| Handoff | 它记录当前 PR、branch 和 HEAD、仍在运行的 job、log 位置，以及恢复后具体接着做什么。 |
+
+DESIGN FROZEN 固定的是你批准的要求，不是整份文档。Agent 仍要记录新发现和进度。Implementation、validation 和 review 分开记录，只有对应工作真的完成了才能打勾。如果一个 step 只有一个 PR，就展开原 step doc，不必复制成两份。
+
+## compact 或 resume 时，怎么接着干？
+
+Compact 是 host 为腾出 context 而压缩聊天历史的过程，不是新建一个 PR。新 PR 要开新的 implementation 会话；compact 或 resume 则继续原来的 PR。可选 continuity preset 检查已记录的机械状态是否仍然匹配、尝试保存 snapshot，并提供恢复指令。Design 和 handoff 写得是否准确、恢复时有没有真正核对清楚，仍由 agent 负责。
+
+恢复时，重新读取当前 design、填好的 contract 和完整 execution rules；改 code 前核对 repo 和已有任务。snapshot 不能编决定或测试结果。自动 compact 不能因为 handoff 不完美就一直卡住。
+
+<a id="hooks"></a>
+
+## 可选 hook：安装、覆盖范围和限制
+
+需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，也可同时安装。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。
+
+```sh
+./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints
+./structured-coding/scripts/install codex --project /path/to/project --hooks continuity checkpoints
+./structured-coding/scripts/install codex --project /path/to/project --check-hooks
+./structured-coding/scripts/install codex --project /path/to/project --remove-hooks checkpoints
+./structured-coding/scripts/install codex --project /path/to/project --remove-hooks
+```
+
+这些命令和上面的普通安装一样，在包含 toolkit 的父目录里运行。/path/to/project 必须换成目标项目准确的 Git root；Claude Code 用户把 codex 换成 claude-code。先用 --dry-run 预览，再运行你选择的安装命令，不需要把每一行都执行一遍。Installation 会添加选中的 preset；只移除一个 preset，另一个仍可继续用。不带名称的 --remove-hooks 会移除本工具拥有的全部 hook。更改后重启 host，并在 /hooks 里检查注册与信任状态，installer 不会替你授予信任。Agent 还要绑定当前 session，在 commit 前检查 staged diff，并明确准备 review handoff。提醒不能把没运行、没定论或仍在等待的检查变成通过。已有设置、skill 文件和 session 数据会保留。
+
+| 功能 | 候选事件 | 应有的行为 | 已提供的支持 |
+| --- | --- | --- | --- |
+| H1 · 实现前 | PreToolUse | 核对已批准设计、contract、repo 状态和恢复情况。不匹配就拒绝依赖这些条件的修改；audit 和设计准备仍然允许。 | 尚未实现 |
+| H2 · commit 前 | PreToolUse | 检查或提示 diff review、ledger、证据和偏离记录。agent 修好再试，不增加每个 commit 都找人批准的步骤。 | Checkpoints：明确的准备步骤，以及 Bash 直接 git commit 的提示；不强制执行 |
+| H3 · merge 前 | PreToolUse + merge 路径覆盖 | 要求来自可信通道、对应具体 PR、目标 branch 和候选 HEAD 的明确授权，并核对完成条件及 CI/Gate 证据。覆盖 CLI、API、auto-merge 和直接操作目标 branch 的绕行路径。 | 尚未实现 |
+| H4 · 手动 compact | PreCompact: manual | handoff 过时就先拦住，同步后再允许 compact。 | Continuity：只检查机械 checkpoint 是否仍然对应当前状态 |
+| H5 · 自动 compact | PreCompact: auto | 允许 compact；必要时保存机械 snapshot。保存失败也要留警告，并要求恢复。 | Continuity：限时尝试 snapshot，不主动阻断自动 compact |
+| H6 · compact/resume | SessionStart + 修改前检查 | 动态确认当前 PR，完整读取规则，核对 repo 和进程状态再继续，别重复启动任务。 | Continuity：提供 session 绑定的 PR 和完整读取指令；没有修改 guard，也不能证明恢复完成 |
+| H7 · 准备交付 review | Stop / 完成事件 | 核对真实完成条件、最终 HEAD 的 CI、证据和 handoff。准备好 review 不等于允许 merge。 | Checkpoints：明确 intent 后最多一次 operator 提醒；不自动续跑，也不判定证据通过 |
+| H7 · merge 后 | 已观察结果 / 核对远端状态 | 确认 merge，再要求并检查 PR → step → overall 更新。agent 写经验，下一个 PR 用新 session。 | 尚未实现 |
+
+有事件名，不等于一定能拦截。adapter 得处理各 host 的 protocol、可信授权来源和 tool 覆盖缺口。merge 后的检查不能倒过来阻止 merge。实现 adapter 前，先看 contract 的验收场景。
+
+比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。
+
+[Hook contract](references/hook-contract.md) · [Continuity](references/continuity.md) · [Checkpoints](references/checkpoints.md) · [Platform setup](references/platforms.zh-CN.md) · [Approval rules](references/adaptation.zh-CN.md)
+
+## 什么工作值得走完整流程？
+
+适合跨 PR 或 session 的较大改动。改错别字、修一个独立小 bug，通常不用搬出整套流程。计划、测试和 LLM review 仍可能出错；这套 workflow 让假设和证据能被检查。
+
+英文是唯一正确源；中文是同步镜像，保留英文专业术语。给人看的解释沿用 DongbeiGPT。specification 和可复用 prompt 全部使用英文。

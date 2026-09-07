@@ -75,6 +75,53 @@ def codebox(command, data):
     return f'<div class="codebox"><pre><code>{esc(command)}</code></pre><button class="copy" type="button">{esc(data["copy"])}</button></div>'
 
 
+def tutorial_html(data):
+    chapters = []
+    for index, step in enumerate(data["tutorial"], 1):
+        prompt = step["promptIndex"]
+        example = "" if prompt is None else codebox(data["prompts"][prompt], data)
+        chapters.append(
+            f'<article class="tutorial-step" id="tutorial-{index}">'
+            f'<h3>{esc(step["title"])}</h3>'
+            + paragraphs(*step["paragraphs"])
+            + example
+            + f'<div class="callout"><strong>{esc(data["checkpointLabel"])}</strong>'
+            + paragraphs(step["checkpoint"])
+            + "</div></article>"
+        )
+    return "".join(chapters)
+
+
+def tutorial_md(data):
+    chunks = [f'<a id="tutorial"></a>\n\n## {data["tutorialTitle"]}\n\n{data["tutorialIntro"]}\n']
+    for step in data["tutorial"]:
+        chunks.append(f"### {step['title']}\n\n" + "\n\n".join(step["paragraphs"]) + "\n")
+        prompt = step["promptIndex"]
+        if prompt is not None:
+            chunks.append(f"```text\n{data['prompts'][prompt]}\n```\n")
+        chunks.append(f"**{data['checkpointLabel']}**\n\n{step['checkpoint']}\n")
+    return "\n".join(chunks)
+
+
+def orientation_md(data):
+    return "\n".join([
+        f'<a id="roles"></a>\n\n## {data["rolesTitle"]}\n\n{data["rolesIntro"]}\n',
+        table_md(data["roles"], data["roleColumns"]),
+        data["rolesExample"] + "\n",
+        f'<a id="sessions"></a>\n\n## {data["sessionsTitle"]}\n\n{data["sessionsIntro"]}\n',
+        table_md(data["sessions"], data["sessionColumns"]),
+        data["sessionsExample"] + "\n",
+    ])
+
+
+def guide_navigation(data):
+    return " · ".join(
+        f"[{data[label]}](#{anchor})"
+        for label, anchor in [("navInstall", "start"), ("sessionsTitle", "sessions"),
+                              ("tutorialNav", "tutorial"), ("hooksTitle", "hooks")]
+    ) + "\n"
+
+
 def detail_blocks(data, svg=False):
     compact = (
         '<div class="compact-lanes">'
@@ -116,15 +163,6 @@ def detail_blocks(data, svg=False):
             + table_html(data["hooks"], data["hookColumns"])
             + paragraphs(data["hooksNote"], data["hookExample"])
             + f'<a href="{source_link(SPEC)}">Hook behavior contract →</a>',
-        ),
-        (
-            "prompts",
-            data["promptsTitle"],
-            paragraphs(data["promptNote"])
-            + "".join(
-                f"<h4>{esc(label)}</h4><pre><code>{esc(prompt)}</code></pre>"
-                for label, prompt in zip(data["promptLabels"], data["prompts"])
-            ),
         ),
         ("format", data["formatTitle"], paragraphs(data["format"])),
         ("fit", data["fitTitle"], paragraphs(data["fit"])),
@@ -177,15 +215,18 @@ def render_html(data):
 <body>
 <a class="skip" href="#main">{esc(data["skip"])}</a>
 <div class="wrap">
-<header class="topbar"><a class="brand" href="#main"><span aria-hidden="true"></span>Structured Coding</a><nav aria-label="{esc(data["navigation"])}"><a class="nav-section" href="#workflow">Workflow</a><a class="nav-section" href="#kit">{esc(data["navKit"])}</a><a class="nav-section" href="#start">{esc(data["navInstall"])}</a><a href="{REPO}">GitHub ↗</a><a class="language" href="{other}">{esc(data["switch"])}</a></nav></header>
+<header class="topbar"><a class="brand" href="#main"><span aria-hidden="true"></span>Structured Coding</a><nav aria-label="{esc(data["navigation"])}"><a class="nav-section" href="#start">{esc(data["navInstall"])}</a><a class="nav-section" href="#tutorial">{esc(data["tutorialNav"])}</a><a href="{REPO}">GitHub ↗</a><a class="language" href="{other}">{esc(data["switch"])}</a></nav></header>
 <main id="main">
 <section class="hero" id="why"><p class="eyebrow">{esc(data["label"])}</p><h1>{esc(data["title"])}</h1><p class="subtitle">{esc(data["subtitle"])}</p><div class="why"><h2>{esc(data["whyTitle"])}</h2><p>{esc(data["why"])}</p></div><div class="benefits">{benefits}</div></section>
 <section class="block" id="workflow">{heading("01", "workflowTitle")}<p class="lead">{esc(data["workflowCaption"])}</p>
 <div class="flow"><div class="flow-caption">{esc(data["workflowLabel"])}</div><svg class="flow-arrows" viewBox="0 0 900 600" aria-hidden="true">{DEFS}{ARROWS}{LOOP}</svg><ol class="flow-grid">{nodes}</ol><p class="flow-note">{esc(data["workflowNote"])}</p><div class="flow-loop">{esc(data["loopLabel"])}</div></div></section>
 <section class="block" id="kit">{heading("02", "kitTitle")}<p class="lead">{esc(data["kitLead"])}</p><div class="kit-grid">{cards}</div></section>
 <section class="block" id="start">{heading("03", "startTitle")}<p class="lead">{esc(data["startLead"])}</p><p class="code-label">{esc(data["cloneLabel"])}</p>{codebox(CLONE, data)}<p class="code-label">{esc(data["installLabel"])}</p><div class="install-grid">{installs}</div><p class="small">{esc(data["projectNote"])}</p><div class="callout"><strong>{esc(data["invokeLabel"])}</strong><p>{esc(data["invoke"])}</p></div><p class="small">{esc(data["installNote"])}</p><p class="small"><a href="#hooks">{esc(data["optionalHookNote"])}</a></p></section>
-<section class="block" id="people">{heading("04", "peopleTitle")}<p class="lead">{esc(data["peopleLead"])}</p><ol class="people">{people}</ol><div class="autonomy">{esc(data["autonomy"])}</div><p class="small">{esc(data["escalation"])}</p></section>
-<section class="block technical" id="technical">{heading("05", "technicalTitle")}<p class="lead">{esc(data["technicalLead"])}</p>{details}</section>
+<section class="block" id="roles">{heading("04", "rolesTitle")}{paragraphs(data["rolesIntro"])}{table_html(data["roles"], data["roleColumns"])}{paragraphs(data["rolesExample"])}</section>
+<section class="block" id="sessions">{heading("05", "sessionsTitle")}{paragraphs(data["sessionsIntro"])}{table_html(data["sessions"], data["sessionColumns"])}<div class="callout">{paragraphs(data["sessionsExample"])}</div></section>
+<section class="block tutorial" id="tutorial">{heading("06", "tutorialTitle")}<p class="lead">{esc(data["tutorialIntro"])}</p>{tutorial_html(data)}</section>
+<section class="block" id="people">{heading("07", "peopleTitle")}<p class="lead">{esc(data["peopleLead"])}</p><ol class="people">{people}</ol><div class="autonomy">{esc(data["autonomy"])}</div><p class="small">{esc(data["escalation"])}</p></section>
+<section class="block technical" id="technical">{heading("08", "technicalTitle")}<p class="lead">{esc(data["technicalLead"])}</p>{details}</section>
 </main>
 <footer><p>{esc(data["footer"])}</p><nav><a href="{source_link(guide)}">{esc(data["guideLabel"])} ↗</a><a href="{other}">{esc(data["switch"])}</a></nav></footer>
 </div>
@@ -286,6 +327,7 @@ def render_readme(data):
     guide = f"structured-coding/README{suffix}.md"
     chunks = [
         f"# Structured Coding\n\n{language} · [{data['htmlLabel']}](docs/index{suffix}.html)\n\n{data['subtitle']}\n",
+        guide_navigation(data),
         f"## {data['whyTitle']}\n\n{data['why']}\n",
     ]
     chunks += [
@@ -302,8 +344,10 @@ def render_readme(data):
         ),
     ]
     chunks += [
+        '<a id="start"></a>\n',
         f"## {data['startTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n\n[{data['optionalHookNote']}](#hooks)\n"
     ]
+    chunks += [orientation_md(data), tutorial_md(data)]
     chunks += [
         f"## {data['peopleTitle']}\n\n{data['peopleLead']}\n\n![{data['peopleTitle']}](docs/assets/people{suffix}.svg)\n\n{data['autonomy']}\n\n{data['escalation']}\n"
     ]
@@ -316,6 +360,52 @@ def render_readme(data):
         f"---\n\n[{data['guideLabel']}]({guide}) · [{data['htmlLabel']}](docs/index{suffix}.html)\n\n{data['htmlNote']}\n\n{data['footer']}\n"
     ]
     return "\n".join(chunks)
+
+
+def render_package_guide(data):
+    """Keep installed human guides self-contained, without repo-only assets."""
+    zh = data["lang"] != "en"
+    suffix = ".zh-CN" if zh else ""
+    language = "[English source](README.md)" if zh else "[Chinese mirror](README.zh-CN.md)"
+    resources = [
+        [f"[{row[1]}]({row[3].removeprefix('structured-coding/')})", row[2]]
+        for row in data["kit"]
+    ]
+    chunks = [
+        f"# Structured Coding\n\n{language}\n\n{data['subtitle']}\n",
+        guide_navigation(data),
+        f"## {data['whyTitle']}\n\n{data['why']}\n",
+        f"## {data['kitTitle']}\n\n{data['kitLead']}\n",
+        table_md(resources, ["资源", "提供什么"] if zh else ["Resource", "What it provides"]),
+        '<a id="start"></a>\n',
+        f"## {data['startTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n",
+        orientation_md(data), tutorial_md(data),
+        f"## {data['recordsTitle']}\n\n" + table_md(data["records"], ["文档", "作用"] if zh else ["Document", "Purpose"]) + "\n" + data["recordsNote"] + "\n",
+        f"## {data['compactTitle']}\n\n{data['compactIntro']}\n\n{data['compactNote']}\n",
+        f'<a id="hooks"></a>\n\n## {data["hooksTitle"]}\n\n{data["hooksIntro"]}\n\n```sh\n{data["hookInstallCommands"]}\n```\n\n{data["hookInstallNote"]}\n',
+        table_md(data["hooks"], data["hookColumns"]),
+        data["hooksNote"] + "\n\n" + data["hookExample"] + "\n",
+        f"[Hook contract](references/hook-contract.md) · [Continuity](references/continuity.md) · [Checkpoints](references/checkpoints.md) · [Platform setup](references/platforms{suffix}.md) · [Approval rules](references/adaptation{suffix}.md)\n",
+        f"## {data['fitTitle']}\n\n{data['fit']}\n\n{data['footer']}\n",
+    ]
+    return "\n".join(chunks)
+
+
+def check_tutorial_mirrors(english, chinese):
+    if len(english["tutorial"]) != len(chinese["tutorial"]):
+        raise ValueError("Tutorial mirror step counts differ")
+    for source in (english, chinese):
+        for step in source["tutorial"]:
+            if set(step) != {"title", "paragraphs", "promptIndex", "checkpoint"}:
+                raise ValueError("Unexpected tutorial step fields")
+            if not step["paragraphs"] or not all(isinstance(p, str) and p.strip() for p in step["paragraphs"]):
+                raise ValueError("Tutorial steps need explanatory paragraphs")
+            index = step["promptIndex"]
+            if index is not None and (type(index) is not int or not 0 <= index < len(source["prompts"])):
+                raise ValueError("Invalid tutorial prompt reference")
+    for original, mirror in zip(english["tutorial"], chinese["tutorial"]):
+        if original["promptIndex"] != mirror["promptIndex"] or len(original["paragraphs"]) != len(mirror["paragraphs"]):
+            raise ValueError("Tutorial mirror structure differs")
 
 
 def expected_outputs():
@@ -335,6 +425,11 @@ def expected_outputs():
         "hooks",
         "promptLabels",
         "prompts",
+        "roles",
+        "roleColumns",
+        "sessions",
+        "sessionColumns",
+        "tutorial",
     ):
         if len(sources[0][key]) != len(sources[1][key]):
             raise ValueError(f"Human-page mirror structure differs: {key}")
@@ -342,10 +437,12 @@ def expected_outputs():
         raise ValueError(
             "Reusable entry prompts must remain identical across languages"
         )
+    check_tutorial_mirrors(*sources)
     outputs = {}
     for data in sources:
         suffix = "" if data["lang"] == "en" else ".zh-CN"
         outputs[f"README{suffix}.md"] = render_readme(data)
+        outputs[f"structured-coding/README{suffix}.md"] = render_package_guide(data)
         outputs[f"docs/index{suffix}.html"] = render_html(data)
         for name, renderer in [
             ("workflow", workflow_svg),
