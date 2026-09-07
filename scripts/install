@@ -68,39 +68,52 @@ def main():
     parser.add_argument("--project", required=True, type=Path,
                         help="Existing target project directory (use . for the current directory)")
     modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--hooks", choices=("continuity",), help="Opt in to project-local continuity hooks")
-    modes.add_argument("--remove-hooks", action="store_true", help="Remove only our hook registration, preserving skill/state")
+    modes.add_argument("--hooks", nargs="+", action="append", choices=("continuity", "checkpoints"),
+                       help="Add the selected project-local hook presets")
+    modes.add_argument("--remove-hooks", nargs="*", action="append", choices=("continuity", "checkpoints"),
+                       help="Remove selected presets, or all owned presets when no names are given")
     modes.add_argument("--check-hooks", action="store_true", help="Check registration, runtime files, and host version")
     parser.add_argument("--dry-run", action="store_true", help="Preview installation/removal without writing")
     args = parser.parse_args()
+    for name in ("hooks", "remove_hooks"):
+        occurrences = getattr(args, name)
+        values = None if occurrences is None else [value for group in occurrences for value in group]
+        setattr(args, name, values)
+        if values and len(values) != len(set(values)):
+            parser.error(f"--{name.replace('_', '-')}: duplicate preset selection")
     try:
-        if args.hooks or args.remove_hooks or args.check_hooks:
+        if args.hooks or args.remove_hooks is not None or args.check_hooks:
             import hook_install
-            if args.remove_hooks:
-                path = hook_install.remove(args.host, args.project, args.dry_run)
-                print(f"{'Would remove' if args.dry_run else 'Removed'} only owned continuity hooks: {path}")
+            if args.remove_hooks is not None:
+                path = hook_install.remove(args.host, args.project, args.dry_run,
+                                           presets=args.remove_hooks or None)
+                selected = ", ".join(args.remove_hooks) if args.remove_hooks else "all owned presets"
+                print(f"{'Would remove' if args.dry_run else 'Removed'} {selected}: {path}")
                 print("Skill files, session bindings, and checkpoints are retained. Existing settings are preserved/restored.")
                 return 0
             if args.check_hooks:
                 print(hook_install.doctor(args.host, args.project))
                 return 0
-            plan = hook_install.prepare(args.host, args.project)
+            if not args.dry_run:
+                hook_install.recover(args.host, args.project)
+            plan = hook_install.prepare(args.host, args.project, args.hooks)
+            selected = ", ".join(plan["presets"])
             if plan["skill"].exists():
                 hook_install.verify_skill(plan)
             if args.dry_run:
                 if not plan["skill"].exists():
                     install(args.host, args.project, dry_run=True)
                 print(f"Would install/reuse skill at {plan['skill']}")
-                print(f"Would register continuity only: {plan['config']} ({args.host} {plan['version']})")
-                print("Events: PreCompact manual/auto; SessionStart startup/resume/compact/clear.")
+                print(f"Would register/reuse {selected}: {plan['config']} ({args.host} {plan['version']})")
+                print("Events: " + ", ".join(plan["groups"]) + ".")
                 print("Existing hooks/settings preserved. No global settings, trust, or permission changes.")
                 return 0
             if not plan["skill"].exists():
                 install(args.host, args.project)
             hook_install.apply(plan)
-            print(f"Continuity hooks registered in {plan['config']}. Skill: {plan['skill']}")
+            print(f"Hook presets registered ({selected}) in {plan['config']}. Skill: {plan['skill']}")
             print("Restart the host and review/enable the hooks through /hooks; trust is not granted by this installer.")
-            print("Only explicit session bindings are checked. Read references/continuity.md in the installed skill.")
+            print("Only explicit session bindings are checked. Read each selected references/<preset>.md in the installed skill.")
             print("No merge guard, mutation guard, global settings, or permission changes.")
             return 0
         if args.dry_run:

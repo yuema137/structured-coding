@@ -61,7 +61,7 @@
   "workflowNote": "Ordinary bugs: repair and continue. Material changes: return for approval.",
   "loopLabel": "MERGED FACTS INFORM THE NEXT PR",
   "kitTitle": "A complete workflow kit.",
-  "kitLead": "Not just a place to write a plan. A process, its specifications, the prompts to run it, optional continuity hooks, and a contract for future guards.",
+  "kitLead": "Not just a place to write a plan. A process, its specifications, the prompts to run it, optional hook presets, and a contract for future guards.",
   "kit": [
     [
       "01",
@@ -93,9 +93,9 @@
     ],
     [
       "05",
-      "Optional continuity hooks",
-      "Compact freshness checks, snapshot attempts, and recovery instructions. Freeze and merge guards remain future work.",
-      "structured-coding/references/continuity.md",
+      "Optional hook presets",
+      "Continuity for compact recovery; checkpoints for commit and review reminders. Freeze and merge guards remain future work.",
+      "structured-coding/references/platforms.md",
       "Read setup and limits"
     ],
     [
@@ -114,7 +114,7 @@
   "invokeLabel": "Then, in the target project's agent chat",
   "invoke": "Prefix your request with $structured-coding in Codex or /structured-coding in Claude Code. Describe the feature and its constraints; ask for planning first, not implementation.",
   "installNote": "Default installation copies the full skill without registering hooks or overwriting an existing copy. Global settings and permissions are unchanged.",
-  "optionalHookNote": "Want continuity hooks? See the opt-in commands and limits below.",
+  "optionalHookNote": "Want continuity or checkpoints? See the opt-in commands and limits below.",
   "peopleTitle": "Where you step in.",
   "peopleLead": "You do not need to approve every commit. You do need to own the decisions that change the agreement.",
   "people": [
@@ -180,11 +180,11 @@
   ],
   "compactNote": "On resume, reload the current design, filled contract, and full execution rules; check the repo and existing jobs before editing. A snapshot cannot invent decisions or test results. Automatic compact must not get stuck waiting for a perfect handoff.",
   "hooksTitle": "Optional hooks: installation, coverage, and limits",
-  "hooksStatus": "OPTIONAL CONTINUITY · NO MERGE GUARD",
-  "hooksIntro": "The continuity preset is available for Codex and Claude Code, but off by default. It does not cover the full behavior contract. Protocol tests run real hook commands in temporary Git worktrees; verify actual event delivery in your host. The agent does not dynamically generate or register its own hooks.",
-  "hookInstallTitle": "Choose whether to add continuity",
-  "hookInstallNote": "From the cloned repo, use the exact project Git root. Replace codex with claude-code for Claude Code. Restart the host and inspect /hooks; installation does not grant trust. The agent then binds its current execution session to the PR and maintains the checkpoint using the preset interface. Existing settings are preserved; removal retains skill files and session data.",
-  "hookInstallCommands": "./scripts/install codex --project /path/to/project --hooks continuity --dry-run\n./scripts/install codex --project /path/to/project --hooks continuity\n./scripts/install codex --project /path/to/project --check-hooks\n./scripts/install codex --project /path/to/project --remove-hooks",
+  "hooksStatus": "OPTIONAL CONTINUITY + CHECKPOINTS · NO MERGE GUARD",
+  "hooksIntro": "Choose continuity for compact recovery, checkpoints for commit/review reminders, or both. Both are off by default. Checkpoints advises; it does not enforce commits or certify readiness. Protocol tests do not establish native event delivery or model compliance. The agent does not dynamically register its own hooks.",
+  "hookInstallTitle": "Choose your optional presets",
+  "hookInstallNote": "Use the exact project Git root; replace codex with claude-code for Claude Code. Installation adds presets; selective removal keeps the other usable. Bare --remove-hooks removes all owned presets. Restart the host and inspect /hooks; trust is not granted. The agent binds its session, inspects staged changes before commit, and explicitly prepares the review handoff. Reminders do not turn pending, inconclusive or not-run checks into passes. Existing settings, skill files and session data are preserved.",
+  "hookInstallCommands": "./scripts/install codex --project /path/to/project --hooks checkpoints --dry-run\n./scripts/install codex --project /path/to/project --hooks checkpoints\n./scripts/install codex --project /path/to/project --hooks continuity checkpoints\n./scripts/install codex --project /path/to/project --check-hooks\n./scripts/install codex --project /path/to/project --remove-hooks checkpoints\n./scripts/install codex --project /path/to/project --remove-hooks",
   "hookColumns": [
     "Function",
     "Candidate event",
@@ -202,7 +202,7 @@
       "H2 · Before commit",
       "PreToolUse",
       "Check or surface diff inspection, ledger, evidence, and deviations. Repair and retry autonomously; no per-commit human gate.",
-      "Not implemented"
+      "Checkpoints: explicit preparation and advice for direct git commit via Bash; no enforcement"
     ],
     [
       "H3 · Before merge",
@@ -232,7 +232,7 @@
       "H7 · Review readiness",
       "Stop / completion event",
       "Verify real completion conditions, exact-final-HEAD CI, evidence, and handoff. Readiness does not authorize merge.",
-      "Not implemented"
+      "Checkpoints: explicit intent and at-most-once operator notice; no automatic continuation or evidence verdict"
     ],
     [
       "H7 · After merge",
@@ -244,7 +244,7 @@
   "hooksNote": "An event name alone does not guarantee blocking. Adapters must handle each host's protocol, trusted approval source, and tool-coverage gaps. A check after merge cannot prevent it. Read the contract's acceptance scenarios before implementing an adapter.",
   "hookExample": "Example: approval for PR 12 at HEAD A does not authorize merging a later HEAD B. The implementing agent cannot turn its own “approved” field into human authorization.",
   "formatTitle": "A skill, a skillset, or a plugin?",
-  "format": "Today this is one standalone skill with supporting resources and optional continuity hooks. A skillset would contain several independently useful skills; a plugin can package those skills and other host integrations. Project installation stays simple. Updates are not managed, and hook registration is explicit and optional; plugin packaging remains an option for future distribution.",
+  "format": "Today this is one standalone skill with supporting resources and optional hook presets. A skillset would contain several independently useful skills; a plugin can package those skills and other host integrations. Project installation stays simple. Updates are not managed, and hook registration is explicit and optional; plugin packaging remains an option for future distribution.",
   "promptsTitle": "What should I say to the agent?",
   "promptLabels": [
     "Plan the feature",

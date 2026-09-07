@@ -166,4 +166,4 @@ Do not merge.
 
 包里有 skill、给人和 agent 的说明、完整 prompt，以及 [hook behavior specification](references/hook-contract.md)。Codex 和 Claude Code 使用同一套核心内容，打包时只增加各自需要的 platform metadata。
 
-Hook specification 规定了 implementation、compact/resume 和 merge 检查的完整目标。可选 `continuity` preset 提供 compact 同步检查、snapshot 尝试和恢复指令，默认不注册。它不是修改或 merge guard。`checkpoints` 和 `merge-guard` 仍是后续工作。选装、卸载方式和限制见 [platform notes](references/platforms.zh-CN.md) 与 [preset interface](references/continuity.md)。
+Hook specification 规定了 implementation、compact/resume 和 merge 检查的完整目标。可选 `continuity` preset 提供 compact 同步检查、snapshot 尝试和恢复指令，默认不注册。它不是修改或 merge guard。可选 [checkpoints preset](references/checkpoints.md) 提供 commit 准备提示，以及明确准备 review 后的一次提醒，不自动续跑。机械同步状态和 intent 记录不能证明测试成功或已达到交付条件。Merge protection 仍是后续工作。选装、卸载方式和限制见 [platform notes](references/platforms.zh-CN.md) 与 [preset interface](references/continuity.md)。

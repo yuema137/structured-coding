@@ -4,8 +4,9 @@ This is the executable, opt-in subset of [the hook contract](hook-contract.md).
 The default skill installation registers no hooks. The preset implements a
 mechanical H4 freshness check, H5 snapshot attempts, and H6 recovery instructions.
 It does **not** implement H1/H2/H3/H7, a mutation guard, semantic recovery proof,
-remote PR-status checks, or merge protection. `checkpoints` and `merge-guard`
-remain future work. A successful hook is not approval or test evidence.
+remote PR-status checks, or merge protection. The separately selectable
+[checkpoints preset](checkpoints.md) adds advisory H2/H7 reminders; merge protection
+remains future work. A successful hook is not approval or test evidence.
 
 ## Installation and removal
 
@@ -35,7 +36,9 @@ events are actually delivered.
 
 An existing current skill can receive hooks without being recopied. An old or
 customized continuity runtime must be compared/backed up and updated explicitly.
-Reinstalling the same registration is a no-op. `--remove-hooks --dry-run` previews
+Reinstalling the same registration is a no-op. `--hooks continuity checkpoints`
+adds both presets; `--remove-hooks continuity` keeps checkpoints and the shared
+SessionStart handler. Bare `--remove-hooks` removes all owned presets. `--remove-hooks --dry-run` previews
 removal; removal retains the skill, PR bindings, snapshots, and checkpoints. It
 restores the original settings bytes when nothing else changed, otherwise removes
 only the exact owned groups. Changed owned groups cause a refusal, not deletion
@@ -48,7 +51,11 @@ before reinstalling; do not assume hooks follow a moved folder. Installation
 uses a local lock and stale-config checks, but is not an atomic transaction with
 an unrelated editor writing host settings at the same moment. Avoid concurrent
 configuration edits. If hook registration fails after copying a new skill, the
-inert skill remains installed and the error is reported.
+inert skill remains installed and the error is reported. A private bounded journal
+records interrupted config/receipt changes; `--check-hooks` and dry-runs report
+pending recovery without writing. Retry an explicit install/removal to complete
+only exact known before/after states. Unknown edits cause refusal. See the
+[platform notes](platforms.md) for aggregate ownership and recovery limits.
 
 ## Binding a PR to one session
 

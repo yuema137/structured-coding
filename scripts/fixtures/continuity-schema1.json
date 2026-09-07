@@ -1,0 +1,173 @@
+{
+  "source_commit": "96c842aefd0b810f8d46b9709a9e7617f12f88bd",
+  "fixtures": {
+    "codex": {
+      "config": {
+        "description": "original",
+        "hooks": {
+          "SessionStart": [
+            {
+              "matcher": "^(startup|resume|compact|clear)$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.agents/skills/structured-coding/scripts/continuity.py event --host codex --project PROJECT --event session-start",
+                  "timeout": 12
+                }
+              ]
+            }
+          ],
+          "PreCompact": [
+            {
+              "matcher": "^manual$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.agents/skills/structured-coding/scripts/continuity.py event --host codex --project PROJECT --event pre-manual",
+                  "timeout": 12
+                }
+              ]
+            },
+            {
+              "matcher": "^auto$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.agents/skills/structured-coding/scripts/continuity.py event --host codex --project PROJECT --event pre-auto",
+                  "timeout": 12
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "receipt": {
+        "schema": 1,
+        "groups": {
+          "PreCompact": [
+            {
+              "matcher": "^manual$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.agents/skills/structured-coding/scripts/continuity.py event --host codex --project PROJECT --event pre-manual",
+                  "timeout": 12
+                }
+              ]
+            },
+            {
+              "matcher": "^auto$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.agents/skills/structured-coding/scripts/continuity.py event --host codex --project PROJECT --event pre-auto",
+                  "timeout": 12
+                }
+              ]
+            }
+          ],
+          "SessionStart": [
+            {
+              "matcher": "^(startup|resume|compact|clear)$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.agents/skills/structured-coding/scripts/continuity.py event --host codex --project PROJECT --event session-start",
+                  "timeout": 12
+                }
+              ]
+            }
+          ]
+        },
+        "config": "PROJECT/.codex/hooks.json",
+        "before": "eyAiZGVzY3JpcHRpb24iOiAib3JpZ2luYWwiLCAiaG9va3MiOiB7IlNlc3Npb25TdGFydCI6IFtdfX0K",
+        "after_sha256": "84f1e20ef73aa127adaadcf91df0c2927943bac2bf29a41c3a88c83e56bd3706",
+        "host_version": "legacy-fixture"
+      }
+    },
+    "claude-code": {
+      "config": {
+        "description": "original",
+        "hooks": {
+          "SessionStart": [
+            {
+              "matcher": "^(startup|resume|compact|clear)$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.claude/skills/structured-coding/scripts/continuity.py event --host claude-code --project PROJECT --event session-start",
+                  "timeout": 12
+                }
+              ]
+            }
+          ],
+          "PreCompact": [
+            {
+              "matcher": "^manual$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.claude/skills/structured-coding/scripts/continuity.py event --host claude-code --project PROJECT --event pre-manual",
+                  "timeout": 12
+                }
+              ]
+            },
+            {
+              "matcher": "^auto$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.claude/skills/structured-coding/scripts/continuity.py event --host claude-code --project PROJECT --event pre-auto",
+                  "timeout": 12
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "receipt": {
+        "schema": 1,
+        "groups": {
+          "PreCompact": [
+            {
+              "matcher": "^manual$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.claude/skills/structured-coding/scripts/continuity.py event --host claude-code --project PROJECT --event pre-manual",
+                  "timeout": 12
+                }
+              ]
+            },
+            {
+              "matcher": "^auto$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.claude/skills/structured-coding/scripts/continuity.py event --host claude-code --project PROJECT --event pre-auto",
+                  "timeout": 12
+                }
+              ]
+            }
+          ],
+          "SessionStart": [
+            {
+              "matcher": "^(startup|resume|compact|clear)$",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "PYTHON PROJECT/.claude/skills/structured-coding/scripts/continuity.py event --host claude-code --project PROJECT --event session-start",
+                  "timeout": 12
+                }
+              ]
+            }
+          ]
+        },
+        "config": "PROJECT/.claude/settings.json",
+        "before": "eyAiZGVzY3JpcHRpb24iOiAib3JpZ2luYWwiLCAiaG9va3MiOiB7IlNlc3Npb25TdGFydCI6IFtdfX0K",
+        "after_sha256": "2c0c52c7c0a77ad25d048e74605a111905eaac17cbfce1970ca081538841dea4",
+        "host_version": "legacy-fixture"
+      }
+    }
+  }
+}

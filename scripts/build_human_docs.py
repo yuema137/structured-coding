@@ -112,6 +112,7 @@ def detail_blocks(data, svg=False):
             + f'<h4>{esc(data["hookInstallTitle"])}</h4><pre><code>{esc(data["hookInstallCommands"])}</code></pre>'
             + paragraphs(data["hookInstallNote"])
             + f'<a href="{source_link("structured-coding/references/continuity.md")}">Continuity preset interface →</a>'
+            + f' · <a href="{source_link("structured-coding/references/checkpoints.md")}">Checkpoints preset interface →</a>'
             + table_html(data["hooks"], data["hookColumns"])
             + paragraphs(data["hooksNote"], data["hookExample"])
             + f'<a href="{source_link(SPEC)}">Hook behavior contract →</a>',

@@ -36,6 +36,8 @@ PUBLISHED_FILES = {
     "references/language-policy.md",
     "references/continuity.md",
     "scripts/continuity.py",
+    "scripts/checkpoints.py",
+    "references/checkpoints.md",
 }
 
 

@@ -3,46 +3,46 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "70ada89738504acaecac7470a9ae62a6802d74cd0e4f65d6a5d9e5892b076d0c",
-    "chinese_sha256": "99157d71da7c46e91bdbb85b383a7bf2495f76f395f348405b717e4b192dd79c"
+    "english_sha256": "800b9d762b3f2bcab215c3264d3560e5d57493a97b2bcd3b34af89437375d1e0",
+    "chinese_sha256": "cd8ff31083a0471e737ada1f8defff685ed6a6ec5b23c27f3ca4ceaf9b5c730f"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "ad7e59cf7b896a5c67d9bf508c529d885f1321fe86f1979360e8a1d43f3d4ece",
-      "chinese_sha256": "afb53b74aa6b1ec6421a3311a6b0dbd9ca6eef082ece74aa8371fd34b45fe204"
+      "english_sha256": "290aef2e8c3599f5cf88b00d67d95c8f84d1e5780826b43ecfe8e44ebcb07214",
+      "chinese_sha256": "f8f6c6c28535172f1694569c9da179e5d5286f5eb520af0cdd20f2c3a72b81c8"
     },
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "c3a86448ed202d122b557f23f4c670d6c563a80567c1980a40dc6304fb3551f4",
-      "chinese_sha256": "2de5f8cb75d747429d588c1b38ea11db7feee5b9b3e1a4a12a27d75113e71993"
+      "english_sha256": "461ab381231672826ba19d6075b004137c0b129f378cfb66798609896f436506",
+      "chinese_sha256": "e1c4fe6200ae71eb79f326bf1b066055fff3d605e1fad03a93baf5e6a71a3325"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
       "chinese": "structured-coding/references/agent-workflow.zh-CN.md",
-      "english_sha256": "03b11c8b3550af983406e1a697c2bb331892013ce5d6abf7a060a7dfc4ec7df2",
-      "chinese_sha256": "95a1e374807964994eb7e9de0dbc9f347a573ffff035a9649fb53b0bfb00c2f6"
+      "english_sha256": "ad77d83db6ff077e2b2dc765c328406e41fec6bb2f441f709c591e7adb281209",
+      "chinese_sha256": "c14525371c189ac66d0bd353f0974ef04530404dc56c648cf46dfb6b05bcad9e"
     },
     {
       "english": "structured-coding/references/adaptation.md",
       "chinese": "structured-coding/references/adaptation.zh-CN.md",
-      "english_sha256": "32d1f5bc80e145f6862a21fc65907c7e074d6a6dfdd759631c8231fd8220820b",
-      "chinese_sha256": "3bf96c1a987f06649f4ddf9d1cc5f155fa463e7783ed3984e439e6fa2950c1d2"
+      "english_sha256": "4d74ac1d1bf7986d2b1ba51e1f5d9b84cac752a944733ee15f2599a47257d552",
+      "chinese_sha256": "0f32a429da57d51f05909bfe9e4503267193f2f0fdcf9c4eac0091e0dd504cfc"
     },
     {
       "english": "structured-coding/references/platforms.md",
       "chinese": "structured-coding/references/platforms.zh-CN.md",
-      "english_sha256": "c998ef3228aeecddb66e0a8a2ca87abaa1edec23124f2cd6ce27ae94f25da564",
-      "chinese_sha256": "fadd5b94e1a7c662569484e3c6f69e3ec1adc9381f897d4f4cd00ed387decded"
+      "english_sha256": "40b12029fb6460f758f953f107999423b5d4d80575b6df1859288ae47686b1b9",
+      "chinese_sha256": "b2fb91f205d9167851c424cf7b064fc9247eadc3ccc6a5b3723e59d39791a3d2"
     }
   ],
   "specification_sha256": {
-    "structured-coding/SKILL.md": "35f77b4ad032f1f6d7dc6600413a2fb99053440e64cb95cc1a356132d72d15e7",
+    "structured-coding/SKILL.md": "cd7fa932e56dc5c2bc4dd38c65bc7eb3d2b95784aac8f371e36783b0b7273e2b",
     "structured-coding/prompts/implementation-working-rules.md": "7caa1d829fcdb0741b3b621918d6058352adcacf6c8bfee5267e37d2850debcf",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",
-    "structured-coding/references/hook-contract.md": "b4ac12ba7ff0422e850b1f8f691875fe35410e379cdfd33a1acfa5d5c60423e8"
+    "structured-coding/references/hook-contract.md": "37ecc2b092669dd3253556564f1cb4086a4309937d573dd7bf5a52342179ad75"
   }
 }

@@ -2,7 +2,7 @@
 
 [English source](platforms.md) · 英文是唯一权威源，本页是中文镜像。
 
-两份包使用同一份 `SKILL.md`、agent workflow、human guide 和完整 prompt。Codex 包另带 `agents/openai.yaml` 展示信息。Claude Code 包使用通用 skill 入口，不添加 fork、子 agent、模型或权限设置。两边默认都不注册 hook。仓库 installer 可以通过 `--hooks continuity` 选装 [continuity preset](continuity.md)，并支持 `--dry-run`、`--check-hooks` 和 `--remove-hooks`。已有 hook group 和其他项目设置会保留；全局设置、权限和信任配置不变。
+两份包使用同一份 `SKILL.md`、agent workflow、human guide 和完整 prompt。Codex 包另带 `agents/openai.yaml` 展示信息。Claude Code 包使用通用 skill 入口，不添加 fork、子 agent、模型或权限设置。两边默认都不注册 hook。installer 可以明确选装 [continuity](continuity.md)、[checkpoints](checkpoints.md)，或同时安装两者。已有 hook group 和其他项目设置会保留；全局设置、权限和信任配置不变。
 
 ## 放置与调用
 
@@ -17,9 +17,31 @@ Codex 的目录和调用方式依据 [OpenAI 官方 skills 文档](https://learn
 
 开始新 PR 时，先在 planning session 准备完整、已批准的 design 与填好的 contract，再在新的 implementation session 调用 skill 并指向这些文件。compact/resume 则读取当前 PR 的 handoff，继续同一个 PR。
 
+## 选装 preset
+
+在 clone 的仓库内运行，填写项目的准确 Git 根目录（含空格的路径要加引号）：
+
+```sh
+./scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+./scripts/install codex --project /path/to/project --hooks checkpoints
+./scripts/install codex --project /path/to/project --hooks continuity checkpoints
+./scripts/install codex --project /path/to/project --check-hooks
+./scripts/install codex --project /path/to/project --remove-hooks checkpoints --dry-run
+./scripts/install codex --project /path/to/project --remove-hooks checkpoints
+./scripts/install codex --project /path/to/project --remove-hooks
+```
+
+Claude Code 用户把 `codex` 换成 `claude-code`。需要 Python 3.9+、Git 和 macOS/Linux/WSL。目前保守的宿主版本下限是 Codex 0.153.4 和 Claude Code 2.1.261；实际事件送达还需要独立的 native 验证。修改后重启 host 并检查 `/hooks`；installer 不授予信任，也不会打开被禁用的 hook。
+
+安装是追加操作。单装 checkpoints 会注册共享 SessionStart、PreToolUse 和 Stop，不注册 compact handler。单装 continuity 会注册共享 SessionStart 和手动/自动 PreCompact。组合安装共五个 group，SessionStart 只出现一次。移除一个后另一个仍可用。裸 `--remove-hooks` 移除全部自有 preset，保留 skill 和 session 数据。重复安装同一选择不会改变文件字节；重复或未知名称会被拒绝。
+
+一份 aggregate receipt 保存原始设置备份。旧 continuity receipt 仍可读取，仅在明确改变安装状态时迁移；检查、预览和未改变选择的重装都不改写它。installer 不覆盖定制过的 runtime 依赖：先比较、备份已有 skill，再明确升级。自有 group 缺失、被修改或重复，receipt schema 未知，以及路径被重定向或无法核验，都会导致拒绝。移动项目或 interpreter 后，需要明确检查并重装。
+
+配置和 receipt 在共享锁下分别原子替换，使用最多 8 MiB 的私有 transaction journal（配置和 receipt 各最多 1 MiB）。重试只处理与已知前后状态完全一致的组合；不认识的用户修改会保留并报告冲突。`--check-hooks` 和 dry-run 只报告待恢复状态，不写入；明确执行安装或移除重试时才能恢复。应避免同时编辑配置：这不能与外部编辑器或 host 构成统一的原子事务。只有最后一个 preset 被移除，且剩余设置与原始解析结果一致时，才恢复原始字节。不会用旧整份配置覆盖仍在使用的 preset。
+
 ## Hook 的平台映射
 
-下表对应完整目标 contract，不是配置文件。可选 continuity adapter 只提供 compact 同步检查、snapshot 尝试和恢复指令。freeze/merge guard 和强制恢复仍是后续工作。[Preset interface](continuity.md) 列出了支持版本、设置方式、测试和覆盖限制。Host protocol 测试不能证明实际生命周期事件已经送达；安装后还要在 `/hooks` 中核对。
+下表对应完整目标 contract，不是配置文件。Continuity 提供 compact 同步检查、snapshot 尝试和恢复指令。Checkpoints 增加直接 commit 的提示，以及明确准备 review 后的一次提醒，不自动续跑，也不强制核验 H2/H7 证据。freeze/merge guard 和强制恢复仍是后续工作。[Continuity interface](continuity.md) 和 [checkpoints interface](checkpoints.md) 说明了设置、测试、输出对象与时机，以及覆盖限制。Host protocol 测试不能证明实际生命周期事件已经送达；安装后还要在 `/hooks` 中核对。
 
 | 工作流行为 | Codex 候选事件 | Claude Code 候选事件 |
 | --- | --- | --- |
