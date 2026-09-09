@@ -104,6 +104,51 @@ class PresetTests(WorktreeTest):
                         self.assertTrue(data.exists())
                         self.assertTrue(plan["skill"].exists())
 
+    def test_absolute_shape_is_the_default_and_keeps_its_published_form(self):
+        """A shipped registration must keep its exact form once shape is a parameter."""
+        for host, parent in (("codex", ".agents"), ("claude-code", ".claude")):
+            skill = self.project / parent / "skills/structured-coding"
+            for presets in (
+                ("continuity",),
+                ("checkpoints",),
+                ("continuity", "checkpoints"),
+            ):
+                with self.subTest(host=host, presets=presets):
+                    built = hooks.groups(host, self.project, skill, presets)
+                    self.assertEqual(
+                        built,
+                        hooks.groups(
+                            host, self.project, skill, presets, hooks.ABSOLUTE
+                        ),
+                    )
+                    for entries in built.values():
+                        for group in entries:
+                            entry = group["hooks"][0]
+                            self.assertEqual(entry["timeout"], 12)
+                            words = shlex.split(entry["command"])
+                            script = Path(words[1])
+                            self.assertEqual(words[0], sys.executable)
+                            self.assertEqual(script.parent, skill / "scripts")
+                            self.assertTrue(script.is_absolute())
+                            self.assertEqual(words[2:5], ["event", "--host", host])
+                            self.assertEqual(
+                                words[words.index("--project") + 1], str(self.project)
+                            )
+
+    def test_unknown_shape_and_schema_are_refused(self):
+        skill = self.project / ".agents/skills/structured-coding"
+        with self.assertRaises(ValueError):
+            hooks.groups("codex", self.project, skill, ("continuity",), "portable")
+        with self.assertRaises(ValueError):
+            hooks.registered_command(
+                "portable", "codex", self.project, skill, "continuity", "pre-auto"
+            )
+        for schema in (1, 2):
+            self.assertEqual(hooks.shape_for_schema(schema), hooks.ABSOLUTE)
+        for schema in (0, 3, 99, None, "1"):
+            with self.subTest(schema=schema), self.assertRaises(ValueError):
+                hooks.shape_for_schema(schema)
+
     def test_check_hooks_names_a_changed_interpreter(self):
         """A groups mismatch caused by the interpreter must say so, not blame paths."""
         for host in hooks.PATHS:

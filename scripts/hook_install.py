@@ -26,6 +26,17 @@ PATHS = {
     "claude-code": (".claude/settings.json", ".claude"),
 }
 
+# A receipt's schema fixes the command shape that produced it, so an installation
+# stays verifiable and removable after the shape written by new installs changes.
+ABSOLUTE = "absolute"
+SCHEMA_SHAPES = {1: ABSOLUTE, 2: ABSOLUTE}
+
+
+def shape_for_schema(schema):
+    if schema not in SCHEMA_SHAPES:
+        raise ValueError("Installation receipt does not match a supported schema")
+    return SCHEMA_SHAPES[schema]
+
 
 def safe(root, relative):
     path = root
@@ -123,7 +134,26 @@ def selection(presets):
     return tuple(p for p in PRESETS if p in values)
 
 
-def groups(host, project, skill, presets=("continuity",)):
+def registered_command(shape, host, project, skill, script, mode):
+    """One registered command in the requested shape."""
+    if shape != ABSOLUTE:
+        raise ValueError(f"Unsupported command shape: {shape}")
+    return shlex.join(
+        [
+            sys.executable,
+            str(skill / f"scripts/{script}.py"),
+            "event",
+            "--host",
+            host,
+            "--project",
+            str(project),
+            "--event",
+            mode,
+        ]
+    )
+
+
+def groups(host, project, skill, presets=("continuity",), shape=ABSOLUTE):
     presets = selection(presets)
     capabilities = []
     if "continuity" in presets:
@@ -150,22 +180,8 @@ def groups(host, project, skill, presets=("continuity",)):
         )
     result = {}
     for event, matcher, script, mode in capabilities:
-        command = [
-            sys.executable,
-            str(skill / f"scripts/{script}.py"),
-            "event",
-            "--host",
-            host,
-            "--project",
-            str(project),
-            "--event",
-            mode,
-        ]
-        group = {
-            "hooks": [
-                {"type": "command", "command": shlex.join(command), "timeout": 12}
-            ]
-        }
+        command = registered_command(shape, host, project, skill, script, mode)
+        group = {"hooks": [{"type": "command", "command": command, "timeout": 12}]}
         if matcher is not None:
             group = {"matcher": matcher, **group}
         result.setdefault(event, []).append(group)
@@ -255,7 +271,8 @@ def validate_record(raw, host, project, skill, config):
         if record["schema"] == 1
         else selection(record.get("presets", ()))
     )
-    if record.get("groups") != groups(host, project, skill, presets):
+    shape = shape_for_schema(record["schema"])
+    if record.get("groups") != groups(host, project, skill, presets, shape):
         raise ValueError(
             "Owned capability paths/groups differ; inspect and explicitly upgrade the "
             "installation" + interpreter_hint(record.get("groups"))
@@ -330,6 +347,7 @@ def prepare(host, project, presets=("continuity",)):
         validate_owned(settings, record["groups"])
         original = decode(record["before"])
     selected = tuple(p for p in PRESETS if p in set(installed) | set(requested))
+    # The shape a new installation writes; deliberately still the default here.
     additions = groups(host, project, skill, selected)
     noop = bool(old_receipt is not None and selected == installed)
     clean = (
@@ -542,6 +560,7 @@ def remove(host, project, dry_run=False, presets=None):
     remaining = tuple(
         p for p in installed if requested is not None and p not in requested
     )
+    installed_shape = shape_for_schema(record["schema"])
     # Legacy receipt-first interrupted installation remains removable without config writes.
     legacy_interrupted = record["schema"] == 1 and current == original
     if legacy_interrupted:
@@ -550,7 +569,7 @@ def remove(host, project, dry_run=False, presets=None):
     else:
         clean = without_owned(settings, record["groups"], parse(original))
         after_settings = (
-            add_groups(clean, groups(host, project, skill, remaining))
+            add_groups(clean, groups(host, project, skill, remaining, installed_shape))
             if remaining
             else clean
         )
@@ -572,7 +591,7 @@ def remove(host, project, dry_run=False, presets=None):
                 **record,
                 "schema": 2,
                 "presets": list(remaining),
-                "groups": groups(host, project, skill, remaining),
+                "groups": groups(host, project, skill, remaining, installed_shape),
                 "after_sha256": hashlib.sha256(after).hexdigest(),
             }
         )
