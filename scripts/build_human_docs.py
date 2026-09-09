@@ -408,6 +408,24 @@ def check_tutorial_mirrors(english, chinese):
             raise ValueError("Tutorial mirror structure differs")
 
 
+def banner(lang):
+    """True both in this repository and in an installed copy of the package."""
+    return (
+        f"<!-- Generated file. Source: docs/content.{lang}.json in the "
+        "structured-coding repository, built by scripts/build_human_docs.py. "
+        "Direct edits here are overwritten by the next build. -->"
+    )
+
+
+def marked(content, lang):
+    """Put the marker where someone opening the file to edit it will see it first."""
+    if content.startswith("<!doctype html>"):
+        # After the doctype: a comment before it puts some browsers in quirks mode.
+        doctype, _, rest = content.partition("\n")
+        return f"{doctype}\n{banner(lang)}\n{rest}"
+    return f"{banner(lang)}\n\n{content}"
+
+
 def expected_outputs():
     sources = [
         json.loads((ROOT / f"docs/content.{lang}.json").read_text())
@@ -441,9 +459,12 @@ def expected_outputs():
     outputs = {}
     for data in sources:
         suffix = "" if data["lang"] == "en" else ".zh-CN"
-        outputs[f"README{suffix}.md"] = render_readme(data)
-        outputs[f"structured-coding/README{suffix}.md"] = render_package_guide(data)
-        outputs[f"docs/index{suffix}.html"] = render_html(data)
+        lang = data["lang"]
+        outputs[f"README{suffix}.md"] = marked(render_readme(data), lang)
+        outputs[f"structured-coding/README{suffix}.md"] = marked(
+            render_package_guide(data), lang
+        )
+        outputs[f"docs/index{suffix}.html"] = marked(render_html(data), lang)
         for name, renderer in [
             ("workflow", workflow_svg),
             ("people", people_svg),

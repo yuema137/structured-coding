@@ -1,3 +1,5 @@
+<!-- Generated file. Source: docs/content.zh-CN.json in the structured-coding repository, built by scripts/build_human_docs.py. Direct edits here are overwritten by the next build. -->
+
 # Structured Coding
 
 [English source](README.md)

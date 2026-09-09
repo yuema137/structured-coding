@@ -1,3 +1,5 @@
+<!-- Generated file. Source: docs/content.en.json in the structured-coding repository, built by scripts/build_human_docs.py. Direct edits here are overwritten by the next build. -->
+
 # Structured Coding
 
 [Chinese mirror](README.zh-CN.md)

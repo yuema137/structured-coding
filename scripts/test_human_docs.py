@@ -40,6 +40,25 @@ class HumanDocsTests(unittest.TestCase):
         docs.check()
         self.assertEqual(len(self.outputs), 12)
 
+    def test_generated_pages_declare_their_source(self):
+        """Someone opening a README to edit it must see that it is generated."""
+        checked = 0
+        for relative, content in self.outputs.items():
+            if not relative.endswith((".md", ".html")):
+                continue
+            with self.subTest(relative=relative):
+                lang = "zh-CN" if ".zh-CN." in relative else "en"
+                head = "\n".join(content.splitlines()[:2])
+                self.assertIn("scripts/build_human_docs.py", head)
+                self.assertIn(f"docs/content.{lang}.json", head)
+                if relative.endswith(".html"):
+                    # A comment before the doctype would trigger quirks mode.
+                    self.assertTrue(content.startswith("<!doctype html>\n<!--"))
+                else:
+                    self.assertTrue(content.startswith("<!--"))
+                checked += 1
+        self.assertEqual(checked, 6)
+
     def test_mirror_structure_and_preserved_prompts(self):
         english, chinese = self.sources
         self.assertEqual(set(english), set(chinese))
