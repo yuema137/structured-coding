@@ -117,7 +117,7 @@ class WorktreeTest(unittest.TestCase):
             ),
         }
 
-    def event(self, mode, host="codex", session=None, raw=None):
+    def event(self, mode, host="codex", session=None, raw=None, cwd=None):
         result = subprocess.run(
             [
                 sys.executable,
@@ -133,6 +133,7 @@ class WorktreeTest(unittest.TestCase):
             input=raw if raw is not None else json.dumps(self.payload(mode, session)),
             text=True,
             capture_output=True,
+            cwd=cwd,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout), result.stderr
@@ -158,6 +159,37 @@ class ContinuityTests(WorktreeTest):
                 self.assertEqual(
                     self.git("config", "--get", key).decode().strip(), expected
                 )
+
+    def test_absent_cwd_does_not_fall_back_to_the_process_directory(self):
+        """A payload without cwd must not be read as "the hook ran in the project"."""
+        self.activate()
+        self.checkpoint()
+        payload = self.payload("pre-manual")
+        del payload["cwd"]
+        # Run from the project root: a fallback to the process directory would pass.
+        output, _ = self.event("pre-manual", raw=json.dumps(payload), cwd=self.project)
+        self.assertFalse(output["continue"])
+        self.assertIn("cwd", output["stopReason"])
+
+    def test_relative_or_malformed_cwd_is_refused_for_a_bound_session(self):
+        self.activate()
+        self.checkpoint()
+        for value in ("relative/path", "", 17, None):
+            with self.subTest(cwd=value):
+                payload = self.payload("pre-manual")
+                payload["cwd"] = value
+                output, _ = self.event(
+                    "pre-manual", raw=json.dumps(payload), cwd=self.project
+                )
+                self.assertFalse(output["continue"])
+                self.assertIn("cwd", output["stopReason"])
+
+    def test_malformed_cwd_does_not_impose_on_an_unbound_session(self):
+        payload = self.payload("pre-manual")
+        del payload["cwd"]
+        self.assertEqual(
+            self.event("pre-manual", raw=json.dumps(payload), cwd=self.project)[0], {}
+        )
 
     def test_unbound_chat_is_not_blocked(self):
         self.assertEqual(self.event("pre-manual")[0], {})
