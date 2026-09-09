@@ -6,6 +6,9 @@ No browser, network, or third-party dependencies are required.
 """
 
 import importlib.util
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -366,6 +369,82 @@ class TrustTests(WorktreeTest):
         verdict, reason = standards.classify("deno-lint")
         self.assertEqual(verdict, "approval required")
         self.assertIn("not a recognized tool", reason)
+
+
+class InspectTests(WorktreeTest):
+    def run_inspect(self):
+        return subprocess.run(
+            [sys.executable, str(RUNTIME), "inspect", "--project", str(self.project)],
+            capture_output=True, text=True,
+        )
+
+    def place(self, layer, text, track=False):
+        relative = dict(standards.LAYERS)[layer]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        if track:
+            self.git("add", "-f", "--", relative)
+            self.git("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-qm", layer)
+
+    def test_a_project_without_configuration_reports_the_defaults(self):
+        result = self.run_inspect()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = json.loads(result.stdout)
+        self.assertEqual(value["sources"], [])
+        self.assertIn("defaults apply", value["note"])
+        self.assertEqual(set(value["origins"].values()), {"default"})
+
+    def test_every_effective_value_names_the_layer_it_came_from(self):
+        self.place("base", '```json\n{"schema": 1, "checks": {"trigger": "pr"}}\n```\n', track=True)
+        self.place("overlay", (
+            '```json\n{"schema": 1, "checks": {"trigger": "commit",'
+            ' "tools": [{"name": "ruff", "scope": "repository"}]}}\n```\n'
+        ))
+        result = self.run_inspect()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = json.loads(result.stdout)
+        self.assertEqual(
+            [(s["layer"], s["trust"]) for s in value["sources"]],
+            [("base", "shared"), ("overlay", "personal")],
+        )
+        self.assertEqual(value["effective"]["checks"]["trigger"], "commit")
+        self.assertEqual(value["origins"]["checks.trigger"], "overlay")
+        self.assertEqual(value["origins"]["checks.tools.ruff.scope"], "overlay")
+        self.assertEqual(value["origins"]["checks.tools.pyright"], "default")
+        self.assertIn("runs no check", value["note"])
+
+    def test_a_declared_runner_is_reported_as_needing_approval(self):
+        self.place("base", (
+            '```json\n{"schema": 1, "checks": {"tools": ['
+            '{"name": "pytest", "enabled": true}, {"name": "deno-lint"}]}}\n```\n'
+        ), track=True)
+        value = json.loads(self.run_inspect().stdout)
+        verdicts = {t["name"]: t["approval"] for t in value["effective"]["checks"]["tools"]}
+        self.assertEqual(verdicts["ruff"], "allowlisted")
+        self.assertEqual(verdicts["pytest"], "approval required")
+        self.assertEqual(verdicts["deno-lint"], "approval required")
+
+    def test_a_refusal_exits_nonzero_and_never_claims_the_defaults_apply(self):
+        cases = {
+            "relaxing overlay": (
+                '```json\n{"schema": 1, "checks": {"trigger": "pr"}}\n```\n',
+                '```json\n{"schema": 1, "checks": {"trigger": "off"}}\n```\n',
+                "checks.trigger",
+            ),
+            "malformed base": ("# no block here\n", None, "json block"),
+        }
+        for label, (base, overlay, field) in cases.items():
+            with self.subTest(case=label):
+                self.setUp()
+                self.place("base", base, track=True)
+                if overlay is not None:
+                    self.place("overlay", overlay)
+                result = self.run_inspect()
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(field, result.stderr)
+                self.assertNotIn("defaults apply", result.stdout + result.stderr)
+                self.assertEqual(result.stdout.strip(), "")
 
 
 if __name__ == "__main__":

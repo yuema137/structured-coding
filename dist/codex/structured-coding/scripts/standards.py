@@ -5,6 +5,7 @@ See references/standards.md for the contract, the two layers, and the limits.
 Uses only Python 3.9+ and Git; never invokes an LLM, a tool, or a remote API.
 """
 
+import argparse
 import json
 import re
 import subprocess
@@ -307,3 +308,60 @@ def discover(project):
             "declared": read(path),
         }
     return root, present
+
+
+def report(project):
+    """What is in effect, where each value came from, and what would need approval."""
+    root, present = discover(project)
+    base = present.get("base")
+    overlay = present.get("overlay")
+    effective, origins = resolve(
+        None if base is None else (base["relative"], base["declared"]),
+        None if overlay is None else (overlay["relative"], overlay["declared"]),
+    )
+    tools = []
+    for tool in effective["checks"]["tools"]:
+        verdict, reason = classify(tool["name"])
+        tools.append({**tool, "approval": verdict, "reason": reason})
+    return {
+        "project": str(root),
+        "sources": [
+            {"layer": layer, "path": present[layer]["relative"], "trust": present[layer]["trust"]}
+            for layer, _ in LAYERS
+            if layer in present
+        ],
+        "effective": {
+            "review": effective["review"],
+            "checks": {"trigger": effective["checks"]["trigger"], "tools": tools},
+        },
+        "origins": origins,
+        "note": (
+            "No configuration file found; the shipped defaults apply and nothing changes."
+            if not present
+            else "Reported only. This helper runs no check and registers no hook."
+        ),
+    }
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=("inspect",))
+    parser.add_argument("--project", required=True, type=Path)
+    args = parser.parse_args(argv)
+    try:
+        print(json.dumps(report(args.project), ensure_ascii=True, indent=2))
+        return 0
+    except Invalid as error:
+        # A refusal must never be reported as "the defaults apply".
+        print(f"Standards configuration refused: {error}", file=sys.stderr)
+        return 1
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+        print(
+            f"Standards configuration unavailable ({type(error).__name__}): {error}",
+            file=sys.stderr,
+        )
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
