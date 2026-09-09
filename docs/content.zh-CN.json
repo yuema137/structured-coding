@@ -252,8 +252,8 @@
     "批准后，用新 session 执行"
   ],
   "promptNote": "这些是启动请求，不替代保留的完整 prompt。agent 仍然需要完整读取对应文件。",
-  "fitTitle": "什么工作值得走完整流程？",
-  "fit": "适合跨 PR 或 session 的较大改动。改错别字、修一个独立小 bug，通常不用搬出整套流程。计划、测试和 LLM review 仍可能出错；这套 workflow 让假设和证据能被检查。",
+  "fitTitle": "什么时候值得用，什么时候不值得",
+  "fit": "这套东西是为大型代码库的持续开发设计的。当一个改动要跨多个 PR 或 session、代码库大到 agent 必须先审计再动手、以及这活儿之后还得有人接手时，它的开销才划得来。改错别字、修一个单文件的 bug、写个用完就扔的原型，它就是 overkill：写计划文档的成本会超过改动本身。这些情况直接用 agent 就行。计划、测试和 LLM review 仍然可能出错；这套 workflow 加上的是把它们的假设和证据写下来，让你能检查。",
   "footer": "英文是唯一正确源；中文是同步镜像，保留英文专业术语。给人看的解释沿用 DongbeiGPT。specification 和可复用 prompt 全部使用英文。",
   "guideLabel": "完整 human guide",
   "repoLabel": "GitHub",

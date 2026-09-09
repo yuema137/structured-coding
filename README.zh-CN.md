@@ -6,6 +6,10 @@
 
 先商量好要改什么，让 agent 放手做，再把结果写回计划。
 
+> **什么时候值得用，什么时候不值得**
+>
+> 这套东西是为大型代码库的持续开发设计的。当一个改动要跨多个 PR 或 session、代码库大到 agent 必须先审计再动手、以及这活儿之后还得有人接手时，它的开销才划得来。改错别字、修一个单文件的 bug、写个用完就扔的原型，它就是 overkill：写计划文档的成本会超过改动本身。这些情况直接用 agent 就行。计划、测试和 LLM review 仍然可能出错；这套 workflow 加上的是把它们的假设和证据写下来，让你能检查。
+
 [快速开始](#start) · [用起来是什么样](#example) · [先做完一个 PR，再规划下一个。](#workflow) · [想了解更多](#further)
 
 <a id="start"></a>
@@ -193,13 +197,6 @@ scope 按工具分别设置，因为正确答案本来就因工具而异：只�
 <summary>这是 skill、skillset，还是 plugin？</summary>
 
 <p>当前是一个独立 skill，带配套资源和可选 hook preset。多个能独立使用的 skill 可以组成 skillset；plugin 可以把它们和其他 host 接入一起打包。项目安装保持简单，不托管更新，hook 也需要明确选装；未来仍然可以提供 plugin 分发。</p>
-
-</details>
-
-<details id="fit">
-<summary>什么工作值得走完整流程？</summary>
-
-<p>适合跨 PR 或 session 的较大改动。改错别字、修一个独立小 bug，通常不用搬出整套流程。计划、测试和 LLM review 仍可能出错；这套 workflow 让假设和证据能被检查。</p>
 
 </details>
 

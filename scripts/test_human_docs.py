@@ -86,7 +86,12 @@ class HumanDocsTests(unittest.TestCase):
             self.assertEqual(order, sorted(order))
             self.assertEqual(page.count('class="flow-node"'), 6)
             self.assertEqual(page.count('class="kit-card"'), 6)
-            self.assertEqual(page.count("<details "), 5)
+            # Four, not five: the scope warning moved out of a collapsed block
+            # into the hero, where someone deciding whether to install sees it.
+            self.assertEqual(page.count("<details "), 4)
+            warning = page.index('class="callout scope"')
+            self.assertLess(warning, page.index('id="start"'))
+            self.assertEqual(page.count('class="callout scope"'), 1)
             self.assertNotRegex(page, r"<details[^>]*\bopen\b")
             self.assertEqual(page.count("<h1>"), 1)
             self.assertIn(f'<html lang="{source["lang"]}"', page)

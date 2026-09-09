@@ -390,6 +390,14 @@ section.block {
   margin: 6px 0;
   color: var(--muted);
 }
+.callout.scope {
+  margin: 24px 0 0;
+  max-width: 62ch;
+}
+.callout.scope strong {
+  display: block;
+  margin-bottom: 2px;
+}
 .people {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

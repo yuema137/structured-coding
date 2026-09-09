@@ -6,6 +6,10 @@
 
 Agree on the change. Let the agent build it. Bring the result back into the plan.
 
+> **When this is worth it, and when it is not**
+>
+> This is built for sustained work on a large codebase. It earns its overhead when a change spans several PRs or sessions, when the code is big enough that an agent must audit before it edits, and when someone has to pick the work up later. For a typo, a one-file bug fix, or a throwaway prototype it is overkill: the planning documents will cost more than the change itself. Use your agent directly for those. Plans, tests, and LLM reviews can still be wrong; what this workflow adds is that their assumptions and evidence are written down where you can inspect them.
+
 [What using it looks like](#example) · [Step-by-step tutorial](#tutorial) · [Going further](#further) · [Optional hooks: installation, coverage, and limits](#hooks)
 
 ## You already have this installed
@@ -283,9 +287,5 @@ A project can state, once, what is true of its whole codebase, so you do not rep
 | Your own additions | .structured-coding/standards.local.md | may add and tighten only, never relax the team's |
 
 Scope is set per tool because the right answer differs by tool: changed files suit ruff and pyright, and mislead for pytest, whose covering tests usually sit in files the change never touched. Tools are grouped by whether they execute your code, so pytest and mypy are recognized and still need a deliberate approval. This release reads the file and reports the resolved result with the layer every value came from; it runs no tool and registers no hook, and a clean report is not evidence that a check has run.
-
-## When is the full workflow worth it?
-
-Use it for substantial changes spanning PRs or sessions. A typo fix or isolated small bug usually does not need this ceremony. Plans, tests, and LLM reviews can still be wrong; the workflow makes their assumptions and evidence inspectable.
 
 English is the authoritative source; Chinese is a synchronized mirror with English technical terms. The human explanation follows DongbeiGPT. Specifications and reusable prompts are in English.
