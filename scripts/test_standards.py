@@ -176,5 +176,121 @@ class ReaderTests(unittest.TestCase):
         self.assertNotIn(secret, str(caught.exception))
 
 
+
+class PackagingTests(unittest.TestCase):
+    def test_a_stray_bytecode_cache_does_not_break_packaging(self):
+        """Importing an installed helper must not make the skill unpublishable."""
+        import build_packages
+
+        cache = build_packages.SOURCE / "scripts/__pycache__"
+        cache.mkdir(parents=True, exist_ok=True)
+        stray = cache / "standards.cpython-000.pyc"
+        stray.write_bytes(b"\x00")
+        self.addCleanup(lambda: stray.exists() and stray.unlink())
+        for host in build_packages.HOSTS:
+            files = build_packages.source_files(host)
+            self.assertNotIn("scripts/__pycache__", " ".join(files))
+            self.assertIn("scripts/standards.py", files)
+
+
+class ResolutionTests(unittest.TestCase):
+    BASE = Path("team.md")
+    MINE = Path("mine.md")
+
+    def resolve(self, base=None, overlay=None):
+        return standards.resolve(
+            None if base is None else (self.BASE, {"schema": 1, **base}),
+            None if overlay is None else (self.MINE, {"schema": 1, **overlay}),
+        )
+
+    def tool(self, effective, name):
+        return next(t for t in effective["checks"]["tools"] if t["name"] == name)
+
+    def test_no_file_at_all_yields_the_shipped_defaults(self):
+        effective, origins = self.resolve()
+        self.assertEqual(effective, standards.DEFAULTS)
+        self.assertEqual(set(origins.values()), {"default"})
+        self.assertTrue(self.tool(effective, "ruff")["enabled"])
+        self.assertFalse(self.tool(effective, "pytest")["enabled"])
+
+    def test_defaults_cannot_be_mutated_through_a_resolution(self):
+        effective, _ = self.resolve({"review": {"conventions": ["x"]}})
+        self.assertEqual(effective["review"]["conventions"], ["x"])
+        self.assertEqual(standards.DEFAULTS["review"]["conventions"], [])
+
+    def test_the_shared_file_may_relax_the_defaults(self):
+        """The defaults are our suggestion; the team standard is authoritative."""
+        effective, origins = self.resolve(
+            {"checks": {"trigger": "off", "tools": [{"name": "ruff", "enabled": False}]}}
+        )
+        self.assertEqual(effective["checks"]["trigger"], "off")
+        self.assertFalse(self.tool(effective, "ruff")["enabled"])
+        self.assertEqual(origins["checks.trigger"], "base")
+
+    def test_a_personal_file_may_tighten_every_field(self):
+        effective, origins = self.resolve(
+            {"checks": {"trigger": "pr", "tools": [{"name": "ruff", "scope": "changed"}]}},
+            {
+                "review": {"trigger": "commit", "conventions": ["No bare except"]},
+                "checks": {
+                    "trigger": "commit",
+                    "tools": [
+                        {"name": "ruff", "scope": "repository"},
+                        {"name": "pytest", "enabled": True},
+                        {"name": "mypy"},
+                    ],
+                },
+            },
+        )
+        self.assertEqual(effective["checks"]["trigger"], "commit")
+        self.assertEqual(self.tool(effective, "ruff")["scope"], "repository")
+        self.assertTrue(self.tool(effective, "pytest")["enabled"])
+        self.assertEqual(self.tool(effective, "mypy")["scope"], "changed")
+        self.assertIn("No bare except", effective["review"]["conventions"])
+        self.assertEqual(origins["checks.tools.ruff.scope"], "overlay")
+        self.assertEqual(origins["checks.tools.mypy"], "overlay")
+        self.assertEqual(origins["review.trigger"], "overlay")
+
+    def test_a_personal_file_may_not_relax_the_shared_standard(self):
+        cases = {
+            "trigger off": ({"checks": {"trigger": "off"}}, "checks.trigger"),
+            "trigger down": ({"review": {"trigger": "pr"}}, "review.trigger"),
+            "disable a check": (
+                {"checks": {"tools": [{"name": "ruff", "enabled": False}]}},
+                "checks.tools.ruff.enabled",
+            ),
+            "narrow a scope": (
+                {"checks": {"tools": [{"name": "pytest", "scope": "changed"}]}},
+                "checks.tools.pytest.scope",
+            ),
+        }
+        base = {
+            "review": {"trigger": "commit"},
+            "checks": {"trigger": "pr", "tools": [{"name": "pytest", "scope": "repository"}]},
+        }
+        for label, (overlay, field) in cases.items():
+            with self.subTest(case=label):
+                with self.assertRaises(standards.Invalid) as caught:
+                    self.resolve(base, overlay)
+                message = str(caught.exception)
+                self.assertIn(str(self.MINE), message)
+                self.assertIn(field, message)
+                self.assertIn("personal file may not", message)
+
+    def test_a_personal_file_cannot_remove_a_shared_convention(self):
+        """Overlay conventions are additions, so removal has no representation."""
+        effective, _ = self.resolve(
+            {"review": {"conventions": ["Team rule"]}},
+            {"review": {"conventions": ["Mine"]}},
+        )
+        self.assertEqual(effective["review"]["conventions"], ["Team rule", "Mine"])
+
+    def test_an_overlay_without_a_shared_file_is_measured_against_the_defaults(self):
+        with self.assertRaisesRegex(standards.Invalid, "checks.trigger"):
+            self.resolve(None, {"checks": {"trigger": "off"}})
+        effective, origins = self.resolve(None, {"checks": {"trigger": "commit"}})
+        self.assertEqual(effective["checks"]["trigger"], "commit")
+        self.assertEqual(origins["checks.trigger"], "overlay")
+
 if __name__ == "__main__":
     unittest.main()

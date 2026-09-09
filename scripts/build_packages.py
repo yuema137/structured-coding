@@ -150,6 +150,10 @@ def source_files(host):
     require(not SOURCE.is_symlink(), "Skill source must not be a symlink")
     actual = set()
     for path in SOURCE.rglob("*"):
+        # A local bytecode cache is not a publication question, and letting one
+        # fail this check breaks every test that installs the skill.
+        if "__pycache__" in path.parts:
+            continue
         require(not path.is_symlink(), f"Unexpected source symlink: {path}")
         if path.is_file() and path.name != ".DS_Store":
             actual.add(path.relative_to(SOURCE).as_posix())

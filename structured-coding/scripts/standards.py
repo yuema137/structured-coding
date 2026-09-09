@@ -7,6 +7,10 @@ Uses only Python 3.9+ and Git; never invokes an LLM, a tool, or a remote API.
 
 import json
 import re
+import sys
+
+# Installed helpers must not create files in the published skill tree.
+sys.dont_write_bytecode = True
 
 MAX_INPUT = 256 * 1024
 SCHEMA = 1
@@ -135,3 +139,113 @@ def validate(path, value):
         if "tools" in checks:
             declared["checks"]["tools"] = tools(path, checks["tools"])
     return declared
+
+
+# Ranked from permissive to strict. An overlay may raise a rank, never lower it.
+TRIGGER_RANK = {name: rank for rank, name in enumerate(TRIGGERS)}
+SCOPE_RANK = {name: rank for rank, name in enumerate(SCOPES)}
+
+DEFAULTS = {
+    "schema": SCHEMA,
+    "review": {"trigger": "pr", "conventions": []},
+    "checks": {
+        "trigger": "pr",
+        "tools": [
+            {"name": "ruff", "enabled": True, "scope": "changed"},
+            {"name": "pyright", "enabled": True, "scope": "changed"},
+            {"name": "pytest", "enabled": False, "scope": "repository"},
+        ],
+    },
+}
+
+
+def defaults():
+    """A fresh copy, so a caller can never mutate the shipped values."""
+    return json.loads(json.dumps(DEFAULTS))
+
+
+def trigger(effective, origins, declared, name, layer, path, restrict):
+    if "trigger" not in declared:
+        return
+    value, current = declared["trigger"], effective[name]["trigger"]
+    if restrict and TRIGGER_RANK[value] < TRIGGER_RANK[current]:
+        raise Invalid(
+            path,
+            f"{name}.trigger",
+            f"a personal file may not relax {current} to {value}",
+        )
+    effective[name]["trigger"] = value
+    origins[f"{name}.trigger"] = layer
+
+
+def merge_conventions(effective, origins, declared, layer):
+    """Overlay entries are additions, so removal is impossible by construction."""
+    if "conventions" not in declared:
+        return
+    existing = effective["review"]["conventions"]
+    for item in declared["conventions"]:
+        if item not in existing:
+            existing.append(item)
+            origins[f"review.conventions[{existing.index(item)}]"] = layer
+
+
+def merge_tools(effective, origins, declared, layer, path, restrict):
+    if "tools" not in declared:
+        return
+    known = {tool["name"]: tool for tool in effective["checks"]["tools"]}
+    for item in declared["tools"]:
+        name = item["name"]
+        current = known.get(name)
+        if current is None:
+            tool = {"name": name, "enabled": True, "scope": "changed", **item}
+            effective["checks"]["tools"].append(tool)
+            known[name] = tool
+            origins[f"checks.tools.{name}"] = layer
+            continue
+        field = f"checks.tools.{name}"
+        if "enabled" in item:
+            if restrict and current["enabled"] and not item["enabled"]:
+                raise Invalid(
+                    path,
+                    f"{field}.enabled",
+                    "a personal file may not disable a shared check",
+                )
+            if current["enabled"] != item["enabled"]:
+                current["enabled"] = item["enabled"]
+                origins[f"{field}.enabled"] = layer
+        if "scope" in item:
+            if restrict and SCOPE_RANK[item["scope"]] < SCOPE_RANK[current["scope"]]:
+                raise Invalid(
+                    path,
+                    f"{field}.scope",
+                    f"a personal file may not narrow {current['scope']} to {item['scope']}",
+                )
+            if current["scope"] != item["scope"]:
+                current["scope"] = item["scope"]
+                origins[f"{field}.scope"] = layer
+
+
+def apply_layer(effective, origins, layer, path, declared, restrict):
+    for name in ("review", "checks"):
+        if name not in declared:
+            continue
+        trigger(effective, origins, declared[name], name, layer, path, restrict)
+    if "review" in declared:
+        merge_conventions(effective, origins, declared["review"], layer)
+    if "checks" in declared:
+        merge_tools(effective, origins, declared["checks"], layer, path, restrict)
+
+
+def resolve(base=None, overlay=None):
+    """Defaults, then the shared file, then the personal one which may only tighten."""
+    effective = defaults()
+    origins = {
+        "review.trigger": "default",
+        "checks.trigger": "default",
+        **{f"checks.tools.{tool['name']}": "default" for tool in effective["checks"]["tools"]},
+    }
+    for layer, source, restrict in (("base", base, False), ("overlay", overlay, True)):
+        if source is not None:
+            path, declared = source
+            apply_layer(effective, origins, layer, path, declared, restrict)
+    return effective, origins
