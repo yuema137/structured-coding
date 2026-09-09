@@ -1,0 +1,93 @@
+# Project standards configuration
+
+Status: **READS AND REPORTS ONLY.** This release parses the configuration,
+resolves the layers, and prints the result. It runs no tool, blocks no commit,
+registers no hook, and grants no approval. A clean report is not evidence that
+any check has run. Automatic execution is later work; the target behaviour for a
+hook remains in the [hook contract](hook-contract.md).
+
+A project uses this to state, once, what is true of its whole codebase, so the
+operator does not restate it in every planning conversation. Requirements
+specific to one PR stay in that PR's conversation and its frozen design; putting
+them here would create a second authority over the same decision.
+
+## Files
+
+| Path, relative to the Git worktree root | Layer |
+| --- | --- |
+| `.structured-coding/standards.md` | base |
+| `.structured-coding/standards.local.md` | overlay |
+
+Copy [the template](../standards-template.md) to the base path and edit its
+single fenced `json` block. The surrounding prose is never read, which is the
+point: it carries the options, the alternatives and the reasons that JSON cannot.
+Exactly one top-level `json` block is read. A block nested inside another fence
+is prose. Zero blocks, several, or unparsable content is refused, naming the file.
+
+Both files are optional. With neither present the shipped defaults apply and
+behaviour is unchanged.
+
+## Two determinations, decided separately
+
+**Layer comes from the filename.** The base states the project's standard. The
+overlay may add and tighten only.
+
+**Trust comes from `git ls-files`.** A tracked file is shared: any contributor can
+change it in a pull request, so a tool it declares outside the allowlist needs
+approval. An untracked file is personal: it is absent from a fresh clone and can
+only have been written by the machine's owner, so authoring it is the approval.
+
+The two are independent, which removes the special cases. A tracked overlay is an
+overlay that happens to be shared. An untracked base is the base and happens to
+be personal. Filename must not decide trust, because `.gitignore` does not apply
+to a file Git already tracks, so a repository could otherwise commit a file under
+the personal name and have it treated as locally authored.
+
+## Resolution
+
+Defaults, then base, then overlay. The base may relax the shipped defaults: those
+defaults are a suggestion and the project's standard is the authority. Only the
+overlay is restricted.
+
+```text
+trigger:  off  <  pr  <  commit
+scope:    changed  <  repository
+```
+
+The overlay may raise a rank, enable a disabled tool, add a tool, and add a
+convention. It may not lower a rank, disable a tool, or narrow a scope. Overlay
+conventions are additions, so removing one has no representation at all.
+
+A relaxing overlay is **refused, naming the field**. Ignoring it would leave a
+developer believing a local skip took effect. Applying it would let one machine
+opt out of the team's standard while its report still read as compliant. A
+genuine local skip belongs in the PR as a recorded deviation. This is the same
+rule the workflow already states for documents: a child may not silently relax a
+binding restriction.
+
+## Tool classification
+
+Grouped by whether the tool executes project code, not by whether the name is
+recognized. `ruff` and `pyright` analyze without running anything. `pytest`
+imports `conftest.py` by design and `mypy` imports configured plugins, so both are
+recognized and still require approval. Anything else is unrecognized and also
+requires approval. Recognition is not trust.
+
+## Reading the report
+
+```sh
+python3 <installed skill>/scripts/standards.py inspect --project /path/to/project
+```
+
+It prints the files found with their trust, the effective values, the layer every
+value came from, each tool's verdict and reason, and a note. A refusal exits
+non-zero with an empty stdout, so a failure cannot be mistaken for a defaults
+report.
+
+## Limits
+
+Stdlib and Git only; Python 3.9 or newer. The configuration is read as data and
+never executed. A refusal names the file and the field and never carries the
+file's contents. Symlinked, non-regular, oversized and non-UTF-8 configuration
+files are refused rather than parsed. Reading a file proves nothing about whether
+the agent followed it.

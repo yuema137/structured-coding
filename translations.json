@@ -45,7 +45,7 @@
     }
   ],
   "specification_sha256": {
-    "structured-coding/SKILL.md": "cd7fa932e56dc5c2bc4dd38c65bc7eb3d2b95784aac8f371e36783b0b7273e2b",
+    "structured-coding/SKILL.md": "bbfa75b6f56f04754799b5c7a0199008663ba4346630a483340182544fa7af37",
     "structured-coding/prompts/implementation-working-rules.md": "7caa1d829fcdb0741b3b621918d6058352adcacf6c8bfee5267e37d2850debcf",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",

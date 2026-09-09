@@ -21,6 +21,7 @@ Read [agent-workflow.md](references/agent-workflow.md) and [adaptation.md](refer
 | Execute / resume | Full [working rules](prompts/implementation-working-rules.md) and [test rules](prompts/test-ci-gate-rules.md); filled contract; current PR design in full | Implement, validate, review, commit, and iterate through authorized PR/CI work |
 | Operator review / merge | Working rules §§21–22; current PR design and exact-head evidence | Review-ready handoff; merge only with explicit operator authorization |
 | After merge | Confirmed merge result; current PR, step, and overall documents | Update PR → step → overall; detail the immediate next PR |
+| Project standards | [standards contract](references/standards.md), only when `.structured-coding/standards.md` exists in the target project | Apply the project's declared review conventions and check ownership; the helper reports, it does not enforce |
 | Hook design / integration | [hook contract](references/hook-contract.md); [platform notes](references/platforms.md); [continuity preset](references/continuity.md) and [checkpoints preset](references/checkpoints.md), only when explicitly enabled | Read only explicitly enabled preset interfaces; further integration only when requested |
 
 The original long prompts are deliberately preserved. Do not replace them with this entrypoint or a summary during execution. Resolve relative resource links against this skill directory, not the target repository.
@@ -41,6 +42,8 @@ The original long prompts are deliberately preserved. Do not replace them with t
 ## Authority and packaging boundaries
 
 The filled, approved project contract specializes these reusable rules. User instructions and existing authorization control task scope. Repository reality establishes what exists; it does not authorize changing frozen intent. A lower-level document or stale handoff cannot silently override a binding invariant.
+
+If the target project declares standards, read [the standards contract](references/standards.md) and apply the resolved result; that file states codebase-wide rules only, and it reports rather than enforces. A project without one is unaffected.
 
 `SIDERIUS`, `shuffle`, `file_order`, Gate labels, tool names, and scientific examples in the prompts retain their source wording. Apply them where relevant using [adaptation.md](references/adaptation.md); do not create those systems in an unrelated project.
 

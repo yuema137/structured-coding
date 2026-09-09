@@ -197,6 +197,18 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("scripts/standards.py", files)
 
 
+class TemplateTests(unittest.TestCase):
+    def test_the_shipped_template_declares_exactly_the_shipped_defaults(self):
+        """The template is validated by the same reader users' files go through,
+        so its published defaults cannot drift from the code's."""
+        template = hook_install.ROOT / "structured-coding/standards-template.md"
+        self.assertEqual(standards.read(template), standards.DEFAULTS)
+
+    def test_the_template_prose_may_show_examples_without_being_read(self):
+        text = (hook_install.ROOT / "structured-coding/standards-template.md").read_text()
+        self.assertEqual(len(standards.blocks(text)), 1)
+
+
 class ResolutionTests(unittest.TestCase):
     BASE = Path("team.md")
     MINE = Path("mine.md")

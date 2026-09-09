@@ -39,6 +39,8 @@ PUBLISHED_FILES = {
     "scripts/checkpoints.py",
     "scripts/standards.py",
     "references/checkpoints.md",
+    "references/standards.md",
+    "standards-template.md",
 }
 
 
