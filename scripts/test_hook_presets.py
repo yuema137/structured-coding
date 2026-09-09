@@ -104,6 +104,42 @@ class PresetTests(WorktreeTest):
                         self.assertTrue(data.exists())
                         self.assertTrue(plan["skill"].exists())
 
+    def test_check_hooks_names_a_changed_interpreter(self):
+        """A groups mismatch caused by the interpreter must say so, not blame paths."""
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                registered = self.project.parent / f"fake-python-{host}"
+                registered.write_bytes(b"")
+                # Register the hooks as if a different interpreter had installed them.
+                with patch.object(sys, "executable", str(registered)):
+                    self.install(host, ["continuity"])
+                    self.assertIn(str(registered), hooks.doctor(host, self.project))
+                for state in ("still present", "no longer present"):
+                    with self.subTest(state=state):
+                        with self.assertRaises(ValueError) as caught:
+                            hooks.doctor(host, self.project)
+                        message = str(caught.exception)
+                        self.assertIn("Registered interpreter", message)
+                        self.assertIn(str(registered), message)
+                        self.assertIn(state, message)
+                        self.assertIn(sys.executable, message)
+                    if state == "still present":
+                        registered.unlink()
+
+    def test_interpreter_hint_stays_silent_on_unreadable_groups(self):
+        """An unrecognizable receipt must not produce a confident interpreter claim."""
+        for owned in (
+            "not-a-mapping",
+            {"A": [{"hooks": [{"command": "/a/python x"}]}], "B": [{"hooks": [{"command": "/b/python y"}]}]},
+            {"A": [{"hooks": [{"command": 17}]}]},
+            {"A": [{"hooks": [{"command": "unclosed '"}]}]},
+            {"A": [{"hooks": [{}]}]},
+            {"A": "not-a-list"},
+        ):
+            with self.subTest(owned=owned):
+                self.assertIsNone(hooks.interpreter(owned))
+                self.assertEqual(hooks.interpreter_hint(owned), "")
+
     def test_legacy_noop_check_preview_upgrade_and_remove(self):
         for host in hooks.PATHS:
             config, _, receipt = self.legacy(host)
