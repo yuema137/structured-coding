@@ -68,6 +68,18 @@ about how your project uses it is a review convention rather than a tool.
 that cover a change usually live in files the change did not touch, so a
 changed-file selection silently skips them.
 
+### Adding a tool this skill ships no argv for
+
+`ruff` and `pyright` run with argv the skill supplies; declaring `command` for
+them is refused. For anything else, say what to run, which needs `"schema": 2`:
+
+```text
+{"name": "deno-lint", "command": ["deno", "lint"], "scope": "changed"}
+```
+
+`command` is argv words, never a shell string, and is never passed to a shell.
+The paths in scope are appended to it.
+
 ### Which tools need approval
 
 Tools are grouped by whether they execute your project's code, not by whether the
@@ -107,9 +119,41 @@ you make rather than one you inherit.
 }
 ```
 
+## Running the checks
+
+```sh
+python3 <skill>/scripts/standards.py run --project . --base main
+```
+
+`--base` is required while any enabled check uses `changed` scope. Each check
+comes back as one of four outcomes:
+
+| Outcome | Meaning |
+| --- | --- |
+| `PASS` | the tool ran and reported nothing |
+| `FAIL` | the tool ran and reported findings |
+| `INCONCLUSIVE` | it could not run or finish: not installed, timed out, or it exited in its own error mode |
+| `NOT RUN` | disabled, nothing in scope, no command, or approval missing |
+
+A tool that is not installed is `INCONCLUSIVE`, never a pass. So is a changed-file
+selection that matched nothing. Neither examined anything, so neither established
+anything.
+
+Before a tool that needs approval will run:
+
+```sh
+python3 <skill>/scripts/standards.py approve --project .
+```
+
+This prints every command it authorizes and records the decision outside the
+working tree, so a pull request cannot approve its own new command. Changing a
+command revokes the record; editing anything else in this file does not.
+
 ## What this does not do yet
 
-Nothing here runs a tool, blocks a commit, or registers a hook. This release
-reads the file and reports the result. Automatic execution, and the approval that
-gates a tool outside the allowlist, are separate later work. Do not read a clean
-`inspect` report as evidence that any check has run.
+Nothing runs automatically. There is no hook, so checks happen only when you
+invoke the command above, and nothing here blocks a commit or a merge.
+
+`approve` records an operator decision; it does not enforce who made it. Nothing
+in this skill prevents an agent from running it, exactly as nothing prevents an
+agent from running the installer.

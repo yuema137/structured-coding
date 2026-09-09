@@ -6,9 +6,12 @@ Uses only Python 3.9+ and Git; never invokes an LLM, a tool, or a remote API.
 """
 
 import argparse
+import hashlib
 import json
+import os
 import re
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -18,10 +21,13 @@ sys.dont_write_bytecode = True
 # sys.path[0], which is how checkpoints.py reaches it and why that script fails
 # hard under python3 -P. Fixing checkpoints.py is separate, recorded work.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from continuity import Repository, safe_path  # noqa: E402
+from continuity import Repository, atomic_json, read_json, safe_path  # noqa: E402
 
 MAX_INPUT = 256 * 1024
+# 1 is what the shipped defaults declare, because they need nothing newer.
+# 2 adds a project-supplied command, for a tool we ship no argv for.
 SCHEMA = 1
+SCHEMAS = (1, 2)
 TRIGGERS = ("off", "pr", "commit")
 SCOPES = ("changed", "repository")
 NAME = re.compile(r"\A[a-z][a-z0-9_-]{0,31}\Z")
@@ -103,7 +109,25 @@ def conventions(path, value):
     return list(value)
 
 
-def tools(path, value):
+def command_words(path, field, value, name):
+    """argv, not a shell string. Nothing here is ever passed to a shell."""
+    if name in ANALYZERS:
+        raise Invalid(
+            path, field, f"{name} runs with the argv this skill ships; remove command"
+        )
+    if not isinstance(value, list) or not value:
+        raise Invalid(path, field, "must be a non-empty list of argv words")
+    for word in value:
+        if not isinstance(word, str) or not word:
+            raise Invalid(path, field, "every argv word must be a non-empty string")
+    if any(character.isspace() for character in value[0]):
+        raise Invalid(
+            path, field, "the first word is the executable, not a whole shell command"
+        )
+    return list(value)
+
+
+def tools(path, value, schema=SCHEMA):
     if not isinstance(value, list):
         raise Invalid(path, "checks.tools", "must be a list")
     seen = set()
@@ -111,7 +135,8 @@ def tools(path, value):
         field = f"checks.tools[{index}]"
         if not isinstance(item, dict):
             raise Invalid(path, field, "must be an object")
-        unknown = set(item) - {"name", "enabled", "scope"}
+        allowed = {"name", "enabled", "scope"} | ({"command"} if schema >= 2 else set())
+        unknown = set(item) - allowed
         if unknown:
             raise Invalid(path, field, f"unknown keys: {', '.join(sorted(unknown))}")
         name = item.get("name")
@@ -124,18 +149,21 @@ def tools(path, value):
             raise Invalid(path, f"{field}.enabled", "must be true or false")
         if "scope" in item and item["scope"] not in SCOPES:
             raise Invalid(path, f"{field}.scope", f"must be one of {', '.join(SCOPES)}")
+        if "command" in item:
+            command_words(path, f"{field}.command", item["command"], name)
     return [dict(item) for item in value]
 
 
 def validate(path, value):
     if not isinstance(value, dict):
         raise Invalid(path, "json block", "must be an object")
-    if value.get("schema") != SCHEMA:
-        raise Invalid(path, "schema", f"must be {SCHEMA}")
+    schema = value.get("schema")
+    if schema not in SCHEMAS:
+        raise Invalid(path, "schema", f"must be one of {', '.join(map(str, SCHEMAS))}")
     unknown = set(value) - {"schema", "review", "checks"}
     if unknown:
         raise Invalid(path, "json block", f"unknown keys: {', '.join(sorted(unknown))}")
-    declared = {"schema": SCHEMA}
+    declared = {"schema": schema}
     if "review" in value:
         review = section(path, value["review"], "review", ("conventions",))
         declared["review"] = dict(review)
@@ -145,7 +173,7 @@ def validate(path, value):
         checks = section(path, value["checks"], "checks", ("tools",))
         declared["checks"] = dict(checks)
         if "tools" in checks:
-            declared["checks"]["tools"] = tools(path, checks["tools"])
+            declared["checks"]["tools"] = tools(path, checks["tools"], schema)
     return declared
 
 
@@ -272,6 +300,64 @@ RUNNERS = {
 }
 
 
+# What an allowlisted tool is actually invoked as. A project never supplies these.
+SHIPPED = {
+    "ruff": {"base": ("ruff", "check"), "repository": (".",)},
+    "pyright": {"base": ("pyright",), "repository": ()},
+}
+
+
+def argv(tool, paths):
+    """The command for one tool, or None when the project must supply it."""
+    name = tool["name"]
+    if name in SHIPPED:
+        shipped = SHIPPED[name]
+        if tool.get("scope", "changed") == "repository":
+            return [*shipped["base"], *shipped["repository"]]
+        return [*shipped["base"], *paths]
+    command = tool.get("command")
+    return None if command is None else [*command, *paths]
+
+
+def changed_files(root, base):
+    """What this branch changed against base. Deletions are excluded: a file that
+    is gone cannot be checked, and reporting it would make a tool fail on it."""
+    if not isinstance(base, str) or not base or base.startswith("-"):
+        raise Invalid(root, "base", "must be a Git revision")
+    result = subprocess.run(
+        ["git", "--no-optional-locks", "-C", str(root), "diff", "--name-only",
+         "--diff-filter=ACMR", f"{base}...HEAD"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30,
+    )
+    if result.returncode:
+        raise Invalid(
+            root, "base", f"{base} is not a revision this repository can compare with"
+        )
+    names = [name for name in os.fsdecode(result.stdout).splitlines() if name]
+    # A path can survive the diff and still be absent from the working tree.
+    return [name for name in names if (root / name).is_file()]
+
+
+def needs_base(effective):
+    return any(
+        tool.get("enabled", True) and tool.get("scope", "changed") == "changed"
+        for tool in effective["checks"]["tools"]
+    )
+
+
+def paths_for(root, tool, base):
+    """The paths this tool runs on, or the reason it is not run at all."""
+    if tool.get("scope", "changed") == "repository":
+        return [], None
+    if base is None:
+        return [], "a base revision is required for changed-file scope"
+    paths = changed_files(root, base)
+    if not paths:
+        # Never a pass: nothing was examined, so nothing was established.
+        return [], "no files changed against the base"
+    return paths, None
+
+
 def classify(name):
     if name in ANALYZERS:
         return "allowlisted", "analyzes without executing project code"
@@ -310,6 +396,144 @@ def discover(project):
     return root, present
 
 
+# The approval lives beside the other per-worktree state, outside the working tree,
+# so a pull request cannot carry an approval for its own new command.
+APPROVAL = "structured-coding-standards/approval.json"
+
+
+def pending_approval(effective):
+    """Enabled tools this skill ships no argv for, paired with what they would run.
+
+    A tool with no command cannot run at all, so it needs a command rather than an
+    approval and is not listed here."""
+    return sorted(
+        [tool["name"], list(tool["command"])]
+        for tool in effective["checks"]["tools"]
+        if tool.get("enabled", True)
+        and tool["name"] not in SHIPPED
+        and tool.get("command")
+    )
+
+
+def digest(pending):
+    """Bound to the commands only. Binding it to the whole configuration would
+    invalidate approval on every unrelated edit, which teaches people to reapprove
+    without reading."""
+    return hashlib.sha256(
+        json.dumps(pending, ensure_ascii=True, sort_keys=True).encode()
+    ).hexdigest()
+
+
+def approval_file(project):
+    return safe_path(Repository(project).gitdir, APPROVAL)
+
+
+def approved(project, pending):
+    if not pending:
+        return True
+    path = approval_file(project)
+    if not path.exists():
+        return False
+    try:
+        return read_json(path).get("commands") == digest(pending)
+    except (OSError, ValueError):
+        return False
+
+
+def grant(project, effective):
+    """Record an approval for exactly the commands currently declared."""
+    pending = pending_approval(effective)
+    path = approval_file(project)
+    if not pending:
+        return pending, None
+    atomic_json(path, {"schema": 1, "commands": digest(pending)})
+    return pending, path
+
+
+TOOL_SECONDS = 300
+TOTAL_SECONDS = 900
+MAX_OUTPUT = 16 * 1024
+
+# Exit codes that mean the tool could not run, as opposed to it finding something.
+# ruff: 0 none, 1 violations, 2 abnormal termination (docs.astral.sh/ruff/linter).
+# pyright: 0 none, 1 errors, 2 fatal, 3 unreadable config, 4 illegal parameters
+# (microsoft/pyright docs/command-line.md). Checked 2026-09-09.
+ERROR_EXITS = {"ruff": (2,), "pyright": (2, 3, 4)}
+
+
+def bounded_output(raw):
+    text = os.fsdecode(raw)
+    if len(text) <= MAX_OUTPUT:
+        return text.strip()
+    return text[:MAX_OUTPUT].strip() + "\n[output truncated]"
+
+
+def execute(root, tool, command, seconds):
+    """Run one tool and classify from what happened, not from the exit code alone."""
+    if seconds <= 0:
+        return "INCONCLUSIVE", "the total time budget was already spent", ""
+    started = time.monotonic()
+    try:
+        result = subprocess.run(
+            command, cwd=str(root), stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, timeout=seconds,
+        )
+    except FileNotFoundError:
+        # Never a pass: an absent tool established nothing.
+        return "INCONCLUSIVE", f"{command[0]} is not installed or not on PATH", ""
+    except subprocess.TimeoutExpired:
+        return "INCONCLUSIVE", f"no result within {seconds:.0f}s", ""
+    except OSError as error:
+        return "INCONCLUSIVE", f"could not start ({type(error).__name__})", ""
+    elapsed = time.monotonic() - started
+    output = bounded_output(result.stdout or b"")
+    code = result.returncode
+    if code == 0:
+        return "PASS", f"clean in {elapsed:.1f}s", output
+    if code < 0:
+        return "INCONCLUSIVE", f"killed by signal {-code}", output
+    if code in ERROR_EXITS.get(tool["name"], ()):
+        return "INCONCLUSIVE", f"exited {code}, its own error mode", output
+    if tool["name"] not in ERROR_EXITS:
+        return "FAIL", f"exited {code}; this skill has no exit-code map for it", output
+    return "FAIL", f"exited {code} in {elapsed:.1f}s", output
+
+
+def outcomes(project, effective, base):
+    """Every enabled tool, with what happened to it."""
+    root = Repository(project).root
+    pending = pending_approval(effective)
+    permitted = approved(project, pending)
+    waiting = {name for name, _ in pending}
+    deadline = time.monotonic() + TOTAL_SECONDS
+    results = []
+    for tool in effective["checks"]["tools"]:
+        entry = {"name": tool["name"], "scope": tool.get("scope", "changed")}
+        if not tool.get("enabled", True):
+            results.append({**entry, "outcome": "NOT RUN", "reason": "disabled"})
+            continue
+        if tool["name"] in waiting and not permitted:
+            results.append({**entry, "outcome": "NOT RUN",
+                            "reason": "approval required; run the approve command"})
+            continue
+        paths, reason = paths_for(root, tool, base)
+        if reason:
+            results.append({**entry, "outcome": "NOT RUN", "reason": reason})
+            continue
+        command = argv(tool, paths)
+        if command is None:
+            results.append({**entry, "outcome": "NOT RUN", "reason":
+                            "no command declared, and this skill ships none for it"})
+            continue
+        outcome, why, output = execute(
+            root, tool, command, min(TOOL_SECONDS, deadline - time.monotonic())
+        )
+        results.append({**entry, "outcome": outcome, "reason": why,
+                        "command": command[:1] + (["..."] if len(command) > 1 else []),
+                        "files": len(paths), "output": output})
+    return results
+
+
 def report(project):
     """What is in effect, where each value came from, and what would need approval."""
     root, present = discover(project)
@@ -343,13 +567,55 @@ def report(project):
     }
 
 
+def resolved(project):
+    _, present = discover(project)
+    base, overlay = present.get("base"), present.get("overlay")
+    return resolve(
+        None if base is None else (base["relative"], base["declared"]),
+        None if overlay is None else (overlay["relative"], overlay["declared"]),
+    )
+
+
+def approve(project):
+    """Operator command. Nothing here prevents an agent from running it, exactly
+    as nothing prevents an agent from running the installer; see references."""
+    root, present = discover(project)
+    base = present.get("base")
+    overlay = present.get("overlay")
+    effective, _ = resolve(
+        None if base is None else (base["relative"], base["declared"]),
+        None if overlay is None else (overlay["relative"], overlay["declared"]),
+    )
+    pending, path = grant(project, effective)
+    if not pending:
+        print("Nothing needs approval; no record was written.")
+        return 0
+    print(f"Approving {len(pending)} command(s) for {root}:")
+    for name, command in pending:
+        print(f"  {name}: {' '.join(command)}")
+    print(f"Recorded in {path}. Changing any of these commands revokes it.")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("inspect",))
+    parser.add_argument("action", choices=("inspect", "run", "approve"))
     parser.add_argument("--project", required=True, type=Path)
+    parser.add_argument("--base", help="revision changed-file scope compares against")
     args = parser.parse_args(argv)
     try:
-        print(json.dumps(report(args.project), ensure_ascii=True, indent=2))
+        if args.action == "approve":
+            return approve(args.project)
+        value = report(args.project)
+        if args.action == "run":
+            effective, _ = resolved(args.project)
+            if needs_base(effective) and args.base is None:
+                raise Invalid(args.project, "base",
+                              "--base is required while a changed-scope check is enabled")
+            value["results"] = outcomes(args.project, effective, args.base)
+            value["note"] = ("Ran the declared checks. Nothing was registered as a hook; "
+                             "this happens only when this command is invoked.")
+        print(json.dumps(value, ensure_ascii=True, indent=2))
         return 0
     except Invalid as error:
         # A refusal must never be reported as "the defaults apply".

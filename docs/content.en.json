@@ -475,5 +475,5 @@
       "may add and tighten only, never relax the team's"
     ]
   ],
-  "standardsNote": "Scope is set per tool because the right answer differs by tool: changed files suit ruff and pyright, and mislead for pytest, whose covering tests usually sit in files the change never touched. Tools are grouped by whether they execute your code, so pytest and mypy are recognized and still need a deliberate approval. This release reads the file and reports the resolved result with the layer every value came from; it runs no tool and registers no hook, and a clean report is not evidence that a check has run."
+  "standardsNote": "Scope is set per tool because the right answer differs by tool: changed files suit ruff and pyright, and mislead for pytest, whose covering tests usually sit in files the change never touched. Tools are grouped by whether they execute your code, so pytest and mypy are recognized and still need a deliberate approval before anything runs them. Running the checks is an explicit command: each one comes back as PASS, FAIL, INCONCLUSIVE or NOT RUN, and a tool that is not installed is INCONCLUSIVE rather than a pass, because it examined nothing. Nothing runs automatically yet; there is no hook, so no commit and no merge is blocked."
 }
