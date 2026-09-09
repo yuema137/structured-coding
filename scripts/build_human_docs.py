@@ -92,10 +92,11 @@ def tutorial_html(data):
     return "".join(chapters)
 
 
-def tutorial_md(data):
-    chunks = [f'<a id="tutorial"></a>\n\n## {data["tutorialTitle"]}\n\n{data["tutorialIntro"]}\n']
+def tutorial_md(data, top="##", step_level="###", anchor=True):
+    lead = '<a id="tutorial"></a>\n\n' if anchor else ""
+    chunks = [f'{lead}{top} {data["tutorialTitle"]}\n\n{data["tutorialIntro"]}\n']
     for step in data["tutorial"]:
-        chunks.append(f"### {step['title']}\n\n" + "\n\n".join(step["paragraphs"]) + "\n")
+        chunks.append(f"{step_level} {step['title']}\n\n" + "\n\n".join(step["paragraphs"]) + "\n")
         prompt = step["promptIndex"]
         if prompt is not None:
             chunks.append(f"```text\n{data['prompts'][prompt]}\n```\n")
@@ -114,12 +115,34 @@ def orientation_md(data):
     ])
 
 
-def guide_navigation(data):
-    return " · ".join(
-        f"[{data[label]}](#{anchor})"
-        for label, anchor in [("navInstall", "start"), ("sessionsTitle", "sessions"),
-                              ("tutorialNav", "tutorial"), ("hooksTitle", "hooks")]
-    ) + "\n"
+def guide_navigation(data, anchors):
+    return " · ".join(f"[{data[label]}](#{anchor})" for label, anchor in anchors) + "\n"
+
+
+def example_md(data):
+    """The shortest honest picture of using the workflow: what you type, what returns."""
+    chunks = [f"## {data['exampleTitle']}\n\n{data['exampleLead']}\n"]
+    for index, label in enumerate(data["promptLabels"]):
+        chunks.append(
+            f"### {index + 1}. {label}\n\n"
+            f"```text\n{data['prompts'][index]}\n```\n\n"
+            f"{data['exampleOutcomes'][index]}\n"
+        )
+    chunks.append(data["exampleNote"] + "\n")
+    return "\n".join(chunks)
+
+
+def going_further_md(data, packaged=False):
+    rows = []
+    for label, target, blurb in data["goingFurther"]:
+        if packaged:
+            if target.startswith("TUTORIAL"):
+                continue
+            target = target.removeprefix("structured-coding/")
+        rows.append([f"[{label}]({target})", blurb])
+    return f"## {data['goingFurtherTitle']}\n\n" + table_md(
+        rows, ["资源", "内容"] if data["lang"] != "en" else ["Resource", "What it covers"]
+    )
 
 
 def detail_blocks(data, svg=False):
@@ -318,74 +341,124 @@ def compact_svg(data):
     return svg_frame(body, 900, 240, data["compactTitle"])
 
 
+def collapsed(key, title, body):
+    return f'<details id="{key}">\n<summary>{esc(title)}</summary>\n\n{body}\n\n</details>\n'
+
+
 def render_readme(data):
+    """Lead with running it; keep orientation and reference material collapsed."""
     zh = data["lang"] != "en"
     suffix = ".zh-CN" if zh else ""
     language = (
         "[English source](README.md)" if zh else "[Chinese mirror](README.zh-CN.md)"
     )
     guide = f"structured-coding/README{suffix}.md"
+    tutorial = f"TUTORIAL{suffix}.md"
     chunks = [
-        f"# Structured Coding\n\n{language} · [{data['htmlLabel']}](docs/index{suffix}.html)\n\n{data['subtitle']}\n",
-        guide_navigation(data),
+        f"# Structured Coding\n\n{language} · [{data['htmlLabel']}](docs/index{suffix}.html) · [{data['tutorialNav']}]({tutorial})\n\n{data['subtitle']}\n",
+        guide_navigation(
+            data,
+            [
+                ("quickStartTitle", "start"),
+                ("exampleTitle", "example"),
+                ("workflowTitle", "workflow"),
+                ("goingFurtherTitle", "further"),
+            ],
+        ),
+        '<a id="start"></a>\n',
+        f"## {data['quickStartTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n\n[{data['optionalHookNote']}](#hooks)\n",
+        '<a id="example"></a>\n',
+        example_md(data),
         f"## {data['whyTitle']}\n\n{data['why']}\n",
-    ]
-    chunks += [
-        "\n".join(f"- **{title}**: {body}" for title, body in data["benefits"]) + "\n"
-    ]
-    chunks += [
-        f"## {data['workflowTitle']}\n\n![{data['workflowTitle']}](docs/assets/workflow{suffix}.svg)\n\n{data['workflowCaption']}\n\n{data['workflowNote']}\n"
-    ]
-    chunks += [
-        f"## {data['kitTitle']}\n\n{data['kitLead']}\n",
-        table_md(
-            [[f"[{row[1]}]({row[3]})", row[2]] for row in data["kit"]],
-            ["Resource", "What it provides"] if not zh else ["资源", "提供什么"],
+        "\n".join(f"- **{title}**: {body}" for title, body in data["benefits"]) + "\n",
+        '<a id="workflow"></a>\n',
+        f"## {data['workflowTitle']}\n\n![{data['workflowTitle']}](docs/assets/workflow{suffix}.svg)\n\n{data['workflowCaption']}\n\n{data['workflowNote']}\n",
+        f"## {data['peopleTitle']}\n\n{data['peopleLead']}\n\n![{data['peopleTitle']}](docs/assets/people{suffix}.svg)\n\n{data['autonomy']}\n\n{data['escalation']}\n",
+        '<a id="further"></a>\n',
+        going_further_md(data),
+        f"## {data['technicalTitle']}\n\n{data['technicalLead']}\n",
+        collapsed(
+            "kit",
+            data["kitTitle"],
+            f"<p>{esc(data['kitLead'])}</p>"
+            + table_html(
+                [[row[1], row[2]] for row in data["kit"]],
+                ["资源", "提供什么"] if zh else ["Resource", "What it provides"],
+            ),
+        ),
+        collapsed(
+            "roles",
+            data["rolesTitle"],
+            paragraphs(data["rolesIntro"])
+            + table_html(data["roles"], data["roleColumns"])
+            + paragraphs(data["rolesExample"]),
+        ),
+        collapsed(
+            "sessions",
+            data["sessionsTitle"],
+            paragraphs(data["sessionsIntro"])
+            + table_html(data["sessions"], data["sessionColumns"])
+            + paragraphs(data["sessionsExample"]),
         ),
     ]
-    chunks += [
-        '<a id="start"></a>\n',
-        f"## {data['startTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n\n[{data['optionalHookNote']}](#hooks)\n"
-    ]
-    chunks += [orientation_md(data), tutorial_md(data)]
-    chunks += [
-        f"## {data['peopleTitle']}\n\n{data['peopleLead']}\n\n![{data['peopleTitle']}](docs/assets/people{suffix}.svg)\n\n{data['autonomy']}\n\n{data['escalation']}\n"
-    ]
-    chunks += [f"## {data['technicalTitle']}\n\n{data['technicalLead']}\n"]
     for key, title, body in detail_blocks(data, svg=True):
-        chunks += [
-            f'<details id="{key}">\n<summary>{esc(title)}</summary>\n\n{body}\n\n</details>\n'
-        ]
+        chunks.append(collapsed(key, title, body))
     chunks += [
-        f"---\n\n[{data['guideLabel']}]({guide}) · [{data['htmlLabel']}](docs/index{suffix}.html)\n\n{data['htmlNote']}\n\n{data['footer']}\n"
+        f"---\n\n[{data['guideLabel']}]({guide}) · [{data['tutorialNav']}]({tutorial}) · [{data['htmlLabel']}](docs/index{suffix}.html)\n\n{data['htmlNote']}\n\n{data['footer']}\n"
     ]
     return "\n".join(chunks)
 
 
+def render_tutorial(data):
+    """The long walkthrough, moved out of the README it used to dominate."""
+    zh = data["lang"] != "en"
+    suffix = ".zh-CN" if zh else ""
+    language = (
+        "[English source](TUTORIAL.md)" if zh else "[Chinese mirror](TUTORIAL.zh-CN.md)"
+    )
+    return "\n".join(
+        [
+            f"{language} · [{data['tutorialBackLink']}](README{suffix}.md)\n",
+            tutorial_md(data, top="#", step_level="##", anchor=False),
+            f"---\n\n[{data['tutorialBackLink']}](README{suffix}.md) · [{data['htmlLabel']}](docs/index{suffix}.html)\n",
+        ]
+    )
+
+
 def render_package_guide(data):
-    """Keep installed human guides self-contained, without repo-only assets."""
+    """The installed copy: its reader already ran the installer, so it never repeats it."""
     zh = data["lang"] != "en"
     suffix = ".zh-CN" if zh else ""
     language = "[English source](README.md)" if zh else "[Chinese mirror](README.zh-CN.md)"
-    resources = [
-        [f"[{row[1]}]({row[3].removeprefix('structured-coding/')})", row[2]]
-        for row in data["kit"]
-    ]
     chunks = [
         f"# Structured Coding\n\n{language}\n\n{data['subtitle']}\n",
-        guide_navigation(data),
+        guide_navigation(
+            data,
+            [
+                ("exampleTitle", "example"),
+                ("tutorialNav", "tutorial"),
+                ("goingFurtherTitle", "further"),
+                ("hooksTitle", "hooks"),
+            ],
+        ),
+        f"## {data['installedTitle']}\n\n{data['installedIntro']}\n\n{data['invoke']}\n",
+        '<a id="example"></a>\n',
+        example_md(data),
         f"## {data['whyTitle']}\n\n{data['why']}\n",
-        f"## {data['kitTitle']}\n\n{data['kitLead']}\n",
-        table_md(resources, ["资源", "提供什么"] if zh else ["Resource", "What it provides"]),
-        '<a id="start"></a>\n',
-        f"## {data['startTitle']}\n\n{data['startLead']}\n\n```sh\n{CLONE}\n```\n\n{data['projectNote']}\n\nCodex:\n\n```sh\n{INSTALL.format('codex')}\n```\n\nClaude Code:\n\n```sh\n{INSTALL.format('claude-code')}\n```\n\n{data['invoke']}\n\n{data['installNote']}\n",
-        orientation_md(data), tutorial_md(data),
-        f"## {data['recordsTitle']}\n\n" + table_md(data["records"], ["文档", "作用"] if zh else ["Document", "Purpose"]) + "\n" + data["recordsNote"] + "\n",
+        f"## {data['peopleTitle']}\n\n{data['peopleLead']}\n\n{data['autonomy']}\n\n{data['escalation']}\n",
+        orientation_md(data),
+        tutorial_md(data),
+        f"## {data['recordsTitle']}\n\n"
+        + table_md(data["records"], ["文档", "作用"] if zh else ["Document", "Purpose"])
+        + "\n"
+        + data["recordsNote"]
+        + "\n",
         f"## {data['compactTitle']}\n\n{data['compactIntro']}\n\n{data['compactNote']}\n",
         f'<a id="hooks"></a>\n\n## {data["hooksTitle"]}\n\n{data["hooksIntro"]}\n\n```sh\n{data["hookInstallCommands"]}\n```\n\n{data["hookInstallNote"]}\n',
         table_md(data["hooks"], data["hookColumns"]),
         data["hooksNote"] + "\n\n" + data["hookExample"] + "\n",
-        f"[Hook contract](references/hook-contract.md) · [Continuity](references/continuity.md) · [Checkpoints](references/checkpoints.md) · [Platform setup](references/platforms{suffix}.md) · [Approval rules](references/adaptation{suffix}.md)\n",
+        '<a id="further"></a>\n',
+        going_further_md(data, packaged=True),
         f"## {data['fitTitle']}\n\n{data['fit']}\n\n{data['footer']}\n",
     ]
     return "\n".join(chunks)
@@ -448,6 +521,8 @@ def expected_outputs():
         "sessions",
         "sessionColumns",
         "tutorial",
+        "exampleOutcomes",
+        "goingFurther",
     ):
         if len(sources[0][key]) != len(sources[1][key]):
             raise ValueError(f"Human-page mirror structure differs: {key}")
@@ -461,6 +536,7 @@ def expected_outputs():
         suffix = "" if data["lang"] == "en" else ".zh-CN"
         lang = data["lang"]
         outputs[f"README{suffix}.md"] = marked(render_readme(data), lang)
+        outputs[f"TUTORIAL{suffix}.md"] = marked(render_tutorial(data), lang)
         outputs[f"structured-coding/README{suffix}.md"] = marked(
             render_package_guide(data), lang
         )

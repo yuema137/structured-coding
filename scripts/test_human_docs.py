@@ -17,6 +17,8 @@ from unittest.mock import patch
 
 import build_human_docs as docs
 
+CLONE_COMMAND = docs.CLONE
+
 
 def expat_available():
     """Some local Python builds ship an ElementTree without a loadable pyexpat."""
@@ -38,7 +40,7 @@ class HumanDocsTests(unittest.TestCase):
 
     def test_generated_outputs_are_current(self):
         docs.check()
-        self.assertEqual(len(self.outputs), 12)
+        self.assertEqual(len(self.outputs), 14)
 
     def test_generated_pages_declare_their_source(self):
         """Someone opening a README to edit it must see that it is generated."""
@@ -57,7 +59,7 @@ class HumanDocsTests(unittest.TestCase):
                 else:
                     self.assertTrue(content.startswith("<!--"))
                 checked += 1
-        self.assertEqual(checked, 6)
+        self.assertEqual(checked, 8)
 
     def test_mirror_structure_and_preserved_prompts(self):
         english, chinese = self.sources
@@ -94,19 +96,31 @@ class HumanDocsTests(unittest.TestCase):
         for source in self.sources:
             page = docs.render_html(source)
             visible = page[:page.index('<section class="block technical"')]
-            readmes = (docs.render_readme(source), docs.render_package_guide(source))
+            # The walkthrough left the repository README; it must still reach a
+            # reader in every other human format.
+            guide = docs.render_package_guide(source)
+            carriers = (docs.render_tutorial(source), guide)
+            readme = docs.render_readme(source)
             for step in source["tutorial"]:
                 for value in [step["title"], *step["paragraphs"], step["checkpoint"]]:
                     self.assertIn(html.escape(value, quote=True), visible)
-                    for readme in readmes:
-                        self.assertIn(value, readme)
+                    for carrier in carriers:
+                        self.assertIn(value, carrier)
                 index = step["promptIndex"]
                 if index is not None:
                     self.assertIn(html.escape(source["prompts"][index], quote=True), visible)
-                    for readme in readmes:
-                        self.assertIn(source["prompts"][index], readme)
-            self.assertNotIn("docs/assets/", readmes[1])
-            self.assertNotIn("](structured-coding/", readmes[1])
+                    for carrier in carriers:
+                        self.assertIn(source["prompts"][index], carrier)
+            # The README keeps the short example and links onward to the rest.
+            self.assertIn(source["exampleLead"], readme)
+            for outcome in source["exampleOutcomes"]:
+                self.assertIn(outcome, readme)
+            suffix = "" if source["lang"] == "en" else ".zh-CN"
+            self.assertIn(f"](TUTORIAL{suffix}.md)", readme)
+            self.assertNotIn("docs/assets/", guide)
+            self.assertNotIn("](structured-coding/", guide)
+            # The installed guide never tells its reader to install again.
+            self.assertNotIn(CLONE_COMMAND, guide)
 
     def test_tutorial_mirror_errors_are_rejected(self):
         english, chinese = self.sources

@@ -6,52 +6,68 @@
 
 Agree on the change. Let the agent build it. Bring the result back into the plan.
 
-[Install](#start) · [How many conversations do you need?](#sessions) · [Step-by-step tutorial](#tutorial) · [Optional hooks: installation, coverage, and limits](#hooks)
+[What using it looks like](#example) · [Step-by-step tutorial](#tutorial) · [Going further](#further) · [Optional hooks: installation, coverage, and limits](#hooks)
+
+## You already have this installed
+
+This guide ships inside the skill, so you are reading it in a project that already has it. Invoke the skill explicitly and describe what you want built; ask for planning first, not implementation.
+
+Prefix your request with $structured-coding in Codex or /structured-coding in Claude Code. Describe the feature and its constraints; ask for planning first, not implementation.
+
+<a id="example"></a>
+
+## What using it looks like
+
+Three messages carry one feature from an idea to a reviewed PR. You approve twice; the agent does the work in between.
+
+### 1. Plan the feature
+
+```text
+Use the structured-coding workflow for this feature. First agree with me on
+requirements, module-level direction, and overall step boundaries; then detail
+the current step. Work on planning for now.
+Requirements: ...
+```
+
+The agent asks what it cannot infer, inspects your actual code, and writes the overall plan with step boundaries. Nothing is implemented yet.
+
+### 2. Prepare the next PR
+
+```text
+Read the overall and step documents, audit the current code, and prepare the
+PR 01a design doc and filled execution contract. Follow the original PR
+requirements for the commit checklist. Separate implementation, validation,
+and review, and prepare the design for my approval.
+```
+
+You get a PR design with an audited commit plan and a filled execution contract. Read it, ask for changes, and approve it once it describes what you actually want built.
+
+### 3. Execute after approval, in a fresh session
+
+```text
+Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
+and the filled contract is docs/plan/pr-01a-contract.md.
+Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
+in full, reconcile actual state, and begin.
+Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
+Do not merge.
+```
+
+A fresh session implements, validates, reviews its own logic, commits, and stops at a review handoff. You read the diff and decide whether to merge.
+
+That is the whole loop. After a confirmed merge the agent updates the plans with what it learned, and the next PR starts from there.
 
 ## Why use Structured Coding?
 
 A plan describes what you intend to build. It does not, on its own, tell an agent how to execute, what counts as evidence, when to ask you, or how to resume after losing context. This skill connects those decisions into one repeatable workflow.
 
-## Here is what the package provides.
+## Where you step in.
 
-The package gives you a workflow to follow, specifications that define acceptable work, prompt templates that tell the agent how to execute, and optional hooks that help at specific moments. You do not have to assemble these pieces yourself. Installing them does not, however, turn every written rule into an enforced check.
+You do not need to approve every commit. You do need to own the decisions that change the agreement.
 
-| Resource | What it provides |
-| --- | --- |
-| [Workflow](references/agent-workflow.md) | You and the agent plan the overall change, divide it into steps, and detail the next PR. After merge, the agent updates those plans with what it learned. |
-| [PR specification](prompts/pr-design-requirements.md) | The PR requirements tell the agent what a design must contain: inspected code, a commit plan, observable acceptance criteria, and separate evidence for implementation, validation, and review. |
-| [Execution templates](prompts/implementation-working-rules.md) | The working rules tell the agent how to proceed. A filled execution contract records what your project authorizes, what must stay unchanged, what budget applies, and when to stop. |
-| [Validation rules](prompts/test-ci-gate-rules.md) | The test rules help the agent choose checks that observe the promised behavior. A passing Unit test is not a substitute for a real model or lifecycle test when the claim depends on one. |
-| [Optional hook presets](references/platforms.md) | The continuity preset helps preserve and recover work around compact. The checkpoints preset gives commit and review reminders. Neither supplies a merge guard. |
-| [Two platform packages](references/platforms.md) | The project installer copies the same core skill for Codex or Claude Code. You can use either host; you do not need both, and installation does not change global settings. |
+After design approval, the agent investigates, implements, validates, reviews, records, and commits. If PR and CI work are authorized, it completes those too without waiting for you to prompt each step.
 
-<a id="start"></a>
-
-## Install it. Start with a request.
-
-You need Git, Python 3.9 or later, and either Codex or Claude Code. Open a terminal on macOS, Linux, or WSL. The commands below download this toolkit and install it into an existing project; they do not create the application you want to build.
-
-```sh
-git clone --depth 1 https://github.com/yuema137/structured-coding.git
-```
-
-Keep the terminal in the parent directory that now contains the cloned structured-coding folder. Replace /path/to/your-project with the project you want the agent to work on, not the toolkit folder. Choose one of the following commands. Quote the path if it contains spaces. If you have already downloaded the toolkit, skip the clone command and use the existing copy.
-
-Codex:
-
-```sh
-./structured-coding/scripts/install codex --project /path/to/your-project
-```
-
-Claude Code:
-
-```sh
-./structured-coding/scripts/install claude-code --project /path/to/your-project
-```
-
-Prefix your request with $structured-coding in Codex or /structured-coding in Claude Code. Describe the feature and its constraints; ask for planning first, not implementation.
-
-For Codex, the installed folder is .agents/skills/structured-coding inside your project; for Claude Code, it is .claude/skills/structured-coding. Start a new agent session in that project and explicitly invoke the skill. The default installation includes the instructions and supporting resources but registers no hooks. If installation reports an existing copy, compare or back it up before updating; the installer will not overwrite your changes. Global settings and permissions stay unchanged.
+A material scope change or an action outside existing authorization comes back to you with evidence and a proposal.
 
 <a id="roles"></a>
 
@@ -241,7 +257,16 @@ An event name alone does not guarantee blocking. Adapters must handle each host'
 
 Example: approval for PR 12 at HEAD A does not authorize merging a later HEAD B. The implementing agent cannot turn its own “approved” field into human authorization.
 
-[Hook contract](references/hook-contract.md) · [Continuity](references/continuity.md) · [Checkpoints](references/checkpoints.md) · [Platform setup](references/platforms.md) · [Approval rules](references/adaptation.md)
+<a id="further"></a>
+
+## Going further
+
+| Resource | What it covers |
+| --- | --- |
+| [Workflow reference](references/agent-workflow.md) | What the agent does in each phase, and where its authority stops. |
+| [PR specification](prompts/pr-design-requirements.md) | What a PR design must contain before it can be approved. |
+| [Optional hooks](references/platforms.md) | Installation, coverage, and the limits of what a hook can enforce. |
+| [Behavior contract](references/hook-contract.md) | The complete target behavior, including the parts not yet shipped. |
 
 ## When is the full workflow worth it?
 

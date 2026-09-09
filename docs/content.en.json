@@ -400,5 +400,45 @@
     "Use the structured-coding workflow for this feature. First agree with me on\nrequirements, module-level direction, and overall step boundaries; then detail\nthe current step. Work on planning for now.\nRequirements: ...",
     "Read the overall and step documents, audit the current code, and prepare the\nPR 01a design doc and filled execution contract. Follow the original PR\nrequirements for the commit checklist. Separate implementation, validation,\nand review, and prepare the design for my approval.",
     "Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,\nand the filled contract is docs/plan/pr-01a-contract.md.\nUse structured-coding. Read Implementation Working Rules and TEST / CI / GATE\nin full, reconcile actual state, and begin.\nContinue autonomously to READY FOR OPERATOR REVIEW under the contract.\nDo not merge."
-  ]
+  ],
+  "quickStartTitle": "Quick start",
+  "exampleTitle": "What using it looks like",
+  "exampleLead": "Three messages carry one feature from an idea to a reviewed PR. You approve twice; the agent does the work in between.",
+  "exampleOutcomes": [
+    "The agent asks what it cannot infer, inspects your actual code, and writes the overall plan with step boundaries. Nothing is implemented yet.",
+    "You get a PR design with an audited commit plan and a filled execution contract. Read it, ask for changes, and approve it once it describes what you actually want built.",
+    "A fresh session implements, validates, reviews its own logic, commits, and stops at a review handoff. You read the diff and decide whether to merge."
+  ],
+  "exampleNote": "That is the whole loop. After a confirmed merge the agent updates the plans with what it learned, and the next PR starts from there.",
+  "goingFurtherTitle": "Going further",
+  "goingFurther": [
+    [
+      "Step-by-step tutorial",
+      "TUTORIAL.md",
+      "The same loop on a real feature, one message at a time."
+    ],
+    [
+      "Workflow reference",
+      "structured-coding/references/agent-workflow.md",
+      "What the agent does in each phase, and where its authority stops."
+    ],
+    [
+      "PR specification",
+      "structured-coding/prompts/pr-design-requirements.md",
+      "What a PR design must contain before it can be approved."
+    ],
+    [
+      "Optional hooks",
+      "structured-coding/references/platforms.md",
+      "Installation, coverage, and the limits of what a hook can enforce."
+    ],
+    [
+      "Behavior contract",
+      "structured-coding/references/hook-contract.md",
+      "The complete target behavior, including the parts not yet shipped."
+    ]
+  ],
+  "installedTitle": "You already have this installed",
+  "installedIntro": "This guide ships inside the skill, so you are reading it in a project that already has it. Invoke the skill explicitly and describe what you want built; ask for planning first, not implementation.",
+  "tutorialBackLink": "Back to the README"
 }

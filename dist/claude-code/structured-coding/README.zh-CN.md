@@ -6,52 +6,68 @@
 
 先商量好要改什么，让 agent 放手做，再把结果写回计划。
 
-[安装](#start) · [到底要开几个会话？](#sessions) · [一步一步使用](#tutorial) · [可选 hook：安装、覆盖范围和限制](#hooks)
+[用起来是什么样](#example) · [一步一步使用](#tutorial) · [想了解更多](#further) · [可选 hook：安装、覆盖范围和限制](#hooks)
+
+## 你已经装好了
+
+这份指南随 skill 一起安装，所以你现在是在一个已经装好它的项目里读它。明确调用 skill，描述你想做的功能；先要 planning，不要直接要实现。
+
+Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding。说清 feature 和约束，先让它规划，不要直接开始实现。
+
+<a id="example"></a>
+
+## 用起来是什么样
+
+三条消息把一个功能从想法带到可以 review 的 PR。你点两次头，中间的活儿由 agent 干。
+
+### 1. 规划 feature
+
+```text
+Use the structured-coding workflow for this feature. First agree with me on
+requirements, module-level direction, and overall step boundaries; then detail
+the current step. Work on planning for now.
+Requirements: ...
+```
+
+Agent 会问它推断不出来的东西，检查你真实的代码，然后写出总体计划和 step 边界。这一步不写任何实现。
+
+### 2. 准备下一个 PR
+
+```text
+Read the overall and step documents, audit the current code, and prepare the
+PR 01a design doc and filled execution contract. Follow the original PR
+requirements for the commit checklist. Separate implementation, validation,
+and review, and prepare the design for my approval.
+```
+
+你会拿到一份 PR 设计：经过代码审计的 commit 计划，加一份填好的执行 contract。读它、要求修改，等它确实描述了你想要的东西再批准。
+
+### 3. 批准后，用新 session 执行
+
+```text
+Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
+and the filled contract is docs/plan/pr-01a-contract.md.
+Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
+in full, reconcile actual state, and begin.
+Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
+Do not merge.
+```
+
+一个全新 session 负责实现、验证、review 自己的逻辑、提交，停在 review handoff。你读 diff，决定要不要 merge。
+
+整个循环就这些。确认 merge 之后，agent 会把学到的东西写回计划，下一个 PR 从那里开始。
 
 ## 为啥要用 Structured Coding？
 
 计划能写清想做什么，但光有计划，还没说清 agent 怎么执行、拿什么证据算完成、什么时候找你，以及 context 丢了以后怎么接着干。这个 skill 把这些决定连成一套能反复使用的 workflow。
 
-## 这套 package 具体提供什么？
+## 你在哪些地方参与？
 
-我们提供的是一套能接着用的东西：工作流告诉你怎么推进，specification 规定什么才算合格，prompt template 告诉 agent 怎么执行，可选 hook 在特定时刻帮忙检查或提醒。你不用自己把这些零件拼起来。不过，装好了 skill，不代表每条文字规则都已经变成程序强制检查。
+不用每次 commit 都点头。但会改变约定的决定，得由你来做。
 
-| 资源 | 提供什么 |
-| --- | --- |
-| [Workflow](references/agent-workflow.zh-CN.md) | 你和 agent 先规划整体目标，再拆 step、细化下一个 PR。Merge 后，agent 把新发现写回这些计划。 |
-| [PR specification](prompts/pr-design-requirements.md) | PR requirements 告诉 agent，design 必须包括已检查的 code、commit plan、可观察的验收要求，以及分别记录的 implementation、validation 和 review 证据。 |
-| [Execution templates](prompts/implementation-working-rules.md) | Working rules 告诉 agent 怎么推进。填好的 execution contract 记录你的项目允许做什么、什么必须不变、预算是多少，以及在哪里停止。 |
-| [Validation rules](prompts/test-ci-gate-rules.md) | Test rules 帮助 agent 选择能观察到承诺行为的检查。如果一个结论依赖真实 model 或完整 lifecycle，Unit test 通过不能替代相应的真实验证。 |
-| [可选 hook preset](references/platforms.zh-CN.md) | Continuity 帮助 agent 在 compact 前后保存和恢复工作。Checkpoints 提供 commit 和 review 提醒。两者都不提供 merge guard。 |
-| [两套平台 package](references/platforms.zh-CN.md) | 项目 installer 给 Codex 和 Claude Code 安装相同的核心 skill。你选一个 host 就行，不需要两个都用，也不会修改全局设置。 |
+设计批准以后，agent 自己调查、实现、验证、review、记录并 commit。PR 和 CI 工作如果已经授权，它也会继续做完，不用你一步一步催。
 
-<a id="start"></a>
-
-## 装好，再给一个需求。
-
-你需要 Git、Python 3.9 或更新版本，以及 Codex 或 Claude Code 中的一个。在 macOS、Linux 或 WSL 里打开 terminal。下面的命令会下载这个 toolkit，并把 skill 安装到已有项目里，不会替你创建要开发的应用。
-
-```sh
-git clone --depth 1 https://github.com/yuema137/structured-coding.git
-```
-
-Terminal 保持在刚才 clone 所在的父目录，里面现在应该有 structured-coding 文件夹。把 /path/to/your-project 换成你要让 agent 修改的项目，不是 toolkit 目录。下面两条安装命令选一条就行，路径有空格就加引号。已经下载过 toolkit 的话，跳过 clone，使用现有副本。
-
-Codex:
-
-```sh
-./structured-coding/scripts/install codex --project /path/to/your-project
-```
-
-Claude Code:
-
-```sh
-./structured-coding/scripts/install claude-code --project /path/to/your-project
-```
-
-Codex 的请求开头加 $structured-coding，Claude Code 加 /structured-coding。说清 feature 和约束，先让它规划，不要直接开始实现。
-
-Codex 安装后，文件夹在目标项目的 .agents/skills/structured-coding；Claude Code 则在 .claude/skills/structured-coding。接着在目标项目里开新的 agent 会话，明确调用 skill。默认安装带上完整指令和资源，但不注册 hook。如果提示已经有一份，先比较或备份再更新，installer 不会覆盖你的修改。全局设置和权限都不变。
+遇到实质性范围变化，或者现有授权以外的操作，agent 带着证据和方案回来找你。
 
 <a id="roles"></a>
 
@@ -241,7 +257,16 @@ Compact 是 host 为腾出 context 而压缩聊天历史的过程，不是新建
 
 比如：批准 PR 12 的 HEAD A，不等于允许 merge 后来的 HEAD B。实现中的 agent 也不能自己写个“已批准”，就把它当成人的授权。
 
-[Hook contract](references/hook-contract.md) · [Continuity](references/continuity.md) · [Checkpoints](references/checkpoints.md) · [Platform setup](references/platforms.zh-CN.md) · [Approval rules](references/adaptation.zh-CN.md)
+<a id="further"></a>
+
+## 想了解更多
+
+| 资源 | 内容 |
+| --- | --- |
+| [工作流参考](references/agent-workflow.zh-CN.md) | Agent 在每个阶段做什么，以及它的权限到哪里为止。 |
+| [PR 规范](prompts/pr-design-requirements.md) | 一份 PR 设计在被批准之前必须包含什么。 |
+| [可选 hook](references/platforms.zh-CN.md) | 安装方式、覆盖范围，以及 hook 能强制什么、不能强制什么。 |
+| [行为契约](references/hook-contract.md) | 完整的目标行为，包括尚未实现的部分。 |
 
 ## 什么工作值得走完整流程？
 
