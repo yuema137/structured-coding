@@ -11,6 +11,7 @@ import json
 import os
 import re
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -449,6 +450,90 @@ def grant(project, effective):
     return pending, path
 
 
+TOOL_SECONDS = 300
+TOTAL_SECONDS = 900
+MAX_OUTPUT = 16 * 1024
+
+# Exit codes that mean the tool could not run, as opposed to it finding something.
+# ruff: 0 none, 1 violations, 2 abnormal termination (docs.astral.sh/ruff/linter).
+# pyright: 0 none, 1 errors, 2 fatal, 3 unreadable config, 4 illegal parameters
+# (microsoft/pyright docs/command-line.md). Checked 2026-09-09.
+ERROR_EXITS = {"ruff": (2,), "pyright": (2, 3, 4)}
+
+
+def bounded_output(raw):
+    text = os.fsdecode(raw)
+    if len(text) <= MAX_OUTPUT:
+        return text.strip()
+    return text[:MAX_OUTPUT].strip() + "\n[output truncated]"
+
+
+def execute(root, tool, command, seconds):
+    """Run one tool and classify from what happened, not from the exit code alone."""
+    if seconds <= 0:
+        return "INCONCLUSIVE", "the total time budget was already spent", ""
+    started = time.monotonic()
+    try:
+        result = subprocess.run(
+            command, cwd=str(root), stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, timeout=seconds,
+        )
+    except FileNotFoundError:
+        # Never a pass: an absent tool established nothing.
+        return "INCONCLUSIVE", f"{command[0]} is not installed or not on PATH", ""
+    except subprocess.TimeoutExpired:
+        return "INCONCLUSIVE", f"no result within {seconds:.0f}s", ""
+    except OSError as error:
+        return "INCONCLUSIVE", f"could not start ({type(error).__name__})", ""
+    elapsed = time.monotonic() - started
+    output = bounded_output(result.stdout or b"")
+    code = result.returncode
+    if code == 0:
+        return "PASS", f"clean in {elapsed:.1f}s", output
+    if code < 0:
+        return "INCONCLUSIVE", f"killed by signal {-code}", output
+    if code in ERROR_EXITS.get(tool["name"], ()):
+        return "INCONCLUSIVE", f"exited {code}, its own error mode", output
+    if tool["name"] not in ERROR_EXITS:
+        return "FAIL", f"exited {code}; this skill has no exit-code map for it", output
+    return "FAIL", f"exited {code} in {elapsed:.1f}s", output
+
+
+def outcomes(project, effective, base):
+    """Every enabled tool, with what happened to it."""
+    root = Repository(project).root
+    pending = pending_approval(effective)
+    permitted = approved(project, pending)
+    waiting = {name for name, _ in pending}
+    deadline = time.monotonic() + TOTAL_SECONDS
+    results = []
+    for tool in effective["checks"]["tools"]:
+        entry = {"name": tool["name"], "scope": tool.get("scope", "changed")}
+        if not tool.get("enabled", True):
+            results.append({**entry, "outcome": "NOT RUN", "reason": "disabled"})
+            continue
+        if tool["name"] in waiting and not permitted:
+            results.append({**entry, "outcome": "NOT RUN",
+                            "reason": "approval required; run the approve command"})
+            continue
+        paths, reason = paths_for(root, tool, base)
+        if reason:
+            results.append({**entry, "outcome": "NOT RUN", "reason": reason})
+            continue
+        command = argv(tool, paths)
+        if command is None:
+            results.append({**entry, "outcome": "NOT RUN", "reason":
+                            "no command declared, and this skill ships none for it"})
+            continue
+        outcome, why, output = execute(
+            root, tool, command, min(TOOL_SECONDS, deadline - time.monotonic())
+        )
+        results.append({**entry, "outcome": outcome, "reason": why,
+                        "command": command[:1] + (["..."] if len(command) > 1 else []),
+                        "files": len(paths), "output": output})
+    return results
+
+
 def report(project):
     """What is in effect, where each value came from, and what would need approval."""
     root, present = discover(project)
@@ -482,6 +567,15 @@ def report(project):
     }
 
 
+def resolved(project):
+    _, present = discover(project)
+    base, overlay = present.get("base"), present.get("overlay")
+    return resolve(
+        None if base is None else (base["relative"], base["declared"]),
+        None if overlay is None else (overlay["relative"], overlay["declared"]),
+    )
+
+
 def approve(project):
     """Operator command. Nothing here prevents an agent from running it, exactly
     as nothing prevents an agent from running the installer; see references."""
@@ -505,13 +599,23 @@ def approve(project):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("inspect", "approve"))
+    parser.add_argument("action", choices=("inspect", "run", "approve"))
     parser.add_argument("--project", required=True, type=Path)
+    parser.add_argument("--base", help="revision changed-file scope compares against")
     args = parser.parse_args(argv)
     try:
         if args.action == "approve":
             return approve(args.project)
-        print(json.dumps(report(args.project), ensure_ascii=True, indent=2))
+        value = report(args.project)
+        if args.action == "run":
+            effective, _ = resolved(args.project)
+            if needs_base(effective) and args.base is None:
+                raise Invalid(args.project, "base",
+                              "--base is required while a changed-scope check is enabled")
+            value["results"] = outcomes(args.project, effective, args.base)
+            value["note"] = ("Ran the declared checks. Nothing was registered as a hook; "
+                             "this happens only when this command is invoked.")
+        print(json.dumps(value, ensure_ascii=True, indent=2))
         return 0
     except Invalid as error:
         # A refusal must never be reported as "the defaults apply".

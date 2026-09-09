@@ -7,6 +7,7 @@ No browser, network, or third-party dependencies are required.
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -690,6 +691,136 @@ class InspectTests(WorktreeTest):
                 self.assertIn(field, result.stderr)
                 self.assertNotIn("defaults apply", result.stdout + result.stderr)
                 self.assertEqual(result.stdout.strip(), "")
+
+
+class ExecutionTests(WorktreeTest):
+    """Every outcome is produced by a real process, never by a mock."""
+
+    def setUp(self):
+        super().setUp()
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        environment = patch.dict(os.environ, {"PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}"})
+        environment.start()
+        self.addCleanup(environment.stop)
+
+    def stub(self, name, body):
+        path = self.bin / name
+        path.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
+        path.chmod(0o755)
+
+    def config(self, text, track=True):
+        relative = dict(standards.LAYERS)["base"]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        if track:
+            self.git("add", "-f", "--", relative)
+            self.git("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-qm", "c")
+
+    def run_checks(self, base=None):
+        effective, _ = standards.resolved(self.project)
+        return {r["name"]: r for r in standards.outcomes(self.project, effective, base)}
+
+    def test_each_outcome_comes_from_a_real_process(self):
+        self.stub("ruff", "exit 0")
+        self.stub("pyright", "echo 'error: x'; exit 1")
+        self.config('```json\n{"schema": 1, "checks": {"tools": ['
+                    '{"name": "ruff", "scope": "repository"},'
+                    '{"name": "pyright", "scope": "repository"},'
+                    '{"name": "pytest", "enabled": false}]}}\n```\n')
+        results = self.run_checks()
+        self.assertEqual(results["ruff"]["outcome"], "PASS")
+        self.assertEqual(results["pyright"]["outcome"], "FAIL")
+        self.assertIn("error: x", results["pyright"]["output"])
+        self.assertEqual(results["pytest"]["outcome"], "NOT RUN")
+        self.assertEqual(results["pytest"]["reason"], "disabled")
+
+    def test_an_absent_tool_is_inconclusive_and_never_a_pass(self):
+        self.config('```json\n{"schema": 1, "checks": {"tools": ['
+                    '{"name": "ruff", "scope": "repository"}]}}\n```\n')
+        result = self.run_checks()["ruff"]
+        self.assertEqual(result["outcome"], "INCONCLUSIVE")
+        self.assertIn("not installed", result["reason"])
+
+    def test_a_tools_own_error_exit_is_inconclusive_not_a_failure(self):
+        """ruff 2 and pyright 2/3/4 mean the tool could not run."""
+        for name, code in (("ruff", 2), ("pyright", 3)):
+            with self.subTest(tool=name):
+                self.stub(name, f"exit {code}")
+                self.config('```json\n{"schema": 1, "checks": {"tools": ['
+                            f'{{"name": "{name}", "scope": "repository"}}]}}}}\n```\n',
+                            track=False)
+                result = self.run_checks()[name]
+                self.assertEqual(result["outcome"], "INCONCLUSIVE")
+                self.assertIn("own error mode", result["reason"])
+
+    def test_a_hanging_tool_times_out_as_inconclusive(self):
+        self.stub("ruff", "sleep 30")
+        self.config('```json\n{"schema": 1, "checks": {"tools": ['
+                    '{"name": "ruff", "scope": "repository"}]}}\n```\n')
+        with patch.object(standards, "TOOL_SECONDS", 1):
+            result = self.run_checks()["ruff"]
+        self.assertEqual(result["outcome"], "INCONCLUSIVE")
+        self.assertIn("no result within", result["reason"])
+
+    def test_captured_output_is_bounded_and_marked(self):
+        self.stub("ruff", "yes 0123456789 | head -c 200000; exit 1")
+        self.config('```json\n{"schema": 1, "checks": {"tools": ['
+                    '{"name": "ruff", "scope": "repository"}]}}\n```\n')
+        result = self.run_checks()["ruff"]
+        self.assertLessEqual(len(result["output"]), standards.MAX_OUTPUT + 40)
+        self.assertIn("[output truncated]", result["output"])
+
+    def test_an_unapproved_command_is_never_executed(self):
+        # self.project contains a quote; keep the stub's shell string simple.
+        marker = self.root / "ran"
+        self.stub("deno", f"touch '{marker}'; exit 0")
+        self.config('```json\n{"schema": 2, "checks": {"tools": ['
+                    '{"name": "deno-lint", "scope": "repository",'
+                    ' "command": ["deno", "lint"]}]}}\n```\n')
+        result = self.run_checks()["deno-lint"]
+        self.assertEqual(result["outcome"], "NOT RUN")
+        self.assertIn("approval required", result["reason"])
+        self.assertFalse(marker.exists())
+        standards.grant(self.project, standards.resolved(self.project)[0])
+        self.assertEqual(self.run_checks()["deno-lint"]["outcome"], "PASS")
+        self.assertTrue(marker.exists())
+
+    def test_a_project_command_records_that_its_exit_codes_are_unmapped(self):
+        self.stub("deno", "exit 7")
+        self.config('```json\n{"schema": 2, "checks": {"tools": ['
+                    '{"name": "deno-lint", "scope": "repository",'
+                    ' "command": ["deno", "lint"]}]}}\n```\n')
+        standards.grant(self.project, standards.resolved(self.project)[0])
+        result = self.run_checks()["deno-lint"]
+        self.assertEqual(result["outcome"], "FAIL")
+        self.assertIn("no exit-code map", result["reason"])
+
+    def test_run_refuses_to_guess_a_base_for_changed_scope(self):
+        self.stub("ruff", "exit 0")
+        result = subprocess.run(
+            [sys.executable, str(RUNTIME), "run", "--project", str(self.project)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("--base is required", result.stderr)
+
+    def test_run_reports_every_tool_end_to_end(self):
+        self.stub("ruff", "exit 0")
+        self.config('```json\n{"schema": 1, "checks": {"tools": ['
+                    '{"name": "ruff", "scope": "repository"},'
+                    '{"name": "pyright", "scope": "repository"}]}}\n```\n')
+        result = subprocess.run(
+            [sys.executable, str(RUNTIME), "run", "--project", str(self.project)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = json.loads(result.stdout)
+        outcomes = {r["name"]: r["outcome"] for r in value["results"]}
+        self.assertEqual(outcomes["ruff"], "PASS")
+        self.assertEqual(outcomes["pyright"], "INCONCLUSIVE")
+        self.assertIn("Nothing was registered as a hook", value["note"])
 
 
 if __name__ == "__main__":
