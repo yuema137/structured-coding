@@ -37,6 +37,7 @@ PUBLISHED_FILES = {
     "references/continuity.md",
     "scripts/continuity.py",
     "scripts/checkpoints.py",
+    "scripts/standards.py",
     "references/checkpoints.md",
 }
 
