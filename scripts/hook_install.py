@@ -30,7 +30,11 @@ PATHS = {
 # stays verifiable and removable after the shape written by new installs changes.
 ABSOLUTE = "absolute"
 PORTABLE = "portable"
-SCHEMA_SHAPES = {1: ABSOLUTE, 2: ABSOLUTE}
+SCHEMA_SHAPES = {1: ABSOLUTE, 2: ABSOLUTE, 3: PORTABLE}
+SHAPE_SCHEMAS = {ABSOLUTE: 2, PORTABLE: 3}
+# What a fresh installation writes. An existing installation keeps its own shape
+# until the operator upgrades it explicitly.
+WRITE_SHAPE = PORTABLE
 
 # How each host names the project root inside a registered command. Claude Code
 # substitutes its variable itself; Codex documents the Git form and runs commands
@@ -49,6 +53,12 @@ def shape_for_schema(schema):
     if schema not in SCHEMA_SHAPES:
         raise ValueError("Installation receipt does not match a supported schema")
     return SCHEMA_SHAPES[schema]
+
+
+def schema_for_shape(shape):
+    if shape not in SHAPE_SCHEMAS:
+        raise ValueError(f"Unsupported command shape: {shape}")
+    return SHAPE_SCHEMAS[shape]
 
 
 def safe(root, relative):
@@ -293,7 +303,7 @@ def interpreter_hint(recorded):
 
 def validate_record(raw, host, project, skill, config):
     record = parse(raw)
-    if record.get("schema") not in (1, 2) or record.get("config") != str(config):
+    if record.get("schema") not in SCHEMA_SHAPES or record.get("config") != str(config):
         raise ValueError(
             "Installation receipt does not match this project or supported schema"
         )
@@ -360,8 +370,8 @@ def pending(receipt):
     return read(journal_path(receipt), MAX_JOURNAL) is not None
 
 
-def prepare(host, project, presets=("continuity",)):
-    requested = selection(presets)
+def prepare(host, project, presets=("continuity",), upgrade=False):
+    requested = () if presets is None else selection(presets)
     project, config, skill, receipt = locations(host, project)
     if pending(receipt):
         raise ValueError(
@@ -373,14 +383,22 @@ def prepare(host, project, presets=("continuity",)):
     check_local_disablers(host, project, settings)
     original = before
     installed = ()
+    installed_shape = None
     if old_receipt is not None:
         record, installed = validate_record(old_receipt, host, project, skill, config)
         validate_owned(settings, record["groups"])
         original = decode(record["before"])
+        installed_shape = shape_for_schema(record["schema"])
+    if not requested and installed_shape is None:
+        raise ValueError("Select at least one preset: continuity checkpoints")
     selected = tuple(p for p in PRESETS if p in set(installed) | set(requested))
-    # The shape a new installation writes; deliberately still the default here.
-    additions = groups(host, project, skill, selected)
-    noop = bool(old_receipt is not None and selected == installed)
+    # Adding a preset to an existing installation must not silently rewrite every
+    # registered command, because that also invalidates the host's hook trust.
+    shape = WRITE_SHAPE if installed_shape is None or upgrade else installed_shape
+    additions = groups(host, project, skill, selected, shape)
+    noop = bool(
+        old_receipt is not None and selected == installed and shape == installed_shape
+    )
     clean = (
         without_owned(settings, record["groups"], parse(original))
         if installed
@@ -392,7 +410,7 @@ def prepare(host, project, presets=("continuity",)):
         if noop
         else serialize(
             {
-                "schema": 2,
+                "schema": schema_for_shape(shape),
                 "presets": list(selected),
                 "groups": additions,
                 "config": str(config),
@@ -404,6 +422,8 @@ def prepare(host, project, presets=("continuity",)):
     )
     return dict(
         noop=noop,
+        shape=shape,
+        installed_shape=installed_shape,
         host=host,
         project=project,
         skill=skill,
@@ -620,7 +640,7 @@ def remove(host, project, dry_run=False, presets=None):
         updated = serialize(
             {
                 **record,
-                "schema": 2,
+                "schema": schema_for_shape(installed_shape),
                 "presets": list(remaining),
                 "groups": groups(host, project, skill, remaining, installed_shape),
                 "after_sha256": hashlib.sha256(after).hexdigest(),
@@ -653,8 +673,16 @@ def doctor(host, project):
     record, presets = validate_record(read(receipt), host, project, skill, config)
     validate_owned(current, record["groups"])
     verify_skill({"skill": skill, "presets": presets})
+    shape = shape_for_schema(record["schema"])
+    portability = (
+        "Commands are portable across machines."
+        if shape == WRITE_SHAPE
+        else "Commands contain machine-specific absolute paths; run "
+        "--upgrade-registration to make this registration portable."
+    )
     return (
         f"Installed presets: {', '.join(presets)}. Registration and runtime files match "
         f"({host} {version_string}), registered interpreter {interpreter(record['groups'])}. "
+        f"{portability} "
         "Trust/enabled state and real host delivery still require /hooks verification."
     )

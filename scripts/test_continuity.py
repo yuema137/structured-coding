@@ -670,14 +670,7 @@ class HookInstallTests(WorktreeTest):
                 command = plan["groups"][event_name][index]["hooks"][0]["command"]
                 payload = self.payload(mode)
                 payload["cwd"] = str(nested)
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    cwd=nested,
-                    input=json.dumps(payload),
-                    text=True,
-                    capture_output=True,
-                )
+                result = self.shell(command, payload, nested, host, root=self.project)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 output = json.loads(result.stdout)
                 if mode == "session-start":
