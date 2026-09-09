@@ -170,6 +170,14 @@ class ContinuityTests(WorktreeTest):
         output, _ = self.event("pre-manual", raw=json.dumps(payload), cwd=self.project)
         self.assertFalse(output["continue"])
         self.assertIn("cwd", output["stopReason"])
+        # The same refusal must never block an unavoidable automatic compaction.
+        automatic = self.payload("pre-auto")
+        del automatic["cwd"]
+        output, stderr = self.event(
+            "pre-auto", raw=json.dumps(automatic), cwd=self.project
+        )
+        self.assertEqual(output, {})
+        self.assertIn("Recovery required", stderr)
 
     def test_relative_or_malformed_cwd_is_refused_for_a_bound_session(self):
         self.activate()
