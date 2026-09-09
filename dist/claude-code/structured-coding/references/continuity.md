@@ -36,7 +36,10 @@ events are actually delivered.
 
 An existing current skill can receive hooks without being recopied. An old or
 customized continuity runtime must be compared/backed up and updated explicitly.
-Reinstalling the same registration is a no-op. `--hooks continuity checkpoints`
+Reinstalling the same selection in the same command form is a no-op; an
+installation made by an older release keeps its absolute commands until
+`--upgrade-registration` rewrites them, which changes each command and so
+requires reviewing and trusting the hooks again. `--hooks continuity checkpoints`
 adds both presets; `--remove-hooks continuity` keeps checkpoints and the shared
 SessionStart handler. Bare `--remove-hooks` removes all owned presets. `--remove-hooks --dry-run` previews
 removal; removal retains the skill, PR bindings, snapshots, and checkpoints. It
@@ -45,9 +48,15 @@ only the exact owned groups. Changed owned groups cause a refusal, not deletion
 of user edits. Local installation receipts contain a private original-settings
 backup in the worktree Git directory. Do not publish these receipts.
 
-Commands contain quoted absolute paths to this project's runtime and Python.
-After moving the project or interpreter, inspect/remove the old registration
-before reinstalling; do not assume hooks follow a moved folder. Installation
+Registered commands contain no machine-specific path. Claude Code expands
+`${CLAUDE_PROJECT_DIR}`; Codex expands `$(git rev-parse --show-toplevel)`; the
+interpreter is `python3` from `PATH`, which must be 3.9 or newer. A registration
+committed to a shared settings file therefore works on a teammate's machine,
+although each machine still reviews and trusts the hooks itself. Inside a linked
+Git worktree the two hosts resolve differently: Codex reaches the worktree,
+where the skill may not be installed, and Claude Code keeps the original project
+root. Install into a linked worktree separately rather than relying on either.
+Installation
 uses a local lock and stale-config checks, but is not an atomic transaction with
 an unrelated editor writing host settings at the same moment. Avoid concurrent
 configuration edits. If hook registration fails after copying a new skill, the

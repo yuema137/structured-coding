@@ -20,11 +20,12 @@ class PresetTests(WorktreeTest):
         versions.start()
         self.addCleanup(versions.stop)
 
-    def install(self, host, presets):
-        plan = hooks.prepare(host, self.project, presets)
-        if not plan["skill"].exists():
-            installer.install(host, self.project)
-        hooks.apply(plan)
+    def install(self, host, presets, shape=None):
+        with patch.object(hooks, "WRITE_SHAPE", shape or hooks.WRITE_SHAPE):
+            plan = hooks.prepare(host, self.project, presets)
+            if not plan["skill"].exists():
+                installer.install(host, self.project)
+            hooks.apply(plan)
         return plan
 
     def legacy(self, host):
@@ -104,15 +105,115 @@ class PresetTests(WorktreeTest):
                         self.assertTrue(data.exists())
                         self.assertTrue(plan["skill"].exists())
 
+    def test_absolute_shape_is_the_default_and_keeps_its_published_form(self):
+        """A shipped registration must keep its exact form once shape is a parameter."""
+        for host, parent in (("codex", ".agents"), ("claude-code", ".claude")):
+            skill = self.project / parent / "skills/structured-coding"
+            for presets in (
+                ("continuity",),
+                ("checkpoints",),
+                ("continuity", "checkpoints"),
+            ):
+                with self.subTest(host=host, presets=presets):
+                    built = hooks.groups(host, self.project, skill, presets)
+                    self.assertEqual(
+                        built,
+                        hooks.groups(
+                            host, self.project, skill, presets, hooks.ABSOLUTE
+                        ),
+                    )
+                    for entries in built.values():
+                        for group in entries:
+                            entry = group["hooks"][0]
+                            self.assertEqual(entry["timeout"], 12)
+                            words = shlex.split(entry["command"])
+                            script = Path(words[1])
+                            self.assertEqual(words[0], sys.executable)
+                            self.assertEqual(script.parent, skill / "scripts")
+                            self.assertTrue(script.is_absolute())
+                            self.assertEqual(words[2:5], ["event", "--host", host])
+                            self.assertEqual(
+                                words[words.index("--project") + 1], str(self.project)
+                            )
+
+    def test_unknown_shape_and_schema_are_refused(self):
+        skill = self.project / ".agents/skills/structured-coding"
+        with self.assertRaises(ValueError):
+            hooks.groups("codex", self.project, skill, ("continuity",), "relative")
+        with self.assertRaises(ValueError):
+            hooks.registered_command(
+                "relative", "codex", self.project, skill, "continuity", "pre-auto"
+            )
+        for schema in (1, 2):
+            self.assertEqual(hooks.shape_for_schema(schema), hooks.ABSOLUTE)
+        self.assertEqual(hooks.shape_for_schema(3), hooks.PORTABLE)
+        for schema in (0, 4, 99, None, "1"):
+            with self.subTest(schema=schema), self.assertRaises(ValueError):
+                hooks.shape_for_schema(schema)
+
+    def owned_group_count(self, config):
+        return sum(len(v) for v in json.loads(config.read_bytes())["hooks"].values())
+
+    def test_legacy_absolute_registration_stays_usable_and_removable(self):
+        """The shape change must never leave an existing registration stranded."""
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, config, _, receipt = hooks.locations(host, self.project)
+                before = hooks.read(config)
+                self.install(host, ["continuity", "checkpoints"], shape=hooks.ABSOLUTE)
+                self.assertEqual(json.loads(receipt.read_bytes())["schema"], 2)
+                report = hooks.doctor(host, self.project)
+                self.assertIn("machine-specific", report)
+                self.assertIn("--upgrade-registration", report)
+                hooks.remove(host, self.project)
+                self.assertEqual(hooks.read(config), before)
+
+    def test_explicit_upgrade_rewrites_the_shape_without_duplicating_groups(self):
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, config, _, receipt = hooks.locations(host, self.project)
+                before = hooks.read(config)
+                self.install(host, ["continuity", "checkpoints"], shape=hooks.ABSOLUTE)
+                planted = self.owned_group_count(config)
+                plan = hooks.prepare(host, self.project, None, upgrade=True)
+                self.assertFalse(plan["noop"])
+                self.assertEqual(plan["presets"], ("continuity", "checkpoints"))
+                hooks.apply(plan)
+                self.assertEqual(json.loads(receipt.read_bytes())["schema"], 3)
+                self.assertEqual(self.owned_group_count(config), planted)
+                self.assertNotIn(sys.executable, config.read_text())
+                self.assertNotIn(str(self.project), config.read_text())
+                self.assertIn("portable", hooks.doctor(host, self.project))
+                # Upgrading twice is a byte-preserving no-op.
+                self.assertTrue(hooks.prepare(host, self.project, None, upgrade=True)["noop"])
+                hooks.remove(host, self.project)
+                self.assertEqual(hooks.read(config), before)
+
+    def test_adding_a_preset_does_not_silently_rewrite_an_existing_shape(self):
+        """Rewriting every command would also invalidate the host's hook trust."""
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, config, _, receipt = hooks.locations(host, self.project)
+                self.install(host, ["continuity"], shape=hooks.ABSOLUTE)
+                plan = hooks.prepare(host, self.project, ["checkpoints"])
+                self.assertEqual(plan["shape"], hooks.ABSOLUTE)
+                self.assertEqual(plan["installed_shape"], hooks.ABSOLUTE)
+                hooks.apply(plan)
+                self.assertEqual(json.loads(receipt.read_bytes())["schema"], 2)
+                self.assertIn(sys.executable, config.read_text())
+                hooks.remove(host, self.project, presets=["checkpoints"])
+                self.assertEqual(json.loads(receipt.read_bytes())["schema"], 2)
+
     def test_check_hooks_names_a_changed_interpreter(self):
         """A groups mismatch caused by the interpreter must say so, not blame paths."""
         for host in hooks.PATHS:
             with self.subTest(host=host):
                 registered = self.project.parent / f"fake-python-{host}"
                 registered.write_bytes(b"")
-                # Register the hooks as if a different interpreter had installed them.
+                # Only an absolute-shape registration records an interpreter, so
+                # this diagnostic now serves legacy installations.
                 with patch.object(sys, "executable", str(registered)):
-                    self.install(host, ["continuity"])
+                    self.install(host, ["continuity"], shape=hooks.ABSOLUTE)
                     self.assertIn(str(registered), hooks.doctor(host, self.project))
                 for state in ("still present", "no longer present"):
                     with self.subTest(state=state):
@@ -125,6 +226,24 @@ class PresetTests(WorktreeTest):
                         self.assertIn(sys.executable, message)
                     if state == "still present":
                         registered.unlink()
+
+    def test_portable_registration_makes_no_interpreter_claim(self):
+        """A relative interpreter can be neither compared nor tested for presence."""
+        owned = {"A": [{"hooks": [{"command": "python3 x.py event"}]}]}
+        self.assertEqual(hooks.interpreter(owned), hooks.INTERPRETER)
+        self.assertEqual(hooks.interpreter_hint(owned), "")
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, _, _, receipt = hooks.locations(host, self.project)
+                self.install(host, ["continuity"])
+                record = json.loads(receipt.read_bytes())
+                self.assertEqual(
+                    hooks.interpreter(record["groups"]), hooks.INTERPRETER
+                )
+                self.assertEqual(hooks.interpreter_hint(record["groups"]), "")
+                self.assertNotIn(
+                    "registered interpreter", hooks.doctor(host, self.project)
+                )
 
     def test_interpreter_hint_stays_silent_on_unreadable_groups(self):
         """An unrecognizable receipt must not produce a confident interpreter claim."""
@@ -182,6 +301,36 @@ class PresetTests(WorktreeTest):
             json.loads(plan["config"].read_bytes()),
             {"permissions": {"deny": ["Bash(keep)"]}},
         )
+
+    def test_interrupted_legacy_installation_still_recovers_and_removes(self):
+        """A pending journal carries receipt blobs in the shape that wrote them."""
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, config, _, receipt = hooks.locations(host, self.project)
+                before = hooks.read(config)
+                self.install(host, ["continuity"], shape=hooks.ABSOLUTE)
+                with patch.object(hooks, "WRITE_SHAPE", hooks.ABSOLUTE):
+                    plan = hooks.prepare(host, self.project, ["checkpoints"])
+                real = hooks.replace
+                calls = 0
+
+                def interrupt(path, expected, replacement):
+                    nonlocal calls
+                    calls += 1
+                    if calls == 2:  # journal written, config not yet published
+                        raise OSError("injected interruption")
+                    real(path, expected, replacement)
+
+                with patch.object(hooks, "replace", side_effect=interrupt):
+                    with self.assertRaises(OSError):
+                        hooks.apply(plan)
+                self.assertTrue(hooks.pending(receipt))
+                # Recovery reads absolute-shape blobs while new installs write
+                # the portable shape; without per-receipt shapes this is stuck.
+                self.assertTrue(hooks.recover(host, self.project))
+                self.assertFalse(hooks.pending(receipt))
+                hooks.remove(host, self.project)
+                self.assertEqual(hooks.read(config), before)
 
     def test_journal_crash_boundaries_on_addition_and_removal(self):
         for operation in ("add", "remove"):

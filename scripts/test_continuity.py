@@ -451,6 +451,96 @@ class HookInstallTests(WorktreeTest):
         hook_install.apply(plan)
         return plan
 
+    def portable_groups(self, host):
+        """Install both presets, then build the same registration portably."""
+        presets = ("continuity", "checkpoints")
+        plan = hook_install.prepare(host, self.project, presets)
+        if not plan["skill"].exists():
+            installer.install(host, self.project)
+        hook_install.apply(plan)
+        return plan, hook_install.groups(
+            host, self.project, plan["skill"], presets, hook_install.PORTABLE
+        )
+
+    def shell(self, command, payload, cwd, host, root=None):
+        """Run a registered command the way a host does: through a shell."""
+        environment = dict(os.environ)
+        environment.pop("CLAUDE_PROJECT_DIR", None)
+        if host == "claude-code" and root is not None:
+            environment["CLAUDE_PROJECT_DIR"] = str(root)
+        return subprocess.run(
+            command,
+            shell=True,
+            cwd=str(cwd),
+            env=environment,
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+        )
+
+    def commit_payload(self):
+        return {
+            "session_id": self.session,
+            "cwd": str(self.project),
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "git commit -m portable"},
+        }
+
+    def test_portable_commands_run_and_resolve_the_bound_project(self):
+        """The only proof that a portable registration actually reaches the project."""
+        nested = self.project / "nested"
+        nested.mkdir(exist_ok=True)
+        for host in runtime.HOSTS:
+            with self.subTest(host=host):
+                plan, portable = self.portable_groups(host)
+                self.activate(host, script=plan["skill"] / "scripts/continuity.py")
+                self.checkpoint(host, plan["skill"] / "scripts/continuity.py")
+                for event, index, payload in (
+                    ("SessionStart", 0, self.payload("session-start")),
+                    ("PreToolUse", 0, self.commit_payload()),
+                ):
+                    with self.subTest(event=event):
+                        command = portable[event][index]["hooks"][0]["command"]
+                        self.assertNotIn(str(self.project), command)
+                        self.assertNotIn(sys.executable, command)
+                        if event == "SessionStart":
+                            payload["cwd"] = str(nested)
+                        result = self.shell(
+                            command, payload, nested, host, root=self.project
+                        )
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        context = json.loads(result.stdout)["hookSpecificOutput"]
+                        # Naming the bound PR proves the correct project resolved.
+                        self.assertIn("PR-1", context["additionalContext"])
+
+    def test_portable_commands_do_not_silently_serve_a_linked_worktree(self):
+        """The two hosts resolve a worktree differently; neither may claim success."""
+        linked = self.root / "linked worktree with 'quote'"
+        self.git("worktree", "add", "-q", "-b", "linked", str(linked))
+        for host in runtime.HOSTS:
+            with self.subTest(host=host):
+                plan, portable = self.portable_groups(host)
+                self.activate(host, script=plan["skill"] / "scripts/continuity.py")
+                command = portable["SessionStart"][0]["hooks"][0]["command"]
+                payload = self.payload("session-start")
+                payload["cwd"] = str(linked)
+                result = self.shell(command, payload, linked, host, root=self.project)
+                # Codex resolves the worktree root and finds no installed skill;
+                # Claude Code keeps the original root and reports the cwd mismatch.
+                # Either way the bound PR must not be presented as current here.
+                self.assertNotIn("PR-1", result.stdout)
+
+    def test_portable_claude_command_fails_loudly_without_its_variable(self):
+        """An unexpanded root must not look like an ordinary quiet hook result."""
+        plan, portable = self.portable_groups("claude-code")
+        self.activate("claude-code", script=plan["skill"] / "scripts/continuity.py")
+        command = portable["SessionStart"][0]["hooks"][0]["command"]
+        result = self.shell(command, self.payload("session-start"), self.project,
+                            "claude-code", root=None)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("PR-1", result.stdout)
+
     def test_each_host_installs_and_removes_only_owned_groups(self):
         for host in runtime.HOSTS:
             with self.subTest(host=host):
@@ -580,14 +670,7 @@ class HookInstallTests(WorktreeTest):
                 command = plan["groups"][event_name][index]["hooks"][0]["command"]
                 payload = self.payload(mode)
                 payload["cwd"] = str(nested)
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    cwd=nested,
-                    input=json.dumps(payload),
-                    text=True,
-                    capture_output=True,
-                )
+                result = self.shell(command, payload, nested, host, root=self.project)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 output = json.loads(result.stdout)
                 if mode == "session-start":

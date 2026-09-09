@@ -219,11 +219,12 @@ Compact 是 host 为腾出 context 而压缩聊天历史的过程，不是新建
 ./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --hooks continuity checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --check-hooks
+./structured-coding/scripts/install codex --project /path/to/project --upgrade-registration
 ./structured-coding/scripts/install codex --project /path/to/project --remove-hooks checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --remove-hooks
 ```
 
-这些命令和上面的普通安装一样，在包含 toolkit 的父目录里运行。/path/to/project 必须换成目标项目准确的 Git root；Claude Code 用户把 codex 换成 claude-code。先用 --dry-run 预览，再运行你选择的安装命令，不需要把每一行都执行一遍。Installation 会添加选中的 preset；只移除一个 preset，另一个仍可继续用。不带名称的 --remove-hooks 会移除本工具拥有的全部 hook。更改后重启 host，并在 /hooks 里检查注册与信任状态，installer 不会替你授予信任。Agent 还要绑定当前 session，在 commit 前检查 staged diff，并明确准备 review handoff。提醒不能把没运行、没定论或仍在等待的检查变成通过。已有设置、skill 文件和 session 数据会保留。
+这些命令和上面的普通安装一样，在包含 toolkit 的父目录里运行。/path/to/project 必须换成目标项目准确的 Git root；Claude Code 用户把 codex 换成 claude-code。先用 --dry-run 预览，再运行你选择的安装命令，不需要把每一行都执行一遍。Installation 会添加选中的 preset；只移除一个 preset，另一个仍可继续用。不带名称的 --remove-hooks 会移除本工具拥有的全部 hook。更改后重启 host，并在 /hooks 里检查注册与信任状态，installer 不会替你授予信任。注册的命令不含任何只属于你这台机器的路径，所以提交到共享设置文件里的注册对同事同样有效，而每个人仍然要在自己机器上审阅并信任这些 hook。旧版本装出来的注册保留其绝对路径，仍然可用；--upgrade-registration 会重写它，这会改变每一条命令，因此需要重新信任这些 hook。Agent 还要绑定当前 session，在 commit 前检查 staged diff，并明确准备 review handoff。提醒不能把没运行、没定论或仍在等待的检查变成通过。已有设置、skill 文件和 session 数据会保留。
 
 | 功能 | 候选事件 | 应有的行为 | 已提供的支持 |
 | --- | --- | --- | --- |

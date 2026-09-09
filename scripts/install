@@ -73,6 +73,8 @@ def main():
     modes.add_argument("--remove-hooks", nargs="*", action="append", choices=("continuity", "checkpoints"),
                        help="Remove selected presets, or all owned presets when no names are given")
     modes.add_argument("--check-hooks", action="store_true", help="Check registration, runtime files, and host version")
+    modes.add_argument("--upgrade-registration", action="store_true",
+                       help="Rewrite the owned registration in the portable command form, keeping the installed presets")
     parser.add_argument("--dry-run", action="store_true", help="Preview installation/removal without writing")
     args = parser.parse_args()
     for name in ("hooks", "remove_hooks"):
@@ -82,7 +84,8 @@ def main():
         if values and len(values) != len(set(values)):
             parser.error(f"--{name.replace('_', '-')}: duplicate preset selection")
     try:
-        if args.hooks or args.remove_hooks is not None or args.check_hooks:
+        if (args.hooks or args.remove_hooks is not None or args.check_hooks
+                or args.upgrade_registration):
             import hook_install
             if args.remove_hooks is not None:
                 path = hook_install.remove(args.host, args.project, args.dry_run,
@@ -96,22 +99,31 @@ def main():
                 return 0
             if not args.dry_run:
                 hook_install.recover(args.host, args.project)
-            plan = hook_install.prepare(args.host, args.project, args.hooks)
+            plan = hook_install.prepare(
+                args.host, args.project,
+                None if args.upgrade_registration else args.hooks,
+                upgrade=args.upgrade_registration)
             selected = ", ".join(plan["presets"])
+            if args.upgrade_registration and plan["noop"]:
+                print(f"Already portable; nothing to rewrite: {plan['config']}")
+                return 0
+            change = "" if plan["installed_shape"] in (None, plan["shape"]) else (
+                f" Rewriting {plan['installed_shape']} commands as {plan['shape']}; "
+                "review and re-trust the hooks in your host afterwards.")
             if plan["skill"].exists():
                 hook_install.verify_skill(plan)
             if args.dry_run:
                 if not plan["skill"].exists():
                     install(args.host, args.project, dry_run=True)
                 print(f"Would install/reuse skill at {plan['skill']}")
-                print(f"Would register/reuse {selected}: {plan['config']} ({args.host} {plan['version']})")
+                print(f"Would register/reuse {selected}: {plan['config']} ({args.host} {plan['version']}).{change}")
                 print("Events: " + ", ".join(plan["groups"]) + ".")
                 print("Existing hooks/settings preserved. No global settings, trust, or permission changes.")
                 return 0
             if not plan["skill"].exists():
                 install(args.host, args.project)
             hook_install.apply(plan)
-            print(f"Hook presets registered ({selected}) in {plan['config']}. Skill: {plan['skill']}")
+            print(f"Hook presets registered ({selected}) in {plan['config']}.{change} Skill: {plan['skill']}")
             print("Restart the host and review/enable the hooks through /hooks; trust is not granted by this installer.")
             print("Only explicit session bindings are checked. Read each selected references/<preset>.md in the installed skill.")
             print("No merge guard, mutation guard, global settings, or permission changes.")

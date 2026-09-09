@@ -3,21 +3,21 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "3a89fe5cdc0674195d7c1b9c44a3f2a4316a51d8fa1c1537cb5486d12bbd6371",
-    "chinese_sha256": "d57bc28333bbde82f947239985e65fa1d3ae76298e92e548d067961b1ebdb2b1"
+    "english_sha256": "6522bb11b41d2147bca256c1043fcc1aa262abfb6a78f20751082530ca014d31",
+    "chinese_sha256": "0e0da8ae8688392ae451eaed19c26eac3b0ccd4dc1d722a22c8e36966537842b"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "ea6fe11cb22b0bb45cf48507c0fb01c92bf138c7c729c99eee8cc7d158b563fb",
-      "chinese_sha256": "cf45b8869f6034592d49783e881824b85ecefd5c4fa5d32736e02d3ac9df8fc7"
+      "english_sha256": "836848a15187135e3ba6b258168886beef215f074a3598be249333d81024be69",
+      "chinese_sha256": "763ab8eff80d6292075db230563b838ef76eab4231a5fc4e352976d06c5239ea"
     },
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "4d0bcb57651051e2e13e0e683b49bc4c6d932e9ed99e824609519adca869a68f",
-      "chinese_sha256": "16e6b88bae3aa8db80806b6b727bd7eb7995ccaf098aafd761f299f2d47320f4"
+      "english_sha256": "6a793514b73ca75cc8fe146a6e637dfd4813fc957129176f75b1038fd2f6d743",
+      "chinese_sha256": "d1d4ddcb1a1861fc352a15324166bf033b4a97bb2180fac5f2e107debaee27a5"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
@@ -34,8 +34,8 @@
     {
       "english": "structured-coding/references/platforms.md",
       "chinese": "structured-coding/references/platforms.zh-CN.md",
-      "english_sha256": "34d2ef333e281bb465b18629d76ecf06a5381f3c038a85dee4021be767140e4d",
-      "chinese_sha256": "174ed5bf6068a345605a0727638686b75601a4167d55b128944134c25b4e69a1"
+      "english_sha256": "f303b3baaee34a5762dd014665cf544a19099f44bc770a854ee2265d890a5bc3",
+      "chinese_sha256": "36d1305f0a911bac70e264bdf57064fd368ce1d98b8c0a518d102412ae0cc83f"
     }
   ],
   "specification_sha256": {

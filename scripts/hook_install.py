@@ -26,6 +26,40 @@ PATHS = {
     "claude-code": (".claude/settings.json", ".claude"),
 }
 
+# A receipt's schema fixes the command shape that produced it, so an installation
+# stays verifiable and removable after the shape written by new installs changes.
+ABSOLUTE = "absolute"
+PORTABLE = "portable"
+SCHEMA_SHAPES = {1: ABSOLUTE, 2: ABSOLUTE, 3: PORTABLE}
+SHAPE_SCHEMAS = {ABSOLUTE: 2, PORTABLE: 3}
+# What a fresh installation writes. An existing installation keeps its own shape
+# until the operator upgrades it explicitly.
+WRITE_SHAPE = PORTABLE
+
+# How each host names the project root inside a registered command. Claude Code
+# substitutes its variable itself; Codex documents the Git form and runs commands
+# through a shell. Neither follows a linked worktree the same way, so a linked
+# worktree needs its own installation; see references/platforms.md.
+ROOT_EXPRESSIONS = {
+    "codex": "$(git rev-parse --show-toplevel)",
+    "claude-code": "${CLAUDE_PROJECT_DIR}",
+}
+INTERPRETER = "python3"
+# Everything outside the quoted root expansion must need no quoting at all.
+UNQUOTED = re.compile(r"\A[A-Za-z0-9_./-]+\Z")
+
+
+def shape_for_schema(schema):
+    if schema not in SCHEMA_SHAPES:
+        raise ValueError("Installation receipt does not match a supported schema")
+    return SCHEMA_SHAPES[schema]
+
+
+def schema_for_shape(shape):
+    if shape not in SHAPE_SCHEMAS:
+        raise ValueError(f"Unsupported command shape: {shape}")
+    return SHAPE_SCHEMAS[shape]
+
 
 def safe(root, relative):
     path = root
@@ -123,7 +157,44 @@ def selection(presets):
     return tuple(p for p in PRESETS if p in values)
 
 
-def groups(host, project, skill, presets=("continuity",)):
+def registered_command(shape, host, project, skill, script, mode):
+    """One registered command in the requested shape."""
+    if shape == ABSOLUTE:
+        return shlex.join(
+            [
+                sys.executable,
+                str(skill / f"scripts/{script}.py"),
+                "event",
+                "--host",
+                host,
+                "--project",
+                str(project),
+                "--event",
+                mode,
+            ]
+        )
+    if shape != PORTABLE:
+        raise ValueError(f"Unsupported command shape: {shape}")
+    # Deriving the relative path from the caller's own skill path keeps this in
+    # step with locations(), and refuses a skill outside the project.
+    relative = Path(skill).relative_to(project).as_posix()
+    if any(
+        not UNQUOTED.match(word)
+        for word in (INTERPRETER, relative, script, host, mode)
+    ):
+        raise ValueError("Refusing an unquotable segment in a portable command")
+    root = ROOT_EXPRESSIONS[host]
+    # shlex.join would single-quote the expansion and stop the host expanding it,
+    # so the root is placed inside double quotes by hand. Every other word here
+    # is an ASCII constant checked above, and the project path is no longer a
+    # literal, so no user-controlled string needs quoting.
+    return (
+        f'{INTERPRETER} "{root}/{relative}/scripts/{script}.py" '
+        f'event --host {host} --project "{root}" --event {mode}'
+    )
+
+
+def groups(host, project, skill, presets=("continuity",), shape=ABSOLUTE):
     presets = selection(presets)
     capabilities = []
     if "continuity" in presets:
@@ -150,22 +221,8 @@ def groups(host, project, skill, presets=("continuity",)):
         )
     result = {}
     for event, matcher, script, mode in capabilities:
-        command = [
-            sys.executable,
-            str(skill / f"scripts/{script}.py"),
-            "event",
-            "--host",
-            host,
-            "--project",
-            str(project),
-            "--event",
-            mode,
-        ]
-        group = {
-            "hooks": [
-                {"type": "command", "command": shlex.join(command), "timeout": 12}
-            ]
-        }
+        command = registered_command(shape, host, project, skill, script, mode)
+        group = {"hooks": [{"type": "command", "command": command, "timeout": 12}]}
         if matcher is not None:
             group = {"matcher": matcher, **group}
         result.setdefault(event, []).append(group)
@@ -235,7 +292,9 @@ def interpreter(owned):
 def interpreter_hint(recorded):
     """A changed interpreter is the common cause of an otherwise puzzling mismatch."""
     previous = interpreter(recorded)
-    if previous is None or previous == sys.executable:
+    # Only an absolute recorded interpreter can be compared with the current one
+    # or tested for presence. A portable registration names no specific Python.
+    if previous is None or not Path(previous).is_absolute() or previous == sys.executable:
         return ""
     state = "still present" if Path(previous).is_file() else "no longer present"
     return (
@@ -246,7 +305,7 @@ def interpreter_hint(recorded):
 
 def validate_record(raw, host, project, skill, config):
     record = parse(raw)
-    if record.get("schema") not in (1, 2) or record.get("config") != str(config):
+    if record.get("schema") not in SCHEMA_SHAPES or record.get("config") != str(config):
         raise ValueError(
             "Installation receipt does not match this project or supported schema"
         )
@@ -255,7 +314,8 @@ def validate_record(raw, host, project, skill, config):
         if record["schema"] == 1
         else selection(record.get("presets", ()))
     )
-    if record.get("groups") != groups(host, project, skill, presets):
+    shape = shape_for_schema(record["schema"])
+    if record.get("groups") != groups(host, project, skill, presets, shape):
         raise ValueError(
             "Owned capability paths/groups differ; inspect and explicitly upgrade the "
             "installation" + interpreter_hint(record.get("groups"))
@@ -312,8 +372,8 @@ def pending(receipt):
     return read(journal_path(receipt), MAX_JOURNAL) is not None
 
 
-def prepare(host, project, presets=("continuity",)):
-    requested = selection(presets)
+def prepare(host, project, presets=("continuity",), upgrade=False):
+    requested = () if presets is None else selection(presets)
     project, config, skill, receipt = locations(host, project)
     if pending(receipt):
         raise ValueError(
@@ -325,13 +385,22 @@ def prepare(host, project, presets=("continuity",)):
     check_local_disablers(host, project, settings)
     original = before
     installed = ()
+    installed_shape = None
     if old_receipt is not None:
         record, installed = validate_record(old_receipt, host, project, skill, config)
         validate_owned(settings, record["groups"])
         original = decode(record["before"])
+        installed_shape = shape_for_schema(record["schema"])
+    if not requested and installed_shape is None:
+        raise ValueError("Select at least one preset: continuity checkpoints")
     selected = tuple(p for p in PRESETS if p in set(installed) | set(requested))
-    additions = groups(host, project, skill, selected)
-    noop = bool(old_receipt is not None and selected == installed)
+    # Adding a preset to an existing installation must not silently rewrite every
+    # registered command, because that also invalidates the host's hook trust.
+    shape = WRITE_SHAPE if installed_shape is None or upgrade else installed_shape
+    additions = groups(host, project, skill, selected, shape)
+    noop = bool(
+        old_receipt is not None and selected == installed and shape == installed_shape
+    )
     clean = (
         without_owned(settings, record["groups"], parse(original))
         if installed
@@ -343,7 +412,7 @@ def prepare(host, project, presets=("continuity",)):
         if noop
         else serialize(
             {
-                "schema": 2,
+                "schema": schema_for_shape(shape),
                 "presets": list(selected),
                 "groups": additions,
                 "config": str(config),
@@ -355,6 +424,8 @@ def prepare(host, project, presets=("continuity",)):
     )
     return dict(
         noop=noop,
+        shape=shape,
+        installed_shape=installed_shape,
         host=host,
         project=project,
         skill=skill,
@@ -542,6 +613,7 @@ def remove(host, project, dry_run=False, presets=None):
     remaining = tuple(
         p for p in installed if requested is not None and p not in requested
     )
+    installed_shape = shape_for_schema(record["schema"])
     # Legacy receipt-first interrupted installation remains removable without config writes.
     legacy_interrupted = record["schema"] == 1 and current == original
     if legacy_interrupted:
@@ -550,7 +622,7 @@ def remove(host, project, dry_run=False, presets=None):
     else:
         clean = without_owned(settings, record["groups"], parse(original))
         after_settings = (
-            add_groups(clean, groups(host, project, skill, remaining))
+            add_groups(clean, groups(host, project, skill, remaining, installed_shape))
             if remaining
             else clean
         )
@@ -570,9 +642,9 @@ def remove(host, project, dry_run=False, presets=None):
         updated = serialize(
             {
                 **record,
-                "schema": 2,
+                "schema": schema_for_shape(installed_shape),
                 "presets": list(remaining),
-                "groups": groups(host, project, skill, remaining),
+                "groups": groups(host, project, skill, remaining, installed_shape),
                 "after_sha256": hashlib.sha256(after).hexdigest(),
             }
         )
@@ -603,8 +675,15 @@ def doctor(host, project):
     record, presets = validate_record(read(receipt), host, project, skill, config)
     validate_owned(current, record["groups"])
     verify_skill({"skill": skill, "presets": presets})
+    portability = (
+        "Commands are portable across machines."
+        if shape_for_schema(record["schema"]) == WRITE_SHAPE
+        else "Commands contain machine-specific absolute paths (registered interpreter "
+        f"{interpreter(record['groups'])}); run --upgrade-registration to make this "
+        "registration portable."
+    )
     return (
         f"Installed presets: {', '.join(presets)}. Registration and runtime files match "
-        f"({host} {version_string}), registered interpreter {interpreter(record['groups'])}. "
+        f"({host} {version_string}). {portability} "
         "Trust/enabled state and real host delivery still require /hooks verification."
     )
