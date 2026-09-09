@@ -138,10 +138,10 @@ class PresetTests(WorktreeTest):
     def test_unknown_shape_and_schema_are_refused(self):
         skill = self.project / ".agents/skills/structured-coding"
         with self.assertRaises(ValueError):
-            hooks.groups("codex", self.project, skill, ("continuity",), "portable")
+            hooks.groups("codex", self.project, skill, ("continuity",), "relative")
         with self.assertRaises(ValueError):
             hooks.registered_command(
-                "portable", "codex", self.project, skill, "continuity", "pre-auto"
+                "relative", "codex", self.project, skill, "continuity", "pre-auto"
             )
         for schema in (1, 2):
             self.assertEqual(hooks.shape_for_schema(schema), hooks.ABSOLUTE)

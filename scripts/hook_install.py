@@ -29,7 +29,20 @@ PATHS = {
 # A receipt's schema fixes the command shape that produced it, so an installation
 # stays verifiable and removable after the shape written by new installs changes.
 ABSOLUTE = "absolute"
+PORTABLE = "portable"
 SCHEMA_SHAPES = {1: ABSOLUTE, 2: ABSOLUTE}
+
+# How each host names the project root inside a registered command. Claude Code
+# substitutes its variable itself; Codex documents the Git form and runs commands
+# through a shell. Neither follows a linked worktree the same way, so a linked
+# worktree needs its own installation; see references/platforms.md.
+ROOT_EXPRESSIONS = {
+    "codex": "$(git rev-parse --show-toplevel)",
+    "claude-code": "${CLAUDE_PROJECT_DIR}",
+}
+INTERPRETER = "python3"
+# Everything outside the quoted root expansion must need no quoting at all.
+UNQUOTED = re.compile(r"\A[A-Za-z0-9_./-]+\Z")
 
 
 def shape_for_schema(schema):
@@ -136,20 +149,38 @@ def selection(presets):
 
 def registered_command(shape, host, project, skill, script, mode):
     """One registered command in the requested shape."""
-    if shape != ABSOLUTE:
+    if shape == ABSOLUTE:
+        return shlex.join(
+            [
+                sys.executable,
+                str(skill / f"scripts/{script}.py"),
+                "event",
+                "--host",
+                host,
+                "--project",
+                str(project),
+                "--event",
+                mode,
+            ]
+        )
+    if shape != PORTABLE:
         raise ValueError(f"Unsupported command shape: {shape}")
-    return shlex.join(
-        [
-            sys.executable,
-            str(skill / f"scripts/{script}.py"),
-            "event",
-            "--host",
-            host,
-            "--project",
-            str(project),
-            "--event",
-            mode,
-        ]
+    # Deriving the relative path from the caller's own skill path keeps this in
+    # step with locations(), and refuses a skill outside the project.
+    relative = Path(skill).relative_to(project).as_posix()
+    if any(
+        not UNQUOTED.match(word)
+        for word in (INTERPRETER, relative, script, host, mode)
+    ):
+        raise ValueError("Refusing an unquotable segment in a portable command")
+    root = ROOT_EXPRESSIONS[host]
+    # shlex.join would single-quote the expansion and stop the host expanding it,
+    # so the root is placed inside double quotes by hand. Every other word here
+    # is an ASCII constant checked above, and the project path is no longer a
+    # literal, so no user-controlled string needs quoting.
+    return (
+        f'{INTERPRETER} "{root}/{relative}/scripts/{script}.py" '
+        f'event --host {host} --project "{root}" --event {mode}'
     )
 
 
