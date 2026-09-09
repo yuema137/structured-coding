@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import hook_install
+from test_continuity import WorktreeTest
 
 RUNTIME = hook_install.ROOT / "structured-coding/scripts/standards.py"
 spec = importlib.util.spec_from_file_location("standards", RUNTIME)
@@ -291,6 +292,81 @@ class ResolutionTests(unittest.TestCase):
         effective, origins = self.resolve(None, {"checks": {"trigger": "commit"}})
         self.assertEqual(effective["checks"]["trigger"], "commit")
         self.assertEqual(origins["checks.trigger"], "overlay")
+
+class TrustTests(WorktreeTest):
+    """Layer comes from the filename; trust comes from Git. Never the other way."""
+
+    def place(self, layer, track, text=None):
+        relative = dict(standards.LAYERS)[layer]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text or '```json\n{"schema": 1}\n```\n', encoding="utf-8")
+        if track:
+            self.git("add", "-f", "--", relative)
+            self.git("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-qm", layer)
+        return path
+
+    def test_no_configuration_present_is_not_an_error(self):
+        root, present = standards.discover(self.project)
+        self.assertEqual(root, self.project)
+        self.assertEqual(present, {})
+
+    def test_the_ordinary_arrangement(self):
+        self.place("base", track=True)
+        self.place("overlay", track=False)
+        _, present = standards.discover(self.project)
+        self.assertEqual(present["base"]["trust"], "shared")
+        self.assertEqual(present["overlay"]["trust"], "personal")
+
+    def test_trust_follows_tracking_even_when_it_contradicts_the_filename(self):
+        self.place("base", track=False)
+        self.place("overlay", track=True)
+        _, present = standards.discover(self.project)
+        # Still the base and still the overlay; only the trust swapped.
+        self.assertEqual(present["base"]["trust"], "personal")
+        self.assertEqual(present["overlay"]["trust"], "shared")
+
+    def test_a_tracked_file_stays_shared_after_being_gitignored(self):
+        """.gitignore does not apply to an already-tracked file, so a filename
+        rule would let a repository disguise a shared file as a personal one."""
+        self.place("overlay", track=True)
+        ignore = self.project / ".gitignore"
+        ignore.write_text(dict(standards.LAYERS)["overlay"] + "\n", encoding="utf-8")
+        _, present = standards.discover(self.project)
+        self.assertEqual(present["overlay"]["trust"], "shared")
+
+    def test_a_symlinked_configuration_is_refused_not_followed(self):
+        real = self.project / "elsewhere.md"
+        real.write_text('```json\n{"schema": 1}\n```\n', encoding="utf-8")
+        relative = dict(standards.LAYERS)["base"]
+        link = self.project / relative
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(real)
+        with self.assertRaises(ValueError):
+            standards.discover(self.project)
+
+    def test_discovery_carries_the_declared_values_through(self):
+        self.place("base", track=True, text=(
+            '```json\n{"schema": 1, "checks": {"tools": [{"name": "mypy"}]}}\n```\n'
+        ))
+        _, present = standards.discover(self.project)
+        declared = present["base"]["declared"]
+        self.assertEqual(declared["checks"]["tools"][0]["name"], "mypy")
+
+    def test_tools_are_classified_by_whether_they_execute_project_code(self):
+        for name in standards.ANALYZERS:
+            with self.subTest(tool=name):
+                verdict, reason = standards.classify(name)
+                self.assertEqual(verdict, "allowlisted")
+                self.assertIn("without executing", reason)
+        for name in standards.RUNNERS:
+            with self.subTest(tool=name):
+                verdict, _ = standards.classify(name)
+                self.assertEqual(verdict, "approval required")
+        verdict, reason = standards.classify("deno-lint")
+        self.assertEqual(verdict, "approval required")
+        self.assertIn("not a recognized tool", reason)
+
 
 if __name__ == "__main__":
     unittest.main()

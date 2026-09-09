@@ -7,10 +7,17 @@ Uses only Python 3.9+ and Git; never invokes an LLM, a tool, or a remote API.
 
 import json
 import re
+import subprocess
 import sys
+from pathlib import Path
 
 # Installed helpers must not create files in the published skill tree.
 sys.dont_write_bytecode = True
+# Import the audited worktree resolution explicitly rather than relying on
+# sys.path[0], which is how checkpoints.py reaches it and why that script fails
+# hard under python3 -P. Fixing checkpoints.py is separate, recorded work.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from continuity import Repository, safe_path  # noqa: E402
 
 MAX_INPUT = 256 * 1024
 SCHEMA = 1
@@ -249,3 +256,54 @@ def resolve(base=None, overlay=None):
             path, declared = source
             apply_layer(effective, origins, layer, path, declared, restrict)
     return effective, origins
+
+
+# The two files. Layer comes from the filename; trust never does.
+DIRECTORY = ".structured-coding"
+LAYERS = (("base", f"{DIRECTORY}/standards.md"), ("overlay", f"{DIRECTORY}/standards.local.md"))
+
+# Analyzers read the project's code. Runners execute it, or code its config names,
+# so recognising them is not the same as trusting them.
+ANALYZERS = ("ruff", "pyright")
+RUNNERS = {
+    "pytest": "runs project code through conftest.py by design",
+    "mypy": "imports the plugins its configuration names",
+}
+
+
+def classify(name):
+    if name in ANALYZERS:
+        return "allowlisted", "analyzes without executing project code"
+    if name in RUNNERS:
+        return "approval required", RUNNERS[name]
+    return "approval required", "not a recognized tool"
+
+
+def tracked(root, path):
+    """Git decides trust. A filename cannot, because .gitignore does not apply
+    to a file that is already tracked."""
+    result = subprocess.run(
+        ["git", "--no-optional-locks", "-C", str(root), "ls-files",
+         "--error-unmatch", "--", str(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=5,
+    )
+    return result.returncode == 0
+
+
+def discover(project):
+    """Every configuration file present, with its layer and its trust."""
+    root = Repository(project).root
+    present = {}
+    for layer, relative in LAYERS:
+        path = safe_path(root, relative)
+        if not path.exists() and not path.is_symlink():
+            continue
+        present[layer] = {
+            "relative": relative,
+            "path": path,
+            "trust": "shared" if tracked(root, path) else "personal",
+            "declared": read(path),
+        }
+    return root, present
