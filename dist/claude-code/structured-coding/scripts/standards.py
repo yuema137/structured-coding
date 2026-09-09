@@ -7,6 +7,7 @@ Uses only Python 3.9+ and Git; never invokes an LLM, a tool, or a remote API.
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -314,6 +315,45 @@ def argv(tool, paths):
         return [*shipped["base"], *paths]
     command = tool.get("command")
     return None if command is None else [*command, *paths]
+
+
+def changed_files(root, base):
+    """What this branch changed against base. Deletions are excluded: a file that
+    is gone cannot be checked, and reporting it would make a tool fail on it."""
+    if not isinstance(base, str) or not base or base.startswith("-"):
+        raise Invalid(root, "base", "must be a Git revision")
+    result = subprocess.run(
+        ["git", "--no-optional-locks", "-C", str(root), "diff", "--name-only",
+         "--diff-filter=ACMR", f"{base}...HEAD"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30,
+    )
+    if result.returncode:
+        raise Invalid(
+            root, "base", f"{base} is not a revision this repository can compare with"
+        )
+    names = [name for name in os.fsdecode(result.stdout).splitlines() if name]
+    # A path can survive the diff and still be absent from the working tree.
+    return [name for name in names if (root / name).is_file()]
+
+
+def needs_base(effective):
+    return any(
+        tool.get("enabled", True) and tool.get("scope", "changed") == "changed"
+        for tool in effective["checks"]["tools"]
+    )
+
+
+def paths_for(root, tool, base):
+    """The paths this tool runs on, or the reason it is not run at all."""
+    if tool.get("scope", "changed") == "repository":
+        return [], None
+    if base is None:
+        return [], "a base revision is required for changed-file scope"
+    paths = changed_files(root, base)
+    if not paths:
+        # Never a pass: nothing was examined, so nothing was established.
+        return [], "no files changed against the base"
+    return paths, None
 
 
 def classify(name):

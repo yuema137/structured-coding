@@ -459,6 +459,68 @@ class TrustTests(WorktreeTest):
         self.assertIn("not a recognized tool", reason)
 
 
+class SelectionTests(WorktreeTest):
+    def commit(self, message):
+        self.git("add", "-A")
+        self.git("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-qm", message)
+
+    def branch_with_changes(self):
+        self.git("checkout", "-q", "-b", "feature")
+        (self.project / "added file.py").write_text("x\n")
+        (self.project / "code.py").write_text("modified\n")
+        self.git("mv", "design.md", "renamed.md")
+        (self.project / "contract.md").unlink()
+        self.commit("feature")
+
+    def test_changed_files_match_the_diff_and_exclude_what_is_gone(self):
+        self.branch_with_changes()
+        names = standards.changed_files(self.project, "main")
+        self.assertIn("added file.py", names)   # a path with a space
+        self.assertIn("code.py", names)
+        self.assertIn("renamed.md", names)
+        self.assertNotIn("design.md", names)    # the rename's old name
+        self.assertNotIn("contract.md", names)  # deleted
+        for name in names:
+            self.assertTrue((self.project / name).is_file())
+
+    def test_a_path_that_the_diff_lists_but_the_tree_lacks_is_dropped(self):
+        self.branch_with_changes()
+        (self.project / "added file.py").unlink()
+        self.assertNotIn("added file.py", standards.changed_files(self.project, "main"))
+
+    def test_an_unusable_base_is_refused_rather_than_guessed(self):
+        for base in ("does-not-exist", "", None, "--upload-pack=evil"):
+            with self.subTest(base=base):
+                with self.assertRaises(standards.Invalid):
+                    standards.changed_files(self.project, base)
+
+    def test_repository_scope_needs_no_base_and_changed_scope_does(self):
+        effective, _ = standards.resolve()
+        self.assertTrue(standards.needs_base(effective))
+        for tool in effective["checks"]["tools"]:
+            tool["scope"] = "repository"
+        self.assertFalse(standards.needs_base(effective))
+        # A disabled changed-scope tool must not force a base either.
+        effective["checks"]["tools"][0].update(scope="changed", enabled=False)
+        self.assertFalse(standards.needs_base(effective))
+
+    def test_an_empty_selection_is_a_reason_not_an_empty_success(self):
+        self.git("checkout", "-q", "-b", "empty")
+        paths, reason = standards.paths_for(
+            self.project, {"name": "ruff", "scope": "changed"}, "main"
+        )
+        self.assertEqual(paths, [])
+        self.assertIn("no files changed", reason)
+        paths, reason = standards.paths_for(
+            self.project, {"name": "ruff", "scope": "changed"}, None
+        )
+        self.assertIn("base revision is required", reason)
+        self.assertEqual(
+            standards.paths_for(self.project, {"name": "ruff", "scope": "repository"}, None),
+            ([], None),
+        )
+
+
 class InspectTests(WorktreeTest):
     def run_inspect(self):
         return subprocess.run(
