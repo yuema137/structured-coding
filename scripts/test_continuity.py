@@ -37,6 +37,10 @@ class WorktreeTest(unittest.TestCase):
         self.environment.start()
         self.addCleanup(self.environment.stop)
         self.git("init", "-b", "main")
+        # Background housekeeping writes .git/objects/maintenance.lock at
+        # unpredictable moments, which breaks tests that compare the whole tree.
+        self.git("config", "maintenance.auto", "false")
+        self.git("config", "gc.auto", "0")
         for name in ("code.py", "design.md", "contract.md", "handoff.md"):
             (self.project / name).write_text(f"Initial {name}\n")
         self.git("add", ".")
@@ -146,6 +150,14 @@ class ContinuityTests(WorktreeTest):
         payload = self.payload("pre-manual")
         payload["cwd"] = str(nested)
         self.assertEqual(runtime.event(self.project, "codex", "pre-manual", payload), {})
+
+    def test_fixture_disables_git_background_maintenance(self):
+        """Housekeeping locks otherwise appear mid-test in whole-tree comparisons."""
+        for key, expected in (("maintenance.auto", "false"), ("gc.auto", "0")):
+            with self.subTest(key=key):
+                self.assertEqual(
+                    self.git("config", "--get", key).decode().strip(), expected
+                )
 
     def test_unbound_chat_is_not_blocked(self):
         self.assertEqual(self.event("pre-manual")[0], {})
