@@ -210,6 +210,40 @@ def encode(value):
     return None if value is None else base64.b64encode(value).decode()
 
 
+def interpreter(owned):
+    """The single Python path embedded in every owned command, if there is one."""
+    found = set()
+    if not isinstance(owned, dict):
+        return None
+    for entries in owned.values():
+        for group in entries if isinstance(entries, list) else ():
+            hooks = group.get("hooks") if isinstance(group, dict) else None
+            for entry in hooks if isinstance(hooks, list) else ():
+                command = entry.get("command") if isinstance(entry, dict) else None
+                if not isinstance(command, str):
+                    return None
+                try:
+                    words = shlex.split(command)
+                except ValueError:
+                    return None
+                if not words:
+                    return None
+                found.add(words[0])
+    return found.pop() if len(found) == 1 else None
+
+
+def interpreter_hint(recorded):
+    """A changed interpreter is the common cause of an otherwise puzzling mismatch."""
+    previous = interpreter(recorded)
+    if previous is None or previous == sys.executable:
+        return ""
+    state = "still present" if Path(previous).is_file() else "no longer present"
+    return (
+        f". Registered interpreter {previous} ({state}) differs from the current "
+        f"{sys.executable}; reinstall with the interpreter the hooks should use"
+    )
+
+
 def validate_record(raw, host, project, skill, config):
     record = parse(raw)
     if record.get("schema") not in (1, 2) or record.get("config") != str(config):
@@ -223,7 +257,8 @@ def validate_record(raw, host, project, skill, config):
     )
     if record.get("groups") != groups(host, project, skill, presets):
         raise ValueError(
-            "Owned capability paths/groups differ; inspect and explicitly upgrade the installation"
+            "Owned capability paths/groups differ; inspect and explicitly upgrade the "
+            "installation" + interpreter_hint(record.get("groups"))
         )
     parse(decode(record["before"]))
     return record, presets
@@ -570,5 +605,6 @@ def doctor(host, project):
     verify_skill({"skill": skill, "presets": presets})
     return (
         f"Installed presets: {', '.join(presets)}. Registration and runtime files match "
-        f"({host} {version_string}). Trust/enabled state and real host delivery still require /hooks verification."
+        f"({host} {version_string}), registered interpreter {interpreter(record['groups'])}. "
+        "Trust/enabled state and real host delivery still require /hooks verification."
     )
