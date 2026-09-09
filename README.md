@@ -121,6 +121,22 @@ A material scope change or an action outside existing authorization comes back t
 | [Optional hooks](structured-coding/references/platforms.md) | Installation, coverage, and the limits of what a hook can enforce. |
 | [Behavior contract](structured-coding/references/hook-contract.md) | The complete target behavior, including the parts not yet shipped. |
 
+<a id="standards"></a>
+
+## Project standards (optional)
+
+A project can state, once, what is true of its whole codebase, so you do not repeat it in every planning conversation. Copy the template to .structured-coding/standards.md and edit one block. This file is optional: without it the defaults below apply and nothing changes. Requirements specific to a single PR stay in that PR's conversation, so this file remains a stable repository asset.
+
+| What you set | Where | Default |
+| --- | --- | --- |
+| Conventions an LLM judges | review.conventions | none; you write plain sentences |
+| When those conventions are raised | review.trigger | at PR review readiness |
+| Commands with a pass or fail result | checks.tools | ruff and pyright on changed files; pytest listed and off |
+| When those checks apply | checks.trigger | at PR review readiness |
+| Your own additions | .structured-coding/standards.local.md | may add and tighten only, never relax the team's |
+
+Scope is set per tool because the right answer differs by tool: changed files suit ruff and pyright, and mislead for pytest, whose covering tests usually sit in files the change never touched. Tools are grouped by whether they execute your code, so pytest and mypy are recognized and still need a deliberate approval. This release reads the file and reports the resolved result with the layer every value came from; it runs no tool and registers no hook, and a clean report is not evidence that a check has run.
+
 ## The details, when you need them.
 
 Open the part relevant to your current question. Use the resource links above for the complete specifications.
