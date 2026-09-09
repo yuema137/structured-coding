@@ -6,6 +6,10 @@
 
 Agree on the change. Let the agent build it. Bring the result back into the plan.
 
+> **When this is worth it, and when it is not**
+>
+> This is built for sustained work on a large codebase. It earns its overhead when a change spans several PRs or sessions, when the code is big enough that an agent must audit before it edits, and when someone has to pick the work up later. For a typo, a one-file bug fix, or a throwaway prototype it is overkill: the planning documents will cost more than the change itself. Use your agent directly for those. Plans, tests, and LLM reviews can still be wrong; what this workflow adds is that their assumptions and evidence are written down where you can inspect them.
+
 [Quick start](#start) · [What using it looks like](#example) · [Follow one PR, then plan the next.](#workflow) · [Going further](#further)
 
 <a id="start"></a>
@@ -193,13 +197,6 @@ Open the part relevant to your current question. Use the resource links above fo
 <summary>A skill, a skillset, or a plugin?</summary>
 
 <p>Today this is one standalone skill with supporting resources and optional hook presets. A skillset would contain several independently useful skills; a plugin can package those skills and other host integrations. Project installation stays simple. Updates are not managed, and hook registration is explicit and optional; plugin packaging remains an option for future distribution.</p>
-
-</details>
-
-<details id="fit">
-<summary>When is the full workflow worth it?</summary>
-
-<p>Use it for substantial changes spanning PRs or sessions. A typo fix or isolated small bug usually does not need this ceremony. Plans, tests, and LLM reviews can still be wrong; the workflow makes their assumptions and evidence inspectable.</p>
 
 </details>
 

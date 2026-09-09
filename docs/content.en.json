@@ -385,8 +385,8 @@
     "Execute after approval, in a fresh session"
   ],
   "promptNote": "These are entry requests, not substitutes for the preserved prompts. The agent still reads the complete required files.",
-  "fitTitle": "When is the full workflow worth it?",
-  "fit": "Use it for substantial changes spanning PRs or sessions. A typo fix or isolated small bug usually does not need this ceremony. Plans, tests, and LLM reviews can still be wrong; the workflow makes their assumptions and evidence inspectable.",
+  "fitTitle": "When this is worth it, and when it is not",
+  "fit": "This is built for sustained work on a large codebase. It earns its overhead when a change spans several PRs or sessions, when the code is big enough that an agent must audit before it edits, and when someone has to pick the work up later. For a typo, a one-file bug fix, or a throwaway prototype it is overkill: the planning documents will cost more than the change itself. Use your agent directly for those. Plans, tests, and LLM reviews can still be wrong; what this workflow adds is that their assumptions and evidence are written down where you can inspect them.",
   "footer": "English is the authoritative source; Chinese is a synchronized mirror with English technical terms. The human explanation follows DongbeiGPT. Specifications and reusable prompts are in English.",
   "guideLabel": "Detailed human guide",
   "repoLabel": "GitHub",

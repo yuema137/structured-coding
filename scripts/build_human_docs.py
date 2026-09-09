@@ -140,6 +140,9 @@ def standards_md(data):
         + table_md(data["standards"], data["standardsColumns"])
         + f'\n{data["standardsNote"]}\n'
     )
+def scope_warning_md(data):
+    """Placed before the install commands: it saves the wrong reader their time."""
+    return f"> **{data['fitTitle']}**\n>\n> {data['fit']}\n"
 
 
 def going_further_md(data, packaged=False):
@@ -198,7 +201,6 @@ def detail_blocks(data, svg=False):
             + f'<a href="{source_link(SPEC)}">Hook behavior contract →</a>',
         ),
         ("format", data["formatTitle"], paragraphs(data["format"])),
-        ("fit", data["fitTitle"], paragraphs(data["fit"])),
     ]
 
 
@@ -250,7 +252,7 @@ def render_html(data):
 <div class="wrap">
 <header class="topbar"><a class="brand" href="#main"><span aria-hidden="true"></span>Structured Coding</a><nav aria-label="{esc(data["navigation"])}"><a class="nav-section" href="#start">{esc(data["navInstall"])}</a><a class="nav-section" href="#tutorial">{esc(data["tutorialNav"])}</a><a href="{REPO}">GitHub ↗</a><a class="language" href="{other}">{esc(data["switch"])}</a></nav></header>
 <main id="main">
-<section class="hero" id="why"><p class="eyebrow">{esc(data["label"])}</p><h1>{esc(data["title"])}</h1><p class="subtitle">{esc(data["subtitle"])}</p><div class="why"><h2>{esc(data["whyTitle"])}</h2><p>{esc(data["why"])}</p></div><div class="benefits">{benefits}</div></section>
+<section class="hero" id="why"><p class="eyebrow">{esc(data["label"])}</p><h1>{esc(data["title"])}</h1><p class="subtitle">{esc(data["subtitle"])}</p><div class="callout scope"><strong>{esc(data["fitTitle"])}</strong><p>{esc(data["fit"])}</p></div><div class="why"><h2>{esc(data["whyTitle"])}</h2><p>{esc(data["why"])}</p></div><div class="benefits">{benefits}</div></section>
 <section class="block" id="workflow">{heading("01", "workflowTitle")}<p class="lead">{esc(data["workflowCaption"])}</p>
 <div class="flow"><div class="flow-caption">{esc(data["workflowLabel"])}</div><svg class="flow-arrows" viewBox="0 0 900 600" aria-hidden="true">{DEFS}{ARROWS}{LOOP}</svg><ol class="flow-grid">{nodes}</ol><p class="flow-note">{esc(data["workflowNote"])}</p><div class="flow-loop">{esc(data["loopLabel"])}</div></div></section>
 <section class="block" id="kit">{heading("02", "kitTitle")}<p class="lead">{esc(data["kitLead"])}</p><div class="kit-grid">{cards}</div></section>
@@ -366,6 +368,7 @@ def render_readme(data):
     tutorial = f"TUTORIAL{suffix}.md"
     chunks = [
         f"# Structured Coding\n\n{language} · [{data['htmlLabel']}](docs/index{suffix}.html) · [{data['tutorialNav']}]({tutorial})\n\n{data['subtitle']}\n",
+        scope_warning_md(data),
         guide_navigation(
             data,
             [
@@ -443,6 +446,7 @@ def render_package_guide(data):
     language = "[English source](README.md)" if zh else "[Chinese mirror](README.zh-CN.md)"
     chunks = [
         f"# Structured Coding\n\n{language}\n\n{data['subtitle']}\n",
+        scope_warning_md(data),
         guide_navigation(
             data,
             [
@@ -471,7 +475,7 @@ def render_package_guide(data):
         '<a id="further"></a>\n',
         going_further_md(data, packaged=True),
         standards_md(data),
-        f"## {data['fitTitle']}\n\n{data['fit']}\n\n{data['footer']}\n",
+        f"{data['footer']}\n",
     ]
     return "\n".join(chunks)
 
