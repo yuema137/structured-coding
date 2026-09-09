@@ -227,6 +227,24 @@ class PresetTests(WorktreeTest):
                     if state == "still present":
                         registered.unlink()
 
+    def test_portable_registration_makes_no_interpreter_claim(self):
+        """A relative interpreter can be neither compared nor tested for presence."""
+        owned = {"A": [{"hooks": [{"command": "python3 x.py event"}]}]}
+        self.assertEqual(hooks.interpreter(owned), hooks.INTERPRETER)
+        self.assertEqual(hooks.interpreter_hint(owned), "")
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, _, _, receipt = hooks.locations(host, self.project)
+                self.install(host, ["continuity"])
+                record = json.loads(receipt.read_bytes())
+                self.assertEqual(
+                    hooks.interpreter(record["groups"]), hooks.INTERPRETER
+                )
+                self.assertEqual(hooks.interpreter_hint(record["groups"]), "")
+                self.assertNotIn(
+                    "registered interpreter", hooks.doctor(host, self.project)
+                )
+
     def test_interpreter_hint_stays_silent_on_unreadable_groups(self):
         """An unrecognizable receipt must not produce a confident interpreter claim."""
         for owned in (

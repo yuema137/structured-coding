@@ -292,7 +292,9 @@ def interpreter(owned):
 def interpreter_hint(recorded):
     """A changed interpreter is the common cause of an otherwise puzzling mismatch."""
     previous = interpreter(recorded)
-    if previous is None or previous == sys.executable:
+    # Only an absolute recorded interpreter can be compared with the current one
+    # or tested for presence. A portable registration names no specific Python.
+    if previous is None or not Path(previous).is_absolute() or previous == sys.executable:
         return ""
     state = "still present" if Path(previous).is_file() else "no longer present"
     return (
@@ -673,16 +675,15 @@ def doctor(host, project):
     record, presets = validate_record(read(receipt), host, project, skill, config)
     validate_owned(current, record["groups"])
     verify_skill({"skill": skill, "presets": presets})
-    shape = shape_for_schema(record["schema"])
     portability = (
         "Commands are portable across machines."
-        if shape == WRITE_SHAPE
-        else "Commands contain machine-specific absolute paths; run "
-        "--upgrade-registration to make this registration portable."
+        if shape_for_schema(record["schema"]) == WRITE_SHAPE
+        else "Commands contain machine-specific absolute paths (registered interpreter "
+        f"{interpreter(record['groups'])}); run --upgrade-registration to make this "
+        "registration portable."
     )
     return (
         f"Installed presets: {', '.join(presets)}. Registration and runtime files match "
-        f"({host} {version_string}), registered interpreter {interpreter(record['groups'])}. "
-        f"{portability} "
+        f"({host} {version_string}). {portability} "
         "Trust/enabled state and real host delivery still require /hooks verification."
     )
