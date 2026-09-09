@@ -521,6 +521,101 @@ class SelectionTests(WorktreeTest):
         )
 
 
+class ApprovalTests(WorktreeTest):
+    def config(self, text):
+        relative = dict(standards.LAYERS)["base"]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        self.git("add", "-f", "--", relative)
+        self.git("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-qm", "config")
+
+    def declare(self, *tools):
+        entries = ", ".join(tools)
+        self.config(
+            '```json\n{"schema": 2, "checks": {"tools": [' + entries + "]}}\n```\n"
+        )
+
+    def effective(self):
+        _, present = standards.discover(self.project)
+        base = present.get("base")
+        value, _ = standards.resolve(
+            None if base is None else (base["relative"], base["declared"])
+        )
+        return value
+
+    def test_the_approval_record_lives_outside_the_working_tree(self):
+        """A pull request must not be able to carry approval for its own command."""
+        path = standards.approval_file(self.project)
+        self.assertNotIn(self.project / ".structured-coding", path.parents)
+        self.assertIn(self.project / ".git", path.parents)
+
+    def test_nothing_needing_approval_records_nothing(self):
+        pending, path = standards.grant(self.project, self.effective())
+        self.assertEqual(pending, [])
+        self.assertFalse(standards.approval_file(self.project).exists())
+        self.assertTrue(standards.approved(self.project, pending))
+
+    def test_a_declared_command_needs_approval_until_it_is_granted(self):
+        self.declare('{"name": "deno-lint", "command": ["deno", "lint"]}')
+        effective = self.effective()
+        pending = standards.pending_approval(effective)
+        self.assertEqual(pending, [["deno-lint", ["deno", "lint"]]])
+        self.assertFalse(standards.approved(self.project, pending))
+        standards.grant(self.project, effective)
+        self.assertTrue(standards.approved(self.project, pending))
+
+    def test_changing_a_command_revokes_the_approval(self):
+        self.declare('{"name": "deno-lint", "command": ["deno", "lint"]}')
+        standards.grant(self.project, self.effective())
+        self.git("rm", "-q", "--cached", dict(standards.LAYERS)["base"])
+        self.declare('{"name": "deno-lint", "command": ["deno", "lint", "--all"]}')
+        effective = self.effective()
+        self.assertFalse(
+            standards.approved(self.project, standards.pending_approval(effective))
+        )
+
+    def test_an_unrelated_edit_does_not_revoke_the_approval(self):
+        """Otherwise people learn to reapprove without reading."""
+        self.declare('{"name": "deno-lint", "command": ["deno", "lint"]}')
+        standards.grant(self.project, self.effective())
+        approved = standards.pending_approval(self.effective())
+        self.git("rm", "-q", "--cached", dict(standards.LAYERS)["base"])
+        self.config(
+            '```json\n{"schema": 2, "review": {"trigger": "commit"}, "checks":'
+            ' {"tools": [{"name": "deno-lint", "command": ["deno", "lint"]}]}}\n```\n'
+        )
+        self.assertEqual(standards.pending_approval(self.effective()), approved)
+        self.assertTrue(standards.approved(self.project, approved))
+
+    def test_a_disabled_or_commandless_tool_needs_no_approval(self):
+        self.declare(
+            '{"name": "deno-lint", "command": ["deno"], "enabled": false}',
+            '{"name": "mypy"}',
+        )
+        self.assertEqual(standards.pending_approval(self.effective()), [])
+
+    def test_a_tampered_or_foreign_record_does_not_approve(self):
+        self.declare('{"name": "deno-lint", "command": ["deno", "lint"]}')
+        pending = standards.pending_approval(self.effective())
+        path = standards.approval_file(self.project)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        for content in ('{"schema": 1, "commands": "not-the-digest"}', "{}", "not json"):
+            with self.subTest(content=content[:12]):
+                path.write_text(content, encoding="utf-8")
+                self.assertFalse(standards.approved(self.project, pending))
+
+    def test_the_approve_command_lists_what_it_authorizes(self):
+        self.declare('{"name": "deno-lint", "command": ["deno", "lint"]}')
+        result = subprocess.run(
+            [sys.executable, str(RUNTIME), "approve", "--project", str(self.project)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("deno lint", result.stdout)
+        self.assertIn("revokes it", result.stdout)
+
+
 class InspectTests(WorktreeTest):
     def run_inspect(self):
         return subprocess.run(

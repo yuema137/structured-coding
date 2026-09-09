@@ -6,6 +6,7 @@ Uses only Python 3.9+ and Git; never invokes an LLM, a tool, or a remote API.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -19,7 +20,7 @@ sys.dont_write_bytecode = True
 # sys.path[0], which is how checkpoints.py reaches it and why that script fails
 # hard under python3 -P. Fixing checkpoints.py is separate, recorded work.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from continuity import Repository, safe_path  # noqa: E402
+from continuity import Repository, atomic_json, read_json, safe_path  # noqa: E402
 
 MAX_INPUT = 256 * 1024
 # 1 is what the shipped defaults declare, because they need nothing newer.
@@ -394,6 +395,60 @@ def discover(project):
     return root, present
 
 
+# The approval lives beside the other per-worktree state, outside the working tree,
+# so a pull request cannot carry an approval for its own new command.
+APPROVAL = "structured-coding-standards/approval.json"
+
+
+def pending_approval(effective):
+    """Enabled tools this skill ships no argv for, paired with what they would run.
+
+    A tool with no command cannot run at all, so it needs a command rather than an
+    approval and is not listed here."""
+    return sorted(
+        [tool["name"], list(tool["command"])]
+        for tool in effective["checks"]["tools"]
+        if tool.get("enabled", True)
+        and tool["name"] not in SHIPPED
+        and tool.get("command")
+    )
+
+
+def digest(pending):
+    """Bound to the commands only. Binding it to the whole configuration would
+    invalidate approval on every unrelated edit, which teaches people to reapprove
+    without reading."""
+    return hashlib.sha256(
+        json.dumps(pending, ensure_ascii=True, sort_keys=True).encode()
+    ).hexdigest()
+
+
+def approval_file(project):
+    return safe_path(Repository(project).gitdir, APPROVAL)
+
+
+def approved(project, pending):
+    if not pending:
+        return True
+    path = approval_file(project)
+    if not path.exists():
+        return False
+    try:
+        return read_json(path).get("commands") == digest(pending)
+    except (OSError, ValueError):
+        return False
+
+
+def grant(project, effective):
+    """Record an approval for exactly the commands currently declared."""
+    pending = pending_approval(effective)
+    path = approval_file(project)
+    if not pending:
+        return pending, None
+    atomic_json(path, {"schema": 1, "commands": digest(pending)})
+    return pending, path
+
+
 def report(project):
     """What is in effect, where each value came from, and what would need approval."""
     root, present = discover(project)
@@ -427,12 +482,35 @@ def report(project):
     }
 
 
+def approve(project):
+    """Operator command. Nothing here prevents an agent from running it, exactly
+    as nothing prevents an agent from running the installer; see references."""
+    root, present = discover(project)
+    base = present.get("base")
+    overlay = present.get("overlay")
+    effective, _ = resolve(
+        None if base is None else (base["relative"], base["declared"]),
+        None if overlay is None else (overlay["relative"], overlay["declared"]),
+    )
+    pending, path = grant(project, effective)
+    if not pending:
+        print("Nothing needs approval; no record was written.")
+        return 0
+    print(f"Approving {len(pending)} command(s) for {root}:")
+    for name, command in pending:
+        print(f"  {name}: {' '.join(command)}")
+    print(f"Recorded in {path}. Changing any of these commands revokes it.")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("inspect",))
+    parser.add_argument("action", choices=("inspect", "approve"))
     parser.add_argument("--project", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.action == "approve":
+            return approve(args.project)
         print(json.dumps(report(args.project), ensure_ascii=True, indent=2))
         return 0
     except Invalid as error:
