@@ -18,6 +18,15 @@ from unittest.mock import patch
 import build_human_docs as docs
 
 
+def expat_available():
+    """Some local Python builds ship an ElementTree without a loadable pyexpat."""
+    try:
+        ET.fromstring("<probe/>")
+    except ImportError:
+        return False
+    return True
+
+
 class HumanDocsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -107,6 +116,9 @@ class HumanDocsTests(unittest.TestCase):
         self.assertNotIn("<script>", rendered)
         self.assertIn("&lt;script&gt;", rendered)
 
+    @unittest.skipUnless(
+        expat_available(), "ElementTree has no usable pyexpat in this interpreter"
+    )
     def test_diagrams_are_portable_and_have_connected_arrows(self):
         namespace = {"svg": "http://www.w3.org/2000/svg"}
         for relative, markup in self.outputs.items():
