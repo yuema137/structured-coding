@@ -51,7 +51,9 @@ def sha(data):
 
 
 def check_markdown():
-    for path in [ROOT / "README.md", ROOT / "README.zh-CN.md", *SOURCE.rglob("*.md")]:
+    repository_docs = [f"{name}{suffix}.md" for name in ("README", "TUTORIAL")
+                       for suffix in ("", ".zh-CN")]
+    for path in [*(ROOT / name for name in repository_docs), *SOURCE.rglob("*.md")]:
         content = path.read_text()
         fence = None
         for line in content.splitlines():
@@ -99,8 +101,10 @@ def heading_levels(content):
 
 def check_languages():
     manifest = json.loads((ROOT / "translations.json").read_text())
+    # Deliberate baseline change: TUTORIAL.md joined the mirrored set when the
+    # walkthrough moved out of the README. See references/language-policy.md.
     expected_sources = {
-        "README.md", "structured-coding/README.md",
+        "README.md", "TUTORIAL.md", "structured-coding/README.md",
         "structured-coding/references/agent-workflow.md",
         "structured-coding/references/adaptation.md",
         "structured-coding/references/platforms.md",
@@ -122,7 +126,9 @@ def check_languages():
         mirrors.add(chinese_path)
     actual_mirrors = set(SOURCE.rglob("*.zh-CN.md")) | set(ROOT.glob("*.zh-CN.md"))
     require(actual_mirrors == mirrors, "Unregistered or missing Chinese mirror")
-    english_docs = [ROOT / "README.md"] + [p for p in SOURCE.rglob("*.md") if p not in mirrors]
+    english_docs = [ROOT / "README.md", ROOT / "TUTORIAL.md"] + [
+        p for p in SOURCE.rglob("*.md") if p not in mirrors
+    ]
     for path in english_docs:
         require(not re.search(r"[\u3400-\u4dbf\u4e00-\u9fff]", path.read_text()),
                 f"Non-English prose in authoritative document: {path}")

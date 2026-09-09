@@ -400,5 +400,45 @@
     }
   ],
   "checkpointLabel": "进入下一步前，确认这件事",
-  "tutorialNav": "一步一步使用"
+  "tutorialNav": "一步一步使用",
+  "quickStartTitle": "快速开始",
+  "exampleTitle": "用起来是什么样",
+  "exampleLead": "三条消息把一个功能从想法带到可以 review 的 PR。你点两次头，中间的活儿由 agent 干。",
+  "exampleOutcomes": [
+    "Agent 会问它推断不出来的东西，检查你真实的代码，然后写出总体计划和 step 边界。这一步不写任何实现。",
+    "你会拿到一份 PR 设计：经过代码审计的 commit 计划，加一份填好的执行 contract。读它、要求修改，等它确实描述了你想要的东西再批准。",
+    "一个全新 session 负责实现、验证、review 自己的逻辑、提交，停在 review handoff。你读 diff，决定要不要 merge。"
+  ],
+  "exampleNote": "整个循环就这些。确认 merge 之后，agent 会把学到的东西写回计划，下一个 PR 从那里开始。",
+  "goingFurtherTitle": "想了解更多",
+  "goingFurther": [
+    [
+      "分步教程",
+      "TUTORIAL.zh-CN.md",
+      "同一个循环，用一个真实功能一条消息一条消息地走一遍。"
+    ],
+    [
+      "工作流参考",
+      "structured-coding/references/agent-workflow.zh-CN.md",
+      "Agent 在每个阶段做什么，以及它的权限到哪里为止。"
+    ],
+    [
+      "PR 规范",
+      "structured-coding/prompts/pr-design-requirements.md",
+      "一份 PR 设计在被批准之前必须包含什么。"
+    ],
+    [
+      "可选 hook",
+      "structured-coding/references/platforms.zh-CN.md",
+      "安装方式、覆盖范围，以及 hook 能强制什么、不能强制什么。"
+    ],
+    [
+      "行为契约",
+      "structured-coding/references/hook-contract.md",
+      "完整的目标行为，包括尚未实现的部分。"
+    ]
+  ],
+  "installedTitle": "你已经装好了",
+  "installedIntro": "这份指南随 skill 一起安装，所以你现在是在一个已经装好它的项目里读它。明确调用 skill，描述你想做的功能；先要 planning，不要直接要实现。",
+  "tutorialBackLink": "返回 README"
 }

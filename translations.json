@@ -3,21 +3,27 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "6522bb11b41d2147bca256c1043fcc1aa262abfb6a78f20751082530ca014d31",
-    "chinese_sha256": "0e0da8ae8688392ae451eaed19c26eac3b0ccd4dc1d722a22c8e36966537842b"
+    "english_sha256": "21c82b6321d3eae740aad7ad397b569bf5d41c7883a0741572ffb8c1c0187f82",
+    "chinese_sha256": "70bd84664375b2c5c5b7e158e1e8eb25b5c2fbbde90afd59f2081ac7a6af4b51"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "836848a15187135e3ba6b258168886beef215f074a3598be249333d81024be69",
-      "chinese_sha256": "763ab8eff80d6292075db230563b838ef76eab4231a5fc4e352976d06c5239ea"
+      "english_sha256": "649d5128be72a420b230379afc054cf95d934d675311fb1393a74df1c9a2560b",
+      "chinese_sha256": "4b83ddb48873ef2506988f73c3afbd6d72c1f7d00cb30cd5dfba9c3ef5a41d2a"
+    },
+    {
+      "english": "TUTORIAL.md",
+      "chinese": "TUTORIAL.zh-CN.md",
+      "english_sha256": "24e158e97d983e13b077024762d18152a4a99e0cfa6c20f589e5647fd9bf3b2f",
+      "chinese_sha256": "b9cc1510f76878a9dd119842e87c7b69f046f071b1a6fbe19c1cd869a058c04c"
     },
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "6a793514b73ca75cc8fe146a6e637dfd4813fc957129176f75b1038fd2f6d743",
-      "chinese_sha256": "d1d4ddcb1a1861fc352a15324166bf033b4a97bb2180fac5f2e107debaee27a5"
+      "english_sha256": "5349dba92fe8e7f4809ae3ec2a6fbca77590656880b32c6e4fa9d7bc8e52ce03",
+      "chinese_sha256": "47d0ce6efee69c8e538621d4153fa785b0e17608303d447efbb55b20138e2560"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
