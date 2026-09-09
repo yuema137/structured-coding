@@ -10,14 +10,14 @@
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "9a8f86f53e18b27dd801e4510e781d97cf5c0e4d0d4bc8437832248b88f08f7e",
-      "chinese_sha256": "d755f4aeaed496a8ac49bf3f71d5c8aff93590b8fb138c3c558ff9420f03c6a5"
+      "english_sha256": "ea6fe11cb22b0bb45cf48507c0fb01c92bf138c7c729c99eee8cc7d158b563fb",
+      "chinese_sha256": "cf45b8869f6034592d49783e881824b85ecefd5c4fa5d32736e02d3ac9df8fc7"
     },
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "3af6db67bb138da8c375ee8716c83029b2008d6636a85eb5d719ee84c78519b7",
-      "chinese_sha256": "935d6cef0a33926be072d68d161c90dce9871bfd3fe428a3a39f176b8b7260ce"
+      "english_sha256": "4d0bcb57651051e2e13e0e683b49bc4c6d932e9ed99e824609519adca869a68f",
+      "chinese_sha256": "16e6b88bae3aa8db80806b6b727bd7eb7995ccaf098aafd761f299f2d47320f4"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",

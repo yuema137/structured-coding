@@ -42,7 +42,7 @@ class HumanDocsTests(unittest.TestCase):
 
     def test_generated_pages_declare_their_source(self):
         """Someone opening a README to edit it must see that it is generated."""
-        marked = 0
+        checked = 0
         for relative, content in self.outputs.items():
             if not relative.endswith((".md", ".html")):
                 continue
@@ -56,8 +56,8 @@ class HumanDocsTests(unittest.TestCase):
                     self.assertTrue(content.startswith("<!doctype html>\n<!--"))
                 else:
                     self.assertTrue(content.startswith("<!--"))
-                marked += 1
-        self.assertEqual(marked, 6)
+                checked += 1
+        self.assertEqual(checked, 6)
 
     def test_mirror_structure_and_preserved_prompts(self):
         english, chinese = self.sources
