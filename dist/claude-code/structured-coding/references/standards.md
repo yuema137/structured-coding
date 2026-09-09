@@ -1,10 +1,10 @@
 # Project standards configuration
 
-Status: **READS AND REPORTS ONLY.** This release parses the configuration,
-resolves the layers, and prints the result. It runs no tool, blocks no commit,
-registers no hook, and grants no approval. A clean report is not evidence that
-any check has run. Automatic execution is later work; the target behaviour for a
-hook remains in the [hook contract](hook-contract.md).
+Status: **RUNS ONLY WHEN INVOKED.** This release reads the configuration and,
+on the `run` command, executes the declared checks and classifies each result.
+It registers no hook, so nothing happens automatically, and it blocks no commit
+and no merge. Automatic triggering is later work; the target behaviour for a hook
+remains in the [hook contract](hook-contract.md).
 
 A project uses this to state, once, what is true of its whole codebase, so the
 operator does not restate it in every planning conversation. Requirements
@@ -73,21 +73,76 @@ imports `conftest.py` by design and `mypy` imports configured plugins, so both a
 recognized and still require approval. Anything else is unrecognized and also
 requires approval. Recognition is not trust.
 
-## Reading the report
+## Commands
 
 ```sh
-python3 <installed skill>/scripts/standards.py inspect --project /path/to/project
+python3 <installed skill>/scripts/standards.py inspect --project .
+python3 <installed skill>/scripts/standards.py run     --project . --base main
+python3 <installed skill>/scripts/standards.py approve --project .
 ```
 
-It prints the files found with their trust, the effective values, the layer every
-value came from, each tool's verdict and reason, and a note. A refusal exits
-non-zero with an empty stdout, so a failure cannot be mistaken for a defaults
-report.
+`inspect` prints the files found with their trust, the effective values, the
+layer every value came from, each tool's approval verdict, and a note. It runs
+nothing. A refusal exits non-zero with an empty stdout, so a failure cannot be
+mistaken for a defaults report.
+
+`run` adds the result of every enabled check. `--base` is required while any
+enabled check uses changed-file scope, and there is no fallback to a guessed
+default branch: guessing which branch a project treats as its base is how a check
+silently examines the wrong range.
+
+## Outcomes
+
+| Outcome | Meaning |
+| --- | --- |
+| `PASS` | the tool ran and reported nothing |
+| `FAIL` | the tool ran and reported findings |
+| `INCONCLUSIVE` | it could not run or could not finish: absent, timed out, killed, or exited in its own error mode |
+| `NOT RUN` | disabled, no files in scope, no command declared, or approval missing |
+
+An absent tool is `INCONCLUSIVE`, never `PASS`: nothing was examined, so nothing
+was established. An empty changed-file selection is `NOT RUN` for the same
+reason.
+
+Exit codes are mapped per tool, because tools disagree. `ruff check` returns 2
+when it terminates abnormally; `pyright` returns 2 for a fatal error, 3 for a
+config file it could not read and 4 for illegal parameters. Those mean the tool
+could not run. A command the project supplied has no such map, so a non-zero exit
+is reported as `FAIL` and the report says its exit codes are unmapped.
+
+Runs are bounded: a per-tool timeout, a total budget, and captured output
+truncated with the truncation marked.
+
+## Commands this skill does not ship
+
+`ruff` and `pyright` run with argv this skill supplies, and a configuration
+declaring `command` for them is refused: those names mean that argv, and letting
+a project redefine them would make the allowlist meaningless.
+
+Any other tool must supply `command` as argv words, which requires schema 2, and
+must be approved before it runs:
+
+```sh
+python3 <installed skill>/scripts/standards.py approve --project .
+```
+
+`approve` prints every command it authorizes and records the approval under the
+Git directory, outside the working tree, so a pull request cannot carry approval
+for the command it introduces. The record is bound to those commands alone:
+changing one revokes it, while an unrelated edit to the configuration does not,
+because a prompt that appears after harmless changes is one people learn to
+accept without reading. Until an approval matches, those tools are `NOT RUN` and
+nothing is executed.
+
+**A disclosed limit:** `approve` is an operator command, and nothing in this
+skill prevents an agent from running it, exactly as nothing prevents an agent
+from running the installer. It records a decision; it does not enforce who made
+it.
 
 ## Limits
 
-Stdlib and Git only; Python 3.9 or newer. The configuration is read as data and
-never executed. A refusal names the file and the field and never carries the
+Stdlib and Git only; Python 3.9 or newer. A declared command is argv and is never
+passed to a shell. The configuration itself is read as data and never executed. A refusal names the file and the field and never carries the
 file's contents. Symlinked, non-regular, oversized and non-UTF-8 configuration
 files are refused rather than parsed. Reading a file proves nothing about whether
 the agent followed it.
