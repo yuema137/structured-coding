@@ -130,7 +130,10 @@ class PresetTests(WorktreeTest):
         """An unrecognizable receipt must not produce a confident interpreter claim."""
         for owned in (
             "not-a-mapping",
-            {"A": [{"hooks": [{"command": "/a/python x"}]}], "B": [{"hooks": [{"command": "/b/python y"}]}]},
+            {
+                "A": [{"hooks": [{"command": "/a/python x"}]}],
+                "B": [{"hooks": [{"command": "/b/python y"}]}],
+            },
             {"A": [{"hooks": [{"command": 17}]}]},
             {"A": [{"hooks": [{"command": "unclosed '"}]}]},
             {"A": [{"hooks": [{}]}]},
