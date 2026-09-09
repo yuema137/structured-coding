@@ -255,7 +255,13 @@ def event(project, host, mode, payload):
     session = payload.get("session_id")
     directory = repository.session_dir(host, session)
     active_path = safe_path(directory, "active.json")
-    cwd = Path(payload.get("cwd", "")).resolve(strict=True)
+    reported = payload.get("cwd")
+    if not isinstance(reported, str) or not Path(reported).is_absolute():
+        # Never fall back to this process's own directory as the reported cwd.
+        if not active_path.exists():
+            return {}
+        raise ValueError("Hook payload has a missing or relative cwd")
+    cwd = Path(reported).resolve(strict=True)
     if not cwd.is_relative_to(repository.root):
         if not active_path.exists():
             return {}
