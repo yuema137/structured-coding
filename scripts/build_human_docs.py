@@ -132,6 +132,16 @@ def example_md(data):
     return "\n".join(chunks)
 
 
+def standards_md(data):
+    """Optional, and the reader has to be able to tell that immediately."""
+    return (
+        f'<a id="standards"></a>\n\n## {data["standardsTitle"]}\n\n'
+        f'{data["standardsLead"]}\n\n'
+        + table_md(data["standards"], data["standardsColumns"])
+        + f'\n{data["standardsNote"]}\n'
+    )
+
+
 def going_further_md(data, packaged=False):
     rows = []
     for label, target, blurb in data["goingFurther"]:
@@ -376,6 +386,7 @@ def render_readme(data):
         f"## {data['peopleTitle']}\n\n{data['peopleLead']}\n\n![{data['peopleTitle']}](docs/assets/people{suffix}.svg)\n\n{data['autonomy']}\n\n{data['escalation']}\n",
         '<a id="further"></a>\n',
         going_further_md(data),
+        standards_md(data),
         f"## {data['technicalTitle']}\n\n{data['technicalLead']}\n",
         collapsed(
             "kit",
@@ -459,6 +470,7 @@ def render_package_guide(data):
         data["hooksNote"] + "\n\n" + data["hookExample"] + "\n",
         '<a id="further"></a>\n',
         going_further_md(data, packaged=True),
+        standards_md(data),
         f"## {data['fitTitle']}\n\n{data['fit']}\n\n{data['footer']}\n",
     ]
     return "\n".join(chunks)
@@ -523,6 +535,8 @@ def expected_outputs():
         "tutorial",
         "exampleOutcomes",
         "goingFurther",
+        "standards",
+        "standardsColumns",
     ):
         if len(sources[0][key]) != len(sources[1][key]):
             raise ValueError(f"Human-page mirror structure differs: {key}")

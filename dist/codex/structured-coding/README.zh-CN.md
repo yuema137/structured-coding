@@ -268,6 +268,22 @@ Compact 是 host 为腾出 context 而压缩聊天历史的过程，不是新建
 | [可选 hook](references/platforms.zh-CN.md) | 安装方式、覆盖范围，以及 hook 能强制什么、不能强制什么。 |
 | [行为契约](references/hook-contract.md) | 完整的目标行为，包括尚未实现的部分。 |
 
+<a id="standards"></a>
+
+## 项目规范（可选）
+
+项目可以把整个 codebase 层面成立的规矩写下来一次，不用每次 planning 都重说一遍。把模板复制到 .structured-coding/standards.md，编辑其中一个块就行。这个文件是可选的：没有它就用下面的 default，行为完全不变。只属于某一个 PR 的要求留在那个 PR 的对话里，这样这份文件才能一直是稳定的仓库资产。
+
+| 你能设置什么 | 写在哪 | Default |
+| --- | --- | --- |
+| 由 LLM 判断的规范 | review.conventions | 空；你用普通句子写 |
+| 这些规范什么时候被提出来 | review.trigger | PR 到达 review 就绪时 |
+| 有明确通过/失败的命令 | checks.tools | ruff 和 pyright 只查改动文件；pytest 列出但关闭 |
+| 这些检查什么时候适用 | checks.trigger | PR 到达 review 就绪时 |
+| 你自己的补充 | .structured-coding/standards.local.md | 只能增加和收紧，不能放松团队的 |
+
+scope 按工具分别设置，因为正确答案本来就因工具而异：只查改动文件适合 ruff 和 pyright，对 pytest 却是误导，因为覆盖这次改动的测试通常在改动没碰过的文件里。工具按「会不会执行你的代码」分组，所以 pytest 和 mypy 是认识的名字但仍需一次明确批准。这一版只读取文件并报告解析结果，同时标注每个值来自哪一层；它不运行任何工具，也不注册 hook，报告干净不等于任何检查跑过。
+
 ## 什么工作值得走完整流程？
 
 适合跨 PR 或 session 的较大改动。改错别字、修一个独立小 bug，通常不用搬出整套流程。计划、测试和 LLM review 仍可能出错；这套 workflow 让假设和证据能被检查。
