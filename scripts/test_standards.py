@@ -94,7 +94,7 @@ class ReaderTests(unittest.TestCase):
             ),
             "not json": ("```json\n{nope}\n```\n", "json block"),
             "not an object": ("```json\n[1, 2]\n```\n", "json block"),
-            "wrong schema": ('```json\n{"schema": 2}\n```\n', "schema"),
+            "unsupported schema": ('```json\n{"schema": 9}\n```\n', "schema"),
             "missing schema": ('```json\n{"review": {}}\n```\n', "schema"),
             "unknown top key": ('```json\n{"schema": 1, "extra": 1}\n```\n', "json block"),
             "review not object": ('```json\n{"schema": 1, "review": []}\n```\n', "review"),
@@ -179,6 +179,82 @@ class ReaderTests(unittest.TestCase):
             standards.read(body)
         self.assertNotIn(secret, str(caught.exception))
 
+
+
+class SchemaTwoTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def write(self, text, name="standards.md"):
+        path = self.root / name
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def test_a_schema_one_file_written_for_the_previous_release_still_parses(self):
+        declared = standards.read(self.write(VALID))
+        self.assertEqual(declared["schema"], 1)
+        self.assertEqual(
+            [t["name"] for t in declared["checks"]["tools"]], ["ruff", "pytest"]
+        )
+
+    def test_schema_two_accepts_a_project_supplied_command(self):
+        declared = standards.read(self.write(
+            '```json\n{"schema": 2, "checks": {"tools": ['
+            '{"name": "deno-lint", "command": ["deno", "lint"]}]}}\n```\n'
+        ))
+        self.assertEqual(declared["checks"]["tools"][0]["command"], ["deno", "lint"])
+
+    def test_the_shipped_argv_is_used_for_allowlisted_tools_and_paths_are_appended(self):
+        self.assertEqual(
+            standards.argv({"name": "ruff", "scope": "changed"}, ["a.py", "b c.py"]),
+            ["ruff", "check", "a.py", "b c.py"],
+        )
+        self.assertEqual(
+            standards.argv({"name": "ruff", "scope": "repository"}, []),
+            ["ruff", "check", "."],
+        )
+        self.assertEqual(standards.argv({"name": "pyright", "scope": "repository"}, []),
+                         ["pyright"])
+        # A tool we ship no argv for and the project did not describe.
+        self.assertIsNone(standards.argv({"name": "mypy"}, ["a.py"]))
+
+    def test_command_is_refused_where_it_makes_no_sense(self):
+        cases = {
+            "command under schema 1": (
+                '```json\n{"schema": 1, "checks": {"tools": ['
+                '{"name": "deno", "command": ["deno"]}]}}\n```\n',
+                "checks.tools[0]",
+            ),
+            "command on an allowlisted tool": (
+                '```json\n{"schema": 2, "checks": {"tools": ['
+                '{"name": "ruff", "command": ["ruff", "check"]}]}}\n```\n',
+                "runs with the argv this skill ships",
+            ),
+            "a shell string": (
+                '```json\n{"schema": 2, "checks": {"tools": ['
+                '{"name": "deno", "command": ["deno lint"]}]}}\n```\n',
+                "not a whole shell command",
+            ),
+            "empty command": (
+                '```json\n{"schema": 2, "checks": {"tools": ['
+                '{"name": "deno", "command": []}]}}\n```\n',
+                "non-empty list",
+            ),
+            "non-string word": (
+                '```json\n{"schema": 2, "checks": {"tools": ['
+                '{"name": "deno", "command": ["deno", 7]}]}}\n```\n',
+                "non-empty string",
+            ),
+            "unknown schema": ('```json\n{"schema": 3}\n```\n', "schema"),
+        }
+        for label, (text, expected) in cases.items():
+            with self.subTest(case=label):
+                path = self.write(text, f"{label.replace(' ', '-')}.md")
+                with self.assertRaises(standards.Invalid) as caught:
+                    standards.read(path)
+                self.assertIn(expected, str(caught.exception))
 
 
 class PackagingTests(unittest.TestCase):

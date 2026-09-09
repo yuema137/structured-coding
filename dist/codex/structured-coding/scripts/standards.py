@@ -21,7 +21,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from continuity import Repository, safe_path  # noqa: E402
 
 MAX_INPUT = 256 * 1024
+# 1 is what the shipped defaults declare, because they need nothing newer.
+# 2 adds a project-supplied command, for a tool we ship no argv for.
 SCHEMA = 1
+SCHEMAS = (1, 2)
 TRIGGERS = ("off", "pr", "commit")
 SCOPES = ("changed", "repository")
 NAME = re.compile(r"\A[a-z][a-z0-9_-]{0,31}\Z")
@@ -103,7 +106,25 @@ def conventions(path, value):
     return list(value)
 
 
-def tools(path, value):
+def command_words(path, field, value, name):
+    """argv, not a shell string. Nothing here is ever passed to a shell."""
+    if name in ANALYZERS:
+        raise Invalid(
+            path, field, f"{name} runs with the argv this skill ships; remove command"
+        )
+    if not isinstance(value, list) or not value:
+        raise Invalid(path, field, "must be a non-empty list of argv words")
+    for word in value:
+        if not isinstance(word, str) or not word:
+            raise Invalid(path, field, "every argv word must be a non-empty string")
+    if any(character.isspace() for character in value[0]):
+        raise Invalid(
+            path, field, "the first word is the executable, not a whole shell command"
+        )
+    return list(value)
+
+
+def tools(path, value, schema=SCHEMA):
     if not isinstance(value, list):
         raise Invalid(path, "checks.tools", "must be a list")
     seen = set()
@@ -111,7 +132,8 @@ def tools(path, value):
         field = f"checks.tools[{index}]"
         if not isinstance(item, dict):
             raise Invalid(path, field, "must be an object")
-        unknown = set(item) - {"name", "enabled", "scope"}
+        allowed = {"name", "enabled", "scope"} | ({"command"} if schema >= 2 else set())
+        unknown = set(item) - allowed
         if unknown:
             raise Invalid(path, field, f"unknown keys: {', '.join(sorted(unknown))}")
         name = item.get("name")
@@ -124,18 +146,21 @@ def tools(path, value):
             raise Invalid(path, f"{field}.enabled", "must be true or false")
         if "scope" in item and item["scope"] not in SCOPES:
             raise Invalid(path, f"{field}.scope", f"must be one of {', '.join(SCOPES)}")
+        if "command" in item:
+            command_words(path, f"{field}.command", item["command"], name)
     return [dict(item) for item in value]
 
 
 def validate(path, value):
     if not isinstance(value, dict):
         raise Invalid(path, "json block", "must be an object")
-    if value.get("schema") != SCHEMA:
-        raise Invalid(path, "schema", f"must be {SCHEMA}")
+    schema = value.get("schema")
+    if schema not in SCHEMAS:
+        raise Invalid(path, "schema", f"must be one of {', '.join(map(str, SCHEMAS))}")
     unknown = set(value) - {"schema", "review", "checks"}
     if unknown:
         raise Invalid(path, "json block", f"unknown keys: {', '.join(sorted(unknown))}")
-    declared = {"schema": SCHEMA}
+    declared = {"schema": schema}
     if "review" in value:
         review = section(path, value["review"], "review", ("conventions",))
         declared["review"] = dict(review)
@@ -145,7 +170,7 @@ def validate(path, value):
         checks = section(path, value["checks"], "checks", ("tools",))
         declared["checks"] = dict(checks)
         if "tools" in checks:
-            declared["checks"]["tools"] = tools(path, checks["tools"])
+            declared["checks"]["tools"] = tools(path, checks["tools"], schema)
     return declared
 
 
@@ -270,6 +295,25 @@ RUNNERS = {
     "pytest": "runs project code through conftest.py by design",
     "mypy": "imports the plugins its configuration names",
 }
+
+
+# What an allowlisted tool is actually invoked as. A project never supplies these.
+SHIPPED = {
+    "ruff": {"base": ("ruff", "check"), "repository": (".",)},
+    "pyright": {"base": ("pyright",), "repository": ()},
+}
+
+
+def argv(tool, paths):
+    """The command for one tool, or None when the project must supply it."""
+    name = tool["name"]
+    if name in SHIPPED:
+        shipped = SHIPPED[name]
+        if tool.get("scope", "changed") == "repository":
+            return [*shipped["base"], *shipped["repository"]]
+        return [*shipped["base"], *paths]
+    command = tool.get("command")
+    return None if command is None else [*command, *paths]
 
 
 def classify(name):
