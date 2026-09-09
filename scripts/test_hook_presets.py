@@ -302,6 +302,36 @@ class PresetTests(WorktreeTest):
             {"permissions": {"deny": ["Bash(keep)"]}},
         )
 
+    def test_interrupted_legacy_installation_still_recovers_and_removes(self):
+        """A pending journal carries receipt blobs in the shape that wrote them."""
+        for host in hooks.PATHS:
+            with self.subTest(host=host):
+                _, config, _, receipt = hooks.locations(host, self.project)
+                before = hooks.read(config)
+                self.install(host, ["continuity"], shape=hooks.ABSOLUTE)
+                with patch.object(hooks, "WRITE_SHAPE", hooks.ABSOLUTE):
+                    plan = hooks.prepare(host, self.project, ["checkpoints"])
+                real = hooks.replace
+                calls = 0
+
+                def interrupt(path, expected, replacement):
+                    nonlocal calls
+                    calls += 1
+                    if calls == 2:  # journal written, config not yet published
+                        raise OSError("injected interruption")
+                    real(path, expected, replacement)
+
+                with patch.object(hooks, "replace", side_effect=interrupt):
+                    with self.assertRaises(OSError):
+                        hooks.apply(plan)
+                self.assertTrue(hooks.pending(receipt))
+                # Recovery reads absolute-shape blobs while new installs write
+                # the portable shape; without per-receipt shapes this is stuck.
+                self.assertTrue(hooks.recover(host, self.project))
+                self.assertFalse(hooks.pending(receipt))
+                hooks.remove(host, self.project)
+                self.assertEqual(hooks.read(config), before)
+
     def test_journal_crash_boundaries_on_addition_and_removal(self):
         for operation in ("add", "remove"):
             for boundary in (1, 2, 3, 4):
