@@ -25,8 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from continuity import (  # noqa: E402
     HOSTS, Repository, active_record, atomic_json, read_json, safe_path,
 )
+# recognized() is the careful direct-git-commit test; it is generic rather than
+# checkpoints-specific, and both files always ship together.
+from checkpoints import bounded, recognized  # noqa: E402
 
 MAX_INPUT = 256 * 1024
+ERRORS = (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError)
 # 1 is what the shipped defaults declare, because they need nothing newer.
 # 2 adds a project-supplied command, for a tool we ship no argv for.
 SCHEMA = 1
@@ -653,15 +657,68 @@ def approve(project):
     return 0
 
 
+COMMIT_TIMEOUT = 60
+
+
+def event(project, host, mode, payload):
+    """Report after a commit. Never blocks, never raises to the host."""
+    if mode != "post-commit" or payload.get("hook_event_name") != "PostToolUse":
+        raise Invalid(project, "event", "unexpected lifecycle payload")
+    tool_input = payload.get("tool_input")
+    if payload.get("tool_name") != "Bash" or not isinstance(tool_input, dict):
+        return {}
+    if any(key in tool_input for key in ("cwd", "workdir")):
+        return {}
+    if not recognized(tool_input.get("command")):
+        return {}
+    cwd = payload.get("cwd")
+    if not isinstance(cwd, str) or not cwd or not Path(cwd).is_absolute():
+        raise Invalid(project, "cwd", "missing or invalid lifecycle cwd")
+    repository = Repository(project)
+    # Exact root excludes nested repositories and shell cwd overrides.
+    if Path(cwd).resolve(strict=True) != repository.root:
+        return {}
+    effective, _ = resolved(project)
+    if effective["checks"]["trigger"] != "commit":
+        return {}
+    base = bound_base(project, host, payload.get("session_id"))
+    results = outcomes(project, effective, base)
+    lines = [f"{r['name']}: {r['outcome']} ({r['reason']})" for r in results]
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": bounded(
+                "Structured Coding standards, reported after this commit. "
+                "These results are advisory; nothing was blocked, and an "
+                "INCONCLUSIVE or NOT RUN check is not a pass. "
+                + "; ".join(lines)
+            ),
+        }
+    }
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("inspect", "run", "approve"))
+    parser.add_argument("action", choices=("inspect", "run", "approve", "event"))
+    parser.add_argument("--event", choices=("post-commit",))
     parser.add_argument("--project", required=True, type=Path)
     parser.add_argument("--base", help="revision changed-file scope compares against")
     parser.add_argument("--host", choices=HOSTS, help="host of a session binding to read the base from")
     parser.add_argument("--session", help="session id of that binding")
     args = parser.parse_args(argv)
     try:
+        if args.action == "event":
+            raw = sys.stdin.buffer.read(MAX_INPUT + 1)
+            if len(raw) > MAX_INPUT:
+                raise Invalid(args.project, "event", "oversized lifecycle payload")
+            try:
+                print(json.dumps(event(args.project, args.host, args.event,
+                                       json.loads(raw)), ensure_ascii=True))
+            except ERRORS:
+                # Fail open: a hook must never block the host it advises.
+                print("Standards hook unavailable; reconcile locally.", file=sys.stderr)
+                print("{}")
+            return 0
         if args.action == "approve":
             return approve(args.project)
         value = report(args.project)

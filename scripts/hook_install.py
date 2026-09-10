@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FLOORS = {"codex": (0, 153, 4), "claude-code": (2, 1, 261)}
-PRESETS = ("continuity", "checkpoints")
+PRESETS = ("continuity", "checkpoints", "standards")
 MAX_FILE = 1024 * 1024
 MAX_JOURNAL = 8 * MAX_FILE
 
@@ -152,7 +152,7 @@ def selection(presets):
     values = tuple(presets)
     if not values or len(set(values)) != len(values) or set(values) - set(PRESETS):
         raise ValueError(
-            "Select each supported preset at most once: continuity checkpoints"
+            "Select each supported preset at most once: " + " ".join(PRESETS)
         )
     return tuple(p for p in PRESETS if p in values)
 
@@ -219,10 +219,17 @@ def groups(host, project, skill, presets=("continuity",), shape=ABSOLUTE):
                 ("Stop", None, "checkpoints", "stop"),
             ]
         )
+    if "standards" in presets:
+        # One discrete event the host really has. There is no PR-completed event,
+        # so that granularity stays an explicit command rather than a stand-in.
+        capabilities.append(("PostToolUse", "^Bash$", "standards", "post-commit"))
     result = {}
     for event, matcher, script, mode in capabilities:
         command = registered_command(shape, host, project, skill, script, mode)
-        group = {"hooks": [{"type": "command", "command": command, "timeout": 12}]}
+        # A commit-time check needs longer than an advisory notice, and both
+        # hosts were measured to honour a larger value.
+        seconds = 60 if script == "standards" else 12
+        group = {"hooks": [{"type": "command", "command": command, "timeout": seconds}]}
         if matcher is not None:
             group = {"matcher": matcher, **group}
         result.setdefault(event, []).append(group)
@@ -485,8 +492,11 @@ def replace(path, expected, replacement):
 def verify_skill(plan):
     source = ROOT / "structured-coding"
     dependencies = {"scripts/continuity.py", "references/continuity.md"}
-    if "checkpoints" in plan.get("presets", ("continuity",)):
+    selected = plan.get("presets", ("continuity",))
+    if "checkpoints" in selected or "standards" in selected:
         dependencies.update({"scripts/checkpoints.py", "references/checkpoints.md"})
+    if "standards" in selected:
+        dependencies.update({"scripts/standards.py", "references/standards.md"})
     for relative in sorted(dependencies):
         path = safe(plan["skill"], relative)
         if read(path) != (source / relative).read_bytes():
