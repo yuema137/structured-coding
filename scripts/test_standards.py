@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -885,6 +886,133 @@ class BoundBaseTests(WorktreeTest):
             capture_output=True, text=True)
         self.assertEqual(result.returncode, 1)
         self.assertIn("--base is required", result.stderr)
+
+
+class ProcessGroupTests(WorktreeTest):
+    """A timed-out tool must not leave a tree running behind it."""
+
+    def alive(self, pid, seconds=5):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            try:
+                os.kill(pid, 0)
+            except (OSError, ProcessLookupError):
+                return False
+            time.sleep(0.1)
+        return True
+
+    def test_a_timeout_ends_the_whole_tree_not_only_the_child(self):
+        pidfile = self.root / "grandchild.pid"
+        stub = self.root / "spawner"
+        stub.write_text(
+            "#!/bin/sh\n"
+            "sh -c 'sleep 300' &\n"
+            f"echo $! > '{pidfile}'\n"
+            "sleep 300\n"
+        )
+        stub.chmod(0o755)
+        outcome, reason, _ = standards.execute(
+            self.project, {"name": "spawner"}, [str(stub)], 2
+        )
+        self.assertEqual(outcome, "INCONCLUSIVE")
+        self.assertIn("no result within", reason)
+        pid = int(pidfile.read_text().strip())
+        self.assertFalse(self.alive(pid), "a grandchild outlived the timed-out tool")
+
+    def test_a_tool_that_ignores_termination_is_still_ended(self):
+        stub = self.root / "stubborn"
+        stub.write_text("#!/bin/sh\ntrap '' TERM\nsleep 300\n")
+        stub.chmod(0o755)
+        started = time.monotonic()
+        outcome, _, _ = standards.execute(
+            self.project, {"name": "stubborn"}, [str(stub)], 2
+        )
+        self.assertEqual(outcome, "INCONCLUSIVE")
+        # Terminated, then killed after the grace period, rather than hanging.
+        self.assertLess(time.monotonic() - started, 2 + standards.GRACE_SECONDS * 2 + 5)
+
+    def test_an_ordinary_tool_is_unaffected_by_the_new_session(self):
+        stub = self.root / "quick"
+        stub.write_text("#!/bin/sh\necho hello\nexit 1\n")
+        stub.chmod(0o755)
+        outcome, _, output = standards.execute(
+            self.project, {"name": "quick"}, [str(stub)], 30
+        )
+        self.assertEqual(outcome, "FAIL")
+        self.assertIn("hello", output)
+
+
+class HandlerTests(WorktreeTest):
+    """The one hook this preset registers: report after a commit, block nothing."""
+
+    def setUp(self):
+        super().setUp()
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        stub = self.bin / "ruff"
+        stub.write_text("#!/bin/sh\nexit 0\n"); stub.chmod(0o755)
+        environment = patch.dict(
+            os.environ, {"PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}"})
+        environment.start(); self.addCleanup(environment.stop)
+
+    def config(self, trigger):
+        relative = dict(standards.LAYERS)["base"]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('```json\n{"schema": 1, "checks": {"trigger": "%s", "tools": ['
+                        '{"name": "ruff", "scope": "repository"},'
+                        '{"name": "pyright", "enabled": false}]}}\n```\n' % trigger,
+                        encoding="utf-8")
+
+    def payload(self, command="git commit -m x", **extra):
+        return {"hook_event_name": "PostToolUse", "session_id": self.session,
+                "cwd": str(self.project), "tool_name": "Bash",
+                "tool_input": {"command": command}, **extra}
+
+    def fire(self, payload):
+        result = subprocess.run(
+            [sys.executable, str(RUNTIME), "event", "--project", str(self.project),
+             "--host", "codex", "--event", "post-commit"],
+            input=json.dumps(payload), text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout), result.stderr
+
+    def test_a_commit_reports_when_the_trigger_matches(self):
+        self.config("commit")
+        value, _ = self.fire(self.payload())
+        context = value["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("ruff: PASS", context)
+        self.assertIn("pyright: NOT RUN", context)
+        self.assertIn("advisory", context)
+
+    def test_nothing_is_reported_when_the_trigger_does_not_match(self):
+        self.config("pr")
+        self.assertEqual(self.fire(self.payload())[0], {})
+
+    def test_only_a_direct_commit_is_acted_on(self):
+        self.config("commit")
+        for label, payload in {
+            "another command": self.payload("git status"),
+            "a chained command": self.payload("git commit -m x && rm -rf /"),
+            "another tool": self.payload(**{"tool_name": "Read"}),
+            "a redirected cwd": {**self.payload(),
+                                 "tool_input": {"command": "git commit -m x",
+                                                "cwd": "/elsewhere"}},
+            "a foreign cwd": {**self.payload(), "cwd": str(self.root)},
+        }.items():
+            with self.subTest(case=label):
+                self.assertEqual(self.fire(payload)[0], {})
+
+    def test_a_malformed_payload_fails_open(self):
+        self.config("commit")
+        for payload in ({}, {"hook_event_name": "Stop"}, {"hook_event_name": "PostToolUse"}):
+            with self.subTest(payload=str(payload)[:24]):
+                value, stderr = self.fire(payload)
+                self.assertEqual(value, {})
+
+    def test_a_project_without_configuration_reports_the_default_trigger(self):
+        """The default trigger is pr, so a commit produces nothing."""
+        self.assertEqual(self.fire(self.payload())[0], {})
 
 
 if __name__ == "__main__":

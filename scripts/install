@@ -68,9 +68,9 @@ def main():
     parser.add_argument("--project", required=True, type=Path,
                         help="Existing target project directory (use . for the current directory)")
     modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--hooks", nargs="+", action="append", choices=("continuity", "checkpoints"),
+    modes.add_argument("--hooks", nargs="+", action="append", choices=("continuity", "checkpoints", "standards"),
                        help="Add the selected project-local hook presets")
-    modes.add_argument("--remove-hooks", nargs="*", action="append", choices=("continuity", "checkpoints"),
+    modes.add_argument("--remove-hooks", nargs="*", action="append", choices=("continuity", "checkpoints", "standards"),
                        help="Remove selected presets, or all owned presets when no names are given")
     modes.add_argument("--check-hooks", action="store_true", help="Check registration, runtime files, and host version")
     modes.add_argument("--upgrade-registration", action="store_true",

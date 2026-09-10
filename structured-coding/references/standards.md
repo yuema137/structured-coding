@@ -1,9 +1,9 @@
 # Project standards configuration
 
-Status: **RUNS ONLY WHEN INVOKED.** This release reads the configuration and,
+Status: **REPORTS; NEVER BLOCKS.** This release reads the configuration and,
 on the `run` command, executes the declared checks and classifies each result.
-It registers no hook, so nothing happens automatically, and it blocks no commit
-and no merge. Automatic triggering is later work; the target behaviour for a hook
+With the optional `standards` preset installed, it also reports after a direct
+`git commit`. It blocks nothing: no commit, no merge, no tool call. Automatic triggering is later work; the target behaviour for a hook
 remains in the [hook contract](hook-contract.md).
 
 A project uses this to state, once, what is true of its whole codebase, so the
@@ -117,6 +117,28 @@ is reported as `FAIL` and the report says its exit codes are unmapped.
 
 Runs are bounded: a per-tool timeout, a total budget, and captured output
 truncated with the truncation marked.
+
+## The optional preset
+
+```sh
+./scripts/install codex --project /path/to/project --hooks standards
+```
+
+It registers one hook: `PostToolUse` on a direct `git commit`. After the commit
+exists, the checks whose trigger is `commit` run and the result is reported to
+the agent as context. Nothing is blocked, and the commit has already happened.
+
+The registered budget is 60 seconds, larger than the 12 the other presets use,
+because a check is slower than a notice. The host is blocked while it runs, so
+keep the commit trigger to fast checks; a tool that outruns the budget is
+`INCONCLUSIVE`, and its process group is ended rather than left running.
+
+**`trigger: "pr"` has no hook, deliberately.** Neither host has a PR-completed
+event. `Stop` is the nearest moment, and it fires at the end of every agent turn,
+which is not what `pr` means. Rather than map onto an event that means something
+else and then suppress the noise, that granularity stays an explicit
+`standards.py run` at review time, alongside the review discipline the workflow
+already carries.
 
 ## Commands this skill does not ship
 

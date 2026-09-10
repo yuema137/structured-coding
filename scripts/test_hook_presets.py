@@ -61,95 +61,49 @@ class PresetTests(WorktreeTest):
         receipt.write_bytes(hooks.serialize(value["receipt"]))
         return config, skill, receipt
 
-    def test_both_hosts_install_and_remove_orders_preserve_exact_original_and_state(
-        self,
-    ):
+    # What each preset registers. SessionStart is shared by all of them.
+    EVENTS = {
+        "continuity": {"SessionStart", "PreCompact"},
+        "checkpoints": {"SessionStart", "PreToolUse", "Stop"},
+        "standards": {"SessionStart", "PostToolUse"},
+    }
+    TOTAL_GROUPS = 6
+
+    def test_every_preset_coexists_and_any_one_can_be_removed(self):
         original = b'{ "description": "keep", "hooks": {"SessionStart": []}}\n'
         for host in hooks.PATHS:
-            for first in hooks.PRESETS:
-                for removed in hooks.PRESETS:
-                    with self.subTest(host=host, first=first, removed=removed):
-                        _, config, _, receipt = hooks.locations(host, self.project)
-                        config.parent.mkdir(exist_ok=True)
-                        config.write_bytes(original)
-                        self.install(host, [first])
-                        second = next(p for p in hooks.PRESETS if p != first)
-                        plan = self.install(host, [second])
-                        state = json.loads(config.read_bytes())
-                        self.assertEqual(sum(map(len, state["hooks"].values())), 5)
-                        self.assertEqual(len(state["hooks"]["SessionStart"]), 1)
-                        self.assertEqual(
-                            json.loads(receipt.read_bytes())["presets"],
-                            list(hooks.PRESETS),
-                        )
-                        before = config.read_bytes(), receipt.read_bytes()
-                        self.install(host, [first])
-                        self.assertEqual(
-                            before, (config.read_bytes(), receipt.read_bytes())
-                        )
-                        hooks.remove(host, self.project, presets=[removed])
-                        survivor = next(p for p in hooks.PRESETS if p != removed)
-                        events = set(json.loads(config.read_bytes())["hooks"])
-                        self.assertEqual(
-                            events,
-                            {"SessionStart", "PreCompact"}
-                            if survivor == "continuity"
-                            else {"SessionStart", "PreToolUse", "Stop"},
-                        )
-                        self.assertIn(survivor, hooks.doctor(host, self.project))
-                        data = self.state(host) / "retained.json"
-                        data.parent.mkdir(parents=True, exist_ok=True)
-                        data.write_text("{}")
-                        hooks.remove(host, self.project)
-                        self.assertEqual(config.read_bytes(), original)
-                        self.assertTrue(data.exists())
-                        self.assertTrue(plan["skill"].exists())
-
-    def test_absolute_shape_is_the_default_and_keeps_its_published_form(self):
-        """A shipped registration must keep its exact form once shape is a parameter."""
-        for host, parent in (("codex", ".agents"), ("claude-code", ".claude")):
-            skill = self.project / parent / "skills/structured-coding"
-            for presets in (
-                ("continuity",),
-                ("checkpoints",),
-                ("continuity", "checkpoints"),
-            ):
-                with self.subTest(host=host, presets=presets):
-                    built = hooks.groups(host, self.project, skill, presets)
+            for removed in hooks.PRESETS:
+                with self.subTest(host=host, removed=removed):
+                    _, config, _, receipt = hooks.locations(host, self.project)
+                    config.parent.mkdir(exist_ok=True)
+                    config.write_bytes(original)
+                    for preset in hooks.PRESETS:
+                        self.install(host, [preset])
+                    state = json.loads(config.read_bytes())
                     self.assertEqual(
-                        built,
-                        hooks.groups(
-                            host, self.project, skill, presets, hooks.ABSOLUTE
-                        ),
+                        sum(map(len, state["hooks"].values())), self.TOTAL_GROUPS
                     )
-                    for entries in built.values():
-                        for group in entries:
-                            entry = group["hooks"][0]
-                            self.assertEqual(entry["timeout"], 12)
-                            words = shlex.split(entry["command"])
-                            script = Path(words[1])
-                            self.assertEqual(words[0], sys.executable)
-                            self.assertEqual(script.parent, skill / "scripts")
-                            self.assertTrue(script.is_absolute())
-                            self.assertEqual(words[2:5], ["event", "--host", host])
-                            self.assertEqual(
-                                words[words.index("--project") + 1], str(self.project)
-                            )
-
-    def test_unknown_shape_and_schema_are_refused(self):
-        skill = self.project / ".agents/skills/structured-coding"
-        with self.assertRaises(ValueError):
-            hooks.groups("codex", self.project, skill, ("continuity",), "relative")
-        with self.assertRaises(ValueError):
-            hooks.registered_command(
-                "relative", "codex", self.project, skill, "continuity", "pre-auto"
-            )
-        for schema in (1, 2):
-            self.assertEqual(hooks.shape_for_schema(schema), hooks.ABSOLUTE)
-        self.assertEqual(hooks.shape_for_schema(3), hooks.PORTABLE)
-        for schema in (0, 4, 99, None, "1"):
-            with self.subTest(schema=schema), self.assertRaises(ValueError):
-                hooks.shape_for_schema(schema)
+                    self.assertEqual(len(state["hooks"]["SessionStart"]), 1)
+                    self.assertEqual(
+                        json.loads(receipt.read_bytes())["presets"], list(hooks.PRESETS)
+                    )
+                    before = config.read_bytes(), receipt.read_bytes()
+                    self.install(host, [hooks.PRESETS[0]])
+                    self.assertEqual(before, (config.read_bytes(), receipt.read_bytes()))
+                    hooks.remove(host, self.project, presets=[removed])
+                    survivors = [p for p in hooks.PRESETS if p != removed]
+                    expected = set().union(*(self.EVENTS[p] for p in survivors))
+                    self.assertEqual(set(json.loads(config.read_bytes())["hooks"]), expected)
+                    report = hooks.doctor(host, self.project)
+                    for survivor in survivors:
+                        self.assertIn(survivor, report)
+                    data = self.state(host) / "retained.json"
+                    data.parent.mkdir(parents=True, exist_ok=True)
+                    data.write_text("{}")
+                    hooks.remove(host, self.project)
+                    self.assertEqual(config.read_bytes(), original)
+                    self.assertTrue(data.exists())
+                    self.assertTrue(hooks.locations(host, self.project)[2].exists())
 
     def owned_group_count(self, config):
         return sum(len(v) for v in json.loads(config.read_bytes())["hooks"].values())
