@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import time
 import sys
@@ -470,26 +471,61 @@ def bounded_output(raw):
     return text[:MAX_OUTPUT].strip() + "\n[output truncated]"
 
 
+GRACE_SECONDS = 5
+
+
+def end_group(process):
+    """A tool's children must not outlive the event that started it.
+
+    subprocess terminates only the child it started. Under an explicit command an
+    operator would notice an orphaned tree; under a hook nothing would."""
+    for number in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(process.pid, number)
+        except (OSError, ProcessLookupError):
+            return
+        try:
+            process.wait(timeout=GRACE_SECONDS)
+            if number is signal.SIGKILL:
+                return
+        except subprocess.TimeoutExpired:
+            continue
+        else:
+            # The leader is gone; make sure nothing it spawned is still holding on.
+            try:
+                os.killpg(process.pid, 0)
+            except (OSError, ProcessLookupError):
+                return
+
+
 def execute(root, tool, command, seconds):
     """Run one tool and classify from what happened, not from the exit code alone."""
     if seconds <= 0:
         return "INCONCLUSIVE", "the total time budget was already spent", ""
     started = time.monotonic()
     try:
-        result = subprocess.run(
+        # Its own session, so a timeout can end the whole tree and not just the leader.
+        process = subprocess.Popen(
             command, cwd=str(root), stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, timeout=seconds,
+            stderr=subprocess.STDOUT, start_new_session=True,
         )
     except FileNotFoundError:
         # Never a pass: an absent tool established nothing.
         return "INCONCLUSIVE", f"{command[0]} is not installed or not on PATH", ""
-    except subprocess.TimeoutExpired:
-        return "INCONCLUSIVE", f"no result within {seconds:.0f}s", ""
     except OSError as error:
         return "INCONCLUSIVE", f"could not start ({type(error).__name__})", ""
+    try:
+        captured, _ = process.communicate(timeout=seconds)
+    except subprocess.TimeoutExpired:
+        end_group(process)
+        try:
+            process.communicate(timeout=GRACE_SECONDS)
+        except (subprocess.TimeoutExpired, OSError, ValueError):
+            pass
+        return "INCONCLUSIVE", f"no result within {seconds:.0f}s", ""
     elapsed = time.monotonic() - started
-    output = bounded_output(result.stdout or b"")
-    code = result.returncode
+    output = bounded_output(captured or b"")
+    code = process.returncode
     if code == 0:
         return "PASS", f"clean in {elapsed:.1f}s", output
     if code < 0:

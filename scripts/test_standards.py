@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -885,6 +886,60 @@ class BoundBaseTests(WorktreeTest):
             capture_output=True, text=True)
         self.assertEqual(result.returncode, 1)
         self.assertIn("--base is required", result.stderr)
+
+
+class ProcessGroupTests(WorktreeTest):
+    """A timed-out tool must not leave a tree running behind it."""
+
+    def alive(self, pid, seconds=5):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            try:
+                os.kill(pid, 0)
+            except (OSError, ProcessLookupError):
+                return False
+            time.sleep(0.1)
+        return True
+
+    def test_a_timeout_ends_the_whole_tree_not_only_the_child(self):
+        pidfile = self.root / "grandchild.pid"
+        stub = self.root / "spawner"
+        stub.write_text(
+            "#!/bin/sh\n"
+            "sh -c 'sleep 300' &\n"
+            f"echo $! > '{pidfile}'\n"
+            "sleep 300\n"
+        )
+        stub.chmod(0o755)
+        outcome, reason, _ = standards.execute(
+            self.project, {"name": "spawner"}, [str(stub)], 2
+        )
+        self.assertEqual(outcome, "INCONCLUSIVE")
+        self.assertIn("no result within", reason)
+        pid = int(pidfile.read_text().strip())
+        self.assertFalse(self.alive(pid), "a grandchild outlived the timed-out tool")
+
+    def test_a_tool_that_ignores_termination_is_still_ended(self):
+        stub = self.root / "stubborn"
+        stub.write_text("#!/bin/sh\ntrap '' TERM\nsleep 300\n")
+        stub.chmod(0o755)
+        started = time.monotonic()
+        outcome, _, _ = standards.execute(
+            self.project, {"name": "stubborn"}, [str(stub)], 2
+        )
+        self.assertEqual(outcome, "INCONCLUSIVE")
+        # Terminated, then killed after the grace period, rather than hanging.
+        self.assertLess(time.monotonic() - started, 2 + standards.GRACE_SECONDS * 2 + 5)
+
+    def test_an_ordinary_tool_is_unaffected_by_the_new_session(self):
+        stub = self.root / "quick"
+        stub.write_text("#!/bin/sh\necho hello\nexit 1\n")
+        stub.chmod(0o755)
+        outcome, _, output = standards.execute(
+            self.project, {"name": "quick"}, [str(stub)], 30
+        )
+        self.assertEqual(outcome, "FAIL")
+        self.assertIn("hello", output)
 
 
 if __name__ == "__main__":
