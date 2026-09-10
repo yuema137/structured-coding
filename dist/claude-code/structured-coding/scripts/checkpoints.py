@@ -12,6 +12,10 @@ from pathlib import Path
 
 # Installed helpers must not create files in the published skill tree.
 sys.dont_write_bytecode = True
+# Import by location rather than relying on sys.path[0], which is absent under
+# python3 -P. This import is above main()'s try, so failing here would exit
+# non-zero without the empty result a hook must always return.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from continuity import (  # noqa: E402
     HOSTS,
     MAX_INPUT,

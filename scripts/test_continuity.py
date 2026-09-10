@@ -196,6 +196,24 @@ class ContinuityTests(WorktreeTest):
         self.assertEqual(runtime.digest(runtime.encoded(loaded)), digest_before)
         self.assertEqual(path.read_bytes(), legacy)
 
+    def test_every_runtime_script_imports_without_a_path_default(self):
+        """A hook launched under python3 -P must still reach its shared helpers.
+
+        The import sits above main()'s try, so failing there exits non-zero
+        without the empty result a hook is required to return."""
+        skill = hook_install.ROOT / "structured-coding/scripts"
+        for name in ("continuity", "checkpoints", "standards"):
+            with self.subTest(script=name):
+                result = subprocess.run(
+                    [sys.executable, "-P", "-c",
+                     "import importlib.util,sys;"
+                     f"spec=importlib.util.spec_from_file_location({name!r},"
+                     f" {str(skill / f'{name}.py')!r});"
+                     "m=importlib.util.module_from_spec(spec);"
+                     "spec.loader.exec_module(m)"],
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_fixture_disables_git_background_maintenance(self):
         """Housekeeping locks otherwise appear mid-test in whole-tree comparisons."""
         for key, expected in (("maintenance.auto", "false"), ("gc.auto", "0")):
