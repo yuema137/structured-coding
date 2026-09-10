@@ -112,7 +112,7 @@ Before implementation edits, the new session must:
 
 1. Inspect branch, HEAD, status, recent history, and relevant running jobs.
 2. Read the PR design in full, its filled contract, and the needed binding parents.
-3. Verify approved design identity, implementation authorization, base, and merged prerequisites.
+3. Verify approved design identity, implementation authorization, base, and merged prerequisites. Read the contract's endpoint authority and work to it; a line whose source is unresolved is raised with the operator, not narrowed further.
 4. Read both execution prompt files completely and inspect the source/tests for the first milestone.
 5. Initialize the handoff for this PR with the fields required by the original contract.
 
@@ -156,7 +156,7 @@ Preserve measurement evidence and frozen parity references. Store durable eviden
 
 Compaction does not reset progress or initialize a new PR. Recover the active PR from the handoff, verify it against repository identity and branch/base, and follow the source authority order: repository/git/process truth → primary design → binding parents → handoff → emergency snapshot → conversational memory.
 
-Re-read the current PR design in full, the filled contract, and both execution prompts. Inspect active processes and CI runs before launching replacements. Re-open the source seam for the exact next action and reconcile stale checkbox/evidence claims before editing.
+Re-read the current PR design in full, the filled contract, and both execution prompts. A restriction found only in the handoff, with no source and no support in the contract, is reported rather than obeyed; a newer explicit instruction from the operator supersedes it. Inspect active processes and CI runs before launching replacements. Re-open the source seam for the exact next action and reconcile stale checkbox/evidence claims before editing.
 
 For planned manual compaction, synchronize the design, handoff, HEAD, and working-tree fingerprint first. For unavoidable automatic compaction, a stale semantic handoff should produce a mechanical rescue snapshot and recovery warning, not a compaction deadlock. The hook must not invent a semantic summary.
 

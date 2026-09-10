@@ -85,6 +85,7 @@ PR CONTEXT INITIALIZATION:
     - working-tree fingerprint;  
     - approved scope;  
     - frozen invariants;  
+    - endpoint authority, with each line's source;  
     - implementation sequence;  
     - validation budget;  
     - current checkpoint;  
@@ -105,6 +106,14 @@ PR CONTEXT AUTHORITY ORDER:
     6. conversational memory.
 
   A lower item may never override a higher one.
+
+  An explicit operator instruction in the CURRENT session outranks a recorded  
+  restriction, including one carried in the handoff. Quote the instruction,  
+  update ENDPOINT AUTHORITY with it as the source, and say plainly that it  
+  replaces the earlier line. Do not silently drop either side.
+
+  Merge authority is outside this: it is never inherited, never widened, and  
+  always requires the operator's explicit authorization for this merge.
 
 PR CONTEXT CONTINUITY:  
   During THIS PR:
