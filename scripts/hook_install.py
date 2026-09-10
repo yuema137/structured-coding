@@ -120,6 +120,31 @@ def version(host):
     return ".".join(map(str, actual))
 
 
+def codex_home():
+    return Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+
+
+def untrusted_project(host, project):
+    """Codex loads no project-local hooks until the project is trusted in its own
+    config, and says nothing at install time. A -c override does not satisfy it.
+
+    This only reports; it changes no trust and blocks nothing."""
+    if host != "codex":
+        return ""
+    path = codex_home() / "config.toml"
+    try:
+        data = path.read_bytes() if path.is_file() else b""
+    except OSError:
+        return ""
+    if f'[projects."{project}"]'.encode() in data:
+        return ""
+    return (
+        f" Codex has not been told to trust {project}: add a "
+        f'[projects."{project}"] entry with trust_level to {path}, or trust it '
+        "through the host. Until then it loads no project-local hooks at all."
+    )
+
+
 def locations(host, project):
     project = Path(project).expanduser().resolve(strict=True)
     result = subprocess.run(
@@ -698,4 +723,5 @@ def doctor(host, project):
         f"Installed presets: {', '.join(presets)}. Skill version {installed}. "
         f"Registration and runtime files match ({host} {version_string}). {portability} "
         "Trust/enabled state and real host delivery still require /hooks verification."
+        + untrusted_project(host, project)
     )

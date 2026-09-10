@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import os
 import shlex
 import sys
 from pathlib import Path
@@ -159,6 +160,22 @@ class PresetTests(WorktreeTest):
                 self.assertIn(sys.executable, config.read_text())
                 hooks.remove(host, self.project, presets=["checkpoints"])
                 self.assertEqual(json.loads(receipt.read_bytes())["schema"], 2)
+
+    def test_check_hooks_says_when_codex_will_not_load_the_hooks(self):
+        """It reported a healthy registration while Codex loaded zero hooks."""
+        home = self.root / "codex-home"
+        home.mkdir()
+        with patch.dict(os.environ, {"CODEX_HOME": str(home)}):
+            self.install("codex", ["continuity"])
+            self.assertIn("has not been told to trust", hooks.doctor("codex", self.project))
+            (home / "config.toml").write_text(
+                f'[projects."{self.project}"]\ntrust_level = "trusted"\n')
+            self.assertNotIn("has not been told to trust",
+                             hooks.doctor("codex", self.project))
+            # Claude Code has no equivalent level, so it must never be told this.
+            self.install("claude-code", ["continuity"])
+            self.assertNotIn("has not been told to trust",
+                             hooks.doctor("claude-code", self.project))
 
     def test_check_hooks_names_a_changed_interpreter(self):
         """A groups mismatch caused by the interpreter must say so, not blame paths."""
