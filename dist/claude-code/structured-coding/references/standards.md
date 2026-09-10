@@ -116,16 +116,19 @@ prevents an agent from running the installer.
 ./scripts/install codex --project /path/to/project --hooks standards
 ```
 
-One hook: `PostToolUse` on a direct `git commit`. The checks whose trigger is
-`commit` run and the result is reported as context. The commit already exists;
-nothing is blocked. The budget is 60 seconds rather than the 12 the other presets
+One hook: `PostToolUse` on a direct `git commit`. Whatever has `commit` as its
+trigger rides along in one report: the checks run, and the declared review
+conventions are restated for the agent to apply to what it just committed.
+The commit already exists; nothing is blocked. The budget is 60 seconds rather than the 12 the other presets
 use, and the host is blocked while it runs, so keep the commit trigger to fast
 checks.
 
 **`trigger: "pr"` has no hook, deliberately.** Neither host has a PR-completed
 event, and `Stop`, the nearest moment, fires at the end of every agent turn,
 which is not what `pr` means. That granularity stays an explicit `run` at review
-time.
+time. Conventions with the `pr` trigger still reach the agent, because `SKILL.md`
+routes it to this contract whenever a project declares one; the hook adds the
+commit-time reminder, not the only path.
 
 ## Limits
 

@@ -679,19 +679,23 @@ def event(project, host, mode, payload):
     if Path(cwd).resolve(strict=True) != repository.root:
         return {}
     effective, _ = resolved(project)
-    if effective["checks"]["trigger"] != "commit":
+    parts = []
+    if effective["review"]["trigger"] == "commit":
+        for convention in effective["review"]["conventions"]:
+            parts.append(f"Convention: {convention}")
+    if effective["checks"]["trigger"] == "commit":
+        base = bound_base(project, host, payload.get("session_id"))
+        for result in outcomes(project, effective, base):
+            parts.append(f"{result['name']}: {result['outcome']} ({result['reason']})")
+    if not parts:
         return {}
-    base = bound_base(project, host, payload.get("session_id"))
-    results = outcomes(project, effective, base)
-    lines = [f"{r['name']}: {r['outcome']} ({r['reason']})" for r in results]
     return {
         "hookSpecificOutput": {
             "hookEventName": "PostToolUse",
             "additionalContext": bounded(
-                "Structured Coding standards, reported after this commit. "
-                "These results are advisory; nothing was blocked, and an "
-                "INCONCLUSIVE or NOT RUN check is not a pass. "
-                + "; ".join(lines)
+                "Structured Coding standards, after this commit. Advisory: nothing "
+                "was blocked, a convention is for you to apply, and an INCONCLUSIVE "
+                "or NOT RUN check is not a pass. " + "; ".join(parts)
             ),
         }
     }
