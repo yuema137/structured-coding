@@ -24,7 +24,7 @@ Repository/git/process 事实确定实际状态，也能说明文档已经过时
 | Gate 1 / Gate 2 | 本工作流中分别指真实 LLM 和真实 lifecycle 证据。映射到项目真实 command；claim 不需要该层时记录 `NOT REQUIRED`。 |
 | Ruff、Pyright、Pydantic、pytest | Ownership 和 command 的示例。使用仓库实际工具；skill 不要求引入新的语言或工具 dependency。 |
 | Scorer、metric、model、training、GPU | 项目具备相关语义时应用。非 ML 项目按需使用确定性和真实 integration 证据。 |
-| `before_end_memory.md` | 建议的 handoff 文件名。复用既有文件或选择 PR 专属路径；不要覆盖用户无关笔记。 |
+| `before_end_memory.md` | 源 prompt 里的 handoff 文件名。默认位置是 `.structured-coding/plans/<effort>/handoff.md`；项目已有既定文件就复用它，不要覆盖用户无关笔记。 |
 | Final handoff 中的 full-suite result | 运行过则报告 canonical result；未运行则记录 `NOT RUN`、原因和实际选择的 CI 证据。不能仅为填写该字段再跑一次 full suite。 |
 
 ## Budget 与 approval 的解释

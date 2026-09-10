@@ -28,14 +28,14 @@
     {
       "english": "structured-coding/references/agent-workflow.md",
       "chinese": "structured-coding/references/agent-workflow.zh-CN.md",
-      "english_sha256": "ad77d83db6ff077e2b2dc765c328406e41fec6bb2f441f709c591e7adb281209",
-      "chinese_sha256": "c14525371c189ac66d0bd353f0974ef04530404dc56c648cf46dfb6b05bcad9e"
+      "english_sha256": "b5e34cf75c303c41c57cfe2b4c4b2e34a23e581c0042fa844d5728e0c4e635ef",
+      "chinese_sha256": "beccae6aaeccce1317508f7d6d05e7baf650cfc51773600d3cefcb40121571d5"
     },
     {
       "english": "structured-coding/references/adaptation.md",
       "chinese": "structured-coding/references/adaptation.zh-CN.md",
-      "english_sha256": "8f84c9f914b078bc184f3dd881e6c8ae61a71f69f6563d7333bc43bf926d9f90",
-      "chinese_sha256": "1ff742848a6b03087687a00230eed95588eb123c0bb16b80993b267ad423a61c"
+      "english_sha256": "b4590430ace1815701f32c78fd11a7b0f500466fb6bc9a76a31d0ab8d6bc7897",
+      "chinese_sha256": "65ff348c9f943be1d3c6280ef4551c58fb614630e024afee95e088f908772ec3"
     },
     {
       "english": "structured-coding/references/platforms.md",

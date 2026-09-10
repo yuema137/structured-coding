@@ -10,15 +10,19 @@
 
 确定用户要求的阶段：overall planning、step planning、PR design/freeze、execution、同一 PR 的恢复、operator review 或 merge 后更新。简要说明所选阶段。利用已有可用产物继续，避免重新生成整套层级。
 
-每个 implementation context 只保留一个 active PR 身份。记录 repository/worktree、PR 标识、branch/base、primary design、parent 文档及填写好的 execution contract。以下路径仅为示例：
+每个 implementation context 只保留一个 active PR 身份。记录 repository/worktree、PR 标识、branch/base、primary design、parent 文档及填写好的 execution contract。
+
+把这些文档统一放在 `.structured-coding/plans/` 下面，每项工作一个目录，这样并行的工作不会互相冲撞，也不会污染项目自己的 `docs/` 目录：
 
 ```text
-docs/plan/overall.md
-docs/plan/step-01.md
-docs/plan/pr-01a.md
-docs/plan/pr-01a-contract.md
-before_end_memory.md
+.structured-coding/plans/infra-exp-p0/overall.md
+.structured-coding/plans/infra-exp-p0/step-01-user-map.md
+.structured-coding/plans/infra-exp-p0/pr-01a-proposer.md
+.structured-coding/plans/infra-exp-p0/pr-01a-contract.md
+.structured-coding/plans/infra-exp-p0/handoff.md
 ```
+
+这是默认做法，不是硬性要求。项目如果已经把规划文档放在别处，就继续放在那儿；真正要紧的是只有一个位置是权威，而且后续 session 找得到它。如果希望后续 session 或队友能读到，就把它们提交进版本库——写下来通常就是为了这个。
 
 不要创建与 primary PR ledger 争夺权威的额外跟踪文档。contract 可以是 PR design 的一节，也可以是单独链接的文档。handoff 用于续接工作，不是另一份 design authority。
 

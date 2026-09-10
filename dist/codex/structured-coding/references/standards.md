@@ -22,6 +22,9 @@ top-level `json` block is read; a block nested inside another fence is prose.
 Zero blocks, several, or unparsable content is refused, naming the file. Both
 files are optional, and with neither the shipped defaults apply.
 
+The same directory is also the default home for planning documents, under
+`.structured-coding/plans/<effort>/`; see the [agent workflow](agent-workflow.md).
+
 ## Layer and trust are decided separately
 
 Layer comes from the filename. Trust comes from `git ls-files`: a tracked file is
