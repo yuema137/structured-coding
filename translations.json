@@ -46,7 +46,7 @@
   ],
   "specification_sha256": {
     "structured-coding/SKILL.md": "bea7c82214ef6332ba587385b0d76a71c820e05f8d9a95796ba6d16efb40f0e0",
-    "structured-coding/prompts/implementation-working-rules.md": "3f23c8eda3ba76fe4ea200bed269a889d5b04e839927df55adb370395cab99f2",
+    "structured-coding/prompts/implementation-working-rules.md": "b1d72cdec975766e0f32d1f83953ff3c8118256ba5e723097218a2aa20932277",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",
     "structured-coding/references/hook-contract.md": "bb4aeec01af96ea42d0fb4248e9b9e3ccf54cae8f7266f523eed57031a68d81f"

@@ -207,7 +207,17 @@ MERGE AUTHORITY:
 If a field is not applicable, mark it `N/A` rather than inventing a value.
 
 The project-specific contract overrides generic defaults below where it is  
-more restrictive.
+more restrictive **and the restriction records a source**: an explicit operator  
+instruction or an applicable repository restriction.
+
+A restriction with no source is not a project decision and does not override  
+anything. Resolve it with the operator before freeze instead of acting on it.  
+Without this, choosing caution and writing the result into the contract presents  
+an agent's decision as the operator's — and every later session that reads the  
+contract correctly then inherits it as a frozen operator boundary.
+
+This does not work in reverse. An unsourced line is resolved, not widened past  
+the shipped defaults, and merge authority is never widened at all.
 
 # 1. Inspect before asking, guessing, or changing the design
 
