@@ -22,7 +22,16 @@ Keep these documents together under `.structured-coding/plans/`, one directory p
 .structured-coding/plans/infra-exp-p0/handoff.md
 ```
 
-That is the default, not a requirement. A project that already keeps planning documents somewhere else should keep them there; what matters is that one location is the authority and that a later session can find it. Commit them if later sessions or teammates need to read them, which is usually the point of writing them down.
+That is the default, not a requirement. A project that already keeps planning documents somewhere else should keep them there; what matters is that one location is the authority and that a later session can find it.
+
+Planning documents are development artifacts and default to staying out of version control, alongside the personal standards overlay:
+
+```text
+.structured-coding/plans/
+.structured-coding/standards.local.md
+```
+
+The shared standards file is the deliberate exception: `.structured-coding/standards.md` is project configuration, and whether Git tracks it is exactly what makes it the team's standard rather than one developer's, so it belongs in version control. Keeping plans local costs a teammate the ability to read them from a fresh clone, while a later session on the same machine still finds them. Commit them when that tradeoff runs the other way for your project.
 
 Do not create additional tracking documents that compete with the primary PR ledger. The contract can be a section of the PR design or a separate linked document. The handoff is a continuation aid, not another design authority.
 

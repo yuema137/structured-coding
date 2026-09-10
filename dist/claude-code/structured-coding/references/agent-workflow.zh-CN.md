@@ -22,7 +22,16 @@
 .structured-coding/plans/infra-exp-p0/handoff.md
 ```
 
-这是默认做法，不是硬性要求。项目如果已经把规划文档放在别处，就继续放在那儿；真正要紧的是只有一个位置是权威，而且后续 session 找得到它。如果希望后续 session 或队友能读到，就把它们提交进版本库——写下来通常就是为了这个。
+这是默认做法，不是硬性要求。项目如果已经把规划文档放在别处，就继续放在那儿；真正要紧的是只有一个位置是权威，而且后续 session 找得到它。
+
+规划文档属于开发产物，默认**不进版本库**，和个人的 standards 覆盖文件一起：
+
+```text
+.structured-coding/plans/
+.structured-coding/standards.local.md
+```
+
+共享的 standards 文件是刻意的例外：`.structured-coding/standards.md` 是项目配置，而"git 有没有 track 它"恰恰就是它成为团队标准而不是某个人标准的判据，所以它应该进版本库。把 plans 留在本地的代价是队友从全新 clone 里读不到它们，而同一台机器上的后续 session 仍然找得到。如果对你的项目来说这个取舍反过来更合适，就提交它们。
 
 不要创建与 primary PR ledger 争夺权威的额外跟踪文档。contract 可以是 PR design 的一节，也可以是单独链接的文档。handoff 用于续接工作，不是另一份 design authority。
 

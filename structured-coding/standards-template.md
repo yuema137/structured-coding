@@ -26,6 +26,17 @@ a trigger off; attempting that is refused, naming the field, rather than quietly
 ignored. If you genuinely need to skip a team check, that belongs in the PR as a
 recorded deviation, where a reviewer can see it.
 
+Keeping the personal file out of version control is what makes it personal, so
+ignore it along with the planning directory:
+
+```text
+.structured-coding/plans/
+.structured-coding/standards.local.md
+```
+
+This file, `.structured-coding/standards.md`, is the opposite: it belongs in
+version control, because Git tracking it is what makes it the team's standard.
+
 Trust is decided by whether Git tracks the file, never by its name. A tracked
 file can be edited by any contributor in a pull request; an untracked one can
 only have been written on your own machine.
