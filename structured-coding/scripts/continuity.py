@@ -19,6 +19,10 @@ import uuid
 from pathlib import Path
 
 HOSTS = ("codex", "claude-code")
+# 2 adds an optional base revision. A schema-1 record is never rewritten, so
+# anything that hashed it stays valid.
+BINDING_SCHEMA = 2
+BINDING_SCHEMAS = (1, 2)
 MAX_INPUT = 1024 * 1024
 MAX_FILES = 10000
 MAX_BYTES = 256 * 1024 * 1024
@@ -211,7 +215,7 @@ def active_record(repository, directory, host, session):
         "binding_id",
     )
     if (
-        record.get("schema") != 1
+        record.get("schema") not in BINDING_SCHEMAS
         or record.get("host") != host
         or record.get("session_id") != session
     ):
@@ -380,6 +384,7 @@ def main(argv=None):
     parser.add_argument("--project", required=True, type=Path)
     parser.add_argument("--session")
     parser.add_argument("--pr")
+    parser.add_argument("--base", help="revision a changed-file check compares against")
     for name in ("design", "contract", "handoff"):
         parser.add_argument(f"--{name}")
     parser.add_argument("--event", choices=("pre-manual", "pre-auto", "session-start"))
@@ -408,8 +413,12 @@ def main(argv=None):
                 raise ValueError(
                     "activate requires --pr, --design, --contract, and --handoff"
                 )
+            if args.base is not None and (
+                not args.base.strip() or args.base.startswith("-")
+            ):
+                raise ValueError("--base must be a revision, not an option")
             active = {
-                "schema": 1,
+                "schema": BINDING_SCHEMA,
                 "host": args.host,
                 "session_id": args.session,
                 "pr": args.pr,
@@ -421,6 +430,10 @@ def main(argv=None):
                 if not path.is_file():
                     raise ValueError(f"Create the {key} document before binding the PR")
                 active[key] = path.relative_to(repository.root).as_posix()
+            if args.base is not None:
+                # Recorded, not resolved: a base that resolves now can stop
+                # resolving after a rebase, so resolution belongs where it is used.
+                active["base"] = args.base
             if active_path.exists() and not read_json(active_path).get("closed"):
                 raise ValueError(
                     "Session already bound; deactivate explicitly before rebinding"

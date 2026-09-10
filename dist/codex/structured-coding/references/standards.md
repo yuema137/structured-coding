@@ -86,10 +86,15 @@ layer every value came from, each tool's approval verdict, and a note. It runs
 nothing. A refusal exits non-zero with an empty stdout, so a failure cannot be
 mistaken for a defaults report.
 
-`run` adds the result of every enabled check. `--base` is required while any
+`run` adds the result of every enabled check. A base is required while any
 enabled check uses changed-file scope, and there is no fallback to a guessed
 default branch: guessing which branch a project treats as its base is how a check
 silently examines the wrong range.
+
+The base comes from `--base`, or from the session binding when `--host` and
+`--session` identify one that recorded it. An explicit `--base` wins, because a
+person naming a revision is more specific than a record made when the PR was
+bound. With neither, a changed-scope check reports that it was not run.
 
 ## Outcomes
 
