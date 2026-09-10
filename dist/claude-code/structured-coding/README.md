@@ -27,9 +27,11 @@ Three messages carry one feature from an idea to a reviewed PR. You approve twic
 ### 1. Plan the feature
 
 ```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
+Use the structured-coding skill for this feature. Read its SKILL.md
+entrypoint first and load the complete resources its table lists for the
+current phase.
+First agree with me on requirements, module-level direction, and overall
+step boundaries; then detail the current step. Work on planning for now.
 Requirements: ...
 ```
 
@@ -39,9 +41,11 @@ The agent asks what it cannot infer, inspects your actual code, and writes the o
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
+PR 01a design doc and filled execution contract. Use structured-coding:
+start from its SKILL.md entrypoint and load what the PR design row lists.
+Follow the original PR requirements for the commit checklist. Separate
+implementation, validation, and review, and prepare the design for my
+approval.
 ```
 
 You get a PR design with an audited commit plan and a filled execution contract. Read it, ask for changes, and approve it once it describes what you actually want built.
@@ -49,10 +53,12 @@ You get a PR design with an audited commit plan and a filled execution contract.
 ### 3. Execute after approval, in a fresh session
 
 ```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
+Execute PR 01a. The approved DESIGN FROZEN document is
+.structured-coding/plans/order-flag/pr-01a.md, and the filled contract is
+.structured-coding/plans/order-flag/pr-01a-contract.md.
+Use structured-coding: read its SKILL.md entrypoint, then the complete
+resources its execute row lists, including Implementation Working Rules and
+TEST / CI / GATE in full. Reconcile actual state, and begin.
 Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```
@@ -116,9 +122,11 @@ Open your target project in your chosen agent host. Invoke $structured-coding in
 For the example, say that alphabetical mode must visit [c, a, b] as [a, b, c], and that leaving the option off must preserve the old behavior. Explain what is outside scope, such as changing the resume mechanism in this PR. The agent should inspect the repo, ask about unresolved product decisions, and propose an overall direction. It should not start implementing merely because you asked for a plan.
 
 ```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
+Use the structured-coding skill for this feature. Read its SKILL.md
+entrypoint first and load the complete resources its table lists for the
+current phase.
+First agree with me on requirements, module-level direction, and overall
+step boundaries; then detail the current step. Work on planning for now.
 Requirements: ...
 ```
 
@@ -134,9 +142,11 @@ For the alphabetical-order PR, acceptance must observe the reader visiting [a, b
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
+PR 01a design doc and filled execution contract. Use structured-coding:
+start from its SKILL.md entrypoint and load what the PR design row lists.
+Follow the original PR requirements for the commit checklist. Separate
+implementation, validation, and review, and prepare the design for my
+approval.
 ```
 
 **Before you move on**
@@ -159,13 +169,15 @@ Ask for a kickoff that identifies the approved design, filled contract, implemen
 
 Start a genuinely new conversation in the same target project. Do not just rename the planning conversation. Invoke the skill again and give it the kickoff with the actual paths. The new agent does not need the entire planning chat: it needs the durable agreement and the source files that establish current state.
 
-Before editing, the agent must read the approved design, filled contract, and complete execution and test rules. It checks the branch, HEAD, existing edits, merged prerequisites, and relevant running jobs. It preserves unrelated work. If you explicitly enabled a preset, it also reads that preset's interface and binds this session to the current PR; it must not assume installation selected an active PR for it.
+Before editing, the agent must re-read the skill entrypoint and its execute row, then the approved design, filled contract, and complete execution and test rules. It checks the branch, HEAD, existing edits, merged prerequisites, and relevant running jobs. It preserves unrelated work. If you explicitly enabled a preset, it also reads that preset's interface and binds this session to the current PR; it must not assume installation selected an active PR for it.
 
 ```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
+Execute PR 01a. The approved DESIGN FROZEN document is
+.structured-coding/plans/order-flag/pr-01a.md, and the filled contract is
+.structured-coding/plans/order-flag/pr-01a-contract.md.
+Use structured-coding: read its SKILL.md entrypoint, then the complete
+resources its execute row lists, including Implementation Working Rules and
+TEST / CI / GATE in full. Reconcile actual state, and begin.
 Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```

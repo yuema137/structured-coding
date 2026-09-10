@@ -51,9 +51,11 @@ Three messages carry one feature from an idea to a reviewed PR. You approve twic
 ### 1. Plan the feature
 
 ```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
+Use the structured-coding skill for this feature. Read its SKILL.md
+entrypoint first and load the complete resources its table lists for the
+current phase.
+First agree with me on requirements, module-level direction, and overall
+step boundaries; then detail the current step. Work on planning for now.
 Requirements: ...
 ```
 
@@ -63,9 +65,11 @@ The agent asks what it cannot infer, inspects your actual code, and writes the o
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
+PR 01a design doc and filled execution contract. Use structured-coding:
+start from its SKILL.md entrypoint and load what the PR design row lists.
+Follow the original PR requirements for the commit checklist. Separate
+implementation, validation, and review, and prepare the design for my
+approval.
 ```
 
 You get a PR design with an audited commit plan and a filled execution contract. Read it, ask for changes, and approve it once it describes what you actually want built.
@@ -73,10 +77,12 @@ You get a PR design with an audited commit plan and a filled execution contract.
 ### 3. Execute after approval, in a fresh session
 
 ```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
+Execute PR 01a. The approved DESIGN FROZEN document is
+.structured-coding/plans/order-flag/pr-01a.md, and the filled contract is
+.structured-coding/plans/order-flag/pr-01a-contract.md.
+Use structured-coding: read its SKILL.md entrypoint, then the complete
+resources its execute row lists, including Implementation Working Rules and
+TEST / CI / GATE in full. Reconcile actual state, and begin.
 Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```

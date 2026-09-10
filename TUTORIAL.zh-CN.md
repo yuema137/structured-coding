@@ -13,9 +13,11 @@
 拿这个例子来说，你要说明：输入是 [c, a, b]，启用字母排序后应按 [a, b, c] 读取；不开这个选项，旧行为必须不变。也要说清楚这次不做什么，比如这个 PR 先不改 resume 机制。Agent 应该先检查 repo，把未确定的产品问题问清楚，再提出整体方向。你说的是做计划，它就不能直接开始 implementation。
 
 ```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
+Use the structured-coding skill for this feature. Read its SKILL.md
+entrypoint first and load the complete resources its table lists for the
+current phase.
+First agree with me on requirements, module-level direction, and overall
+step boundaries; then detail the current step. Work on planning for now.
 Requirements: ...
 ```
 
@@ -31,9 +33,11 @@ Overall plan 讲整个功能和主要步骤，step plan 讲几个 PR 怎么配�
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
+PR 01a design doc and filled execution contract. Use structured-coding:
+start from its SKILL.md entrypoint and load what the PR design row lists.
+Follow the original PR requirements for the commit checklist. Separate
+implementation, validation, and review, and prepare the design for my
+approval.
 ```
 
 **进入下一步前，确认这件事**
@@ -56,13 +60,15 @@ Design 符合你的意思后，明确批准这份具体的 design 和 contract�
 
 在同一个目标项目里，真正新开一个会话，不是给 planning 会话改个名字。重新调用 skill，把带真实路径的 kickoff 发过去。新的 agent 不需要整段 planning 聊天记录，但需要已经保存的约定，以及能确认当前状态的源文件。
 
-修改前，agent 必须读已批准的 design、填好的 contract，以及完整的 execution 和 test rules。它还要检查 branch、HEAD、已有改动、前置 PR 是否 merge，以及相关 job 是否仍在运行。无关改动要保留。如果你明确启用了某个 preset，它还要读对应说明，把当前 session 绑定到这个 PR。安装了 hook，不等于已经替它选好了当前 PR。
+修改前，agent 必须先重读 skill entrypoint 和它的 execute 行，再读已批准的 design、填好的 contract，以及完整的 execution 和 test rules。它还要检查 branch、HEAD、已有改动、前置 PR 是否 merge，以及相关 job 是否仍在运行。无关改动要保留。如果你明确启用了某个 preset，它还要读对应说明，把当前 session 绑定到这个 PR。安装了 hook，不等于已经替它选好了当前 PR。
 
 ```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
+Execute PR 01a. The approved DESIGN FROZEN document is
+.structured-coding/plans/order-flag/pr-01a.md, and the filled contract is
+.structured-coding/plans/order-flag/pr-01a-contract.md.
+Use structured-coding: read its SKILL.md entrypoint, then the complete
+resources its execute row lists, including Implementation Working Rules and
+TEST / CI / GATE in full. Reconcile actual state, and begin.
 Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```
