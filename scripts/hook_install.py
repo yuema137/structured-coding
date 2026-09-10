@@ -516,7 +516,16 @@ def replace(path, expected, replacement):
 
 def verify_skill(plan):
     source = ROOT / "structured-coding"
-    dependencies = {"scripts/continuity.py", "references/continuity.md"}
+    # The entrypoint set is required for every preset: a hook that names
+    # SKILL.md is worthless if the installed copy lacks it or predates the
+    # routing the hook points at.
+    dependencies = {
+        "SKILL.md",
+        "references/agent-workflow.md",
+        "references/adaptation.md",
+        "scripts/continuity.py",
+        "references/continuity.md",
+    }
     selected = plan.get("presets", ("continuity",))
     if "checkpoints" in selected or "standards" in selected:
         dependencies.update({"scripts/checkpoints.py", "references/checkpoints.md"})

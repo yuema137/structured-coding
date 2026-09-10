@@ -453,6 +453,25 @@ class PresetTests(WorktreeTest):
             hooks.verify_skill(plan)
         self.assertEqual(path.read_text(), "customized")
 
+    def test_entrypoint_files_are_part_of_a_complete_installation(self):
+        plan = self.install("codex", ["continuity"])
+        for relative in (
+            "SKILL.md",
+            "references/agent-workflow.md",
+            "references/adaptation.md",
+        ):
+            with self.subTest(relative=relative):
+                path = plan["skill"] / relative
+                original = path.read_bytes()
+                path.unlink()
+                with self.assertRaisesRegex(ValueError, "update the skill"):
+                    hooks.verify_skill(plan)
+                with self.assertRaisesRegex(ValueError, "update the skill"):
+                    hooks.doctor("codex", self.project)
+                path.write_bytes(original)
+        # Restoring every file leaves the installation reporting healthy again.
+        self.assertIn("Installed presets", hooks.doctor("codex", self.project))
+
     def test_redirected_journal_or_metadata_never_written(self):
         plan = self.install("codex", ["continuity"])
         target = self.root / "keep"
