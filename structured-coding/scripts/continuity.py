@@ -235,6 +235,19 @@ def active_record(repository, directory, host, session):
     return record
 
 
+def entrypoint():
+    """The installed entrypoint, absolute, or None when it is absent or unreadable.
+
+    Named rather than replayed: a session-start message cannot deliver the
+    routing table, only say where it is.
+    """
+    path = Path(__file__).resolve().parents[1] / "SKILL.md"
+    try:
+        return path if path.is_file() else None
+    except OSError:
+        return None
+
+
 def context(message):
     return {
         "hookSpecificOutput": {
@@ -296,9 +309,18 @@ def event(project, host, mode, payload):
     invocation = f"{helper} activate --host {host} --project {shlex.quote(str(repository.root))} --session {shlex.quote(session)}"
     if not active_path.exists():
         if mode == "session-start":
+            routing = entrypoint()
             return context(
                 "Structured Coding continuity is installed, but no PR is bound to this session. "
-                "Ordinary work is unaffected. If executing a Structured Coding PR, read the installed "
+                "Ordinary work is unaffected. "
+                + (
+                    f"If this session does Structured Coding work of any kind, read {routing} first and then "
+                    "the complete resources its table lists for the current phase; that table is the required "
+                    "list, and this message does not replay it. "
+                    if routing
+                    else ""
+                )
+                + "If executing a Structured Coding PR, read the installed "
                 "references/continuity.md and explicitly bind its current design, contract, and handoff. "
                 f"Start with: {invocation} --pr PR_ID --design PATH --contract PATH --handoff PATH. "
                 "Do not infer authorization or reuse another session's PR."
@@ -362,12 +384,19 @@ def event(project, host, mode, payload):
         str(skill / "prompts" / name)
         for name in ("implementation-working-rules.md", "test-ci-gate-rules.md")
     ]
+    routing = entrypoint()
+    if routing:
+        # First, because a recovering session is exactly the case that reads the
+        # prompts and skips the routing rules they do not contain.
+        rules.insert(0, str(routing))
     return context(
         f"Structured Coding: RECOVERY REQUIRED for PR {active['pr']}. {warning}"
         f"Worktree: {repository.root}; bound branch: {active['branch']}; current HEAD: {identity['head']}. "
         "Read these files IN FULL before further implementation (this message does not replay their contents): "
         + json.dumps(documents + rules, ensure_ascii=True)
-        + ". Reconcile actual Git state, handoff checkpoint/next actions, and known jobs/logs; "
+        + ". The entrypoint, when listed, comes first: re-read it and its current phase row, then whatever "
+        "that row requires and this session has not read. "
+        "Reconcile actual Git state, handoff checkpoint/next actions, and known jobs/logs; "
         "reuse existing jobs. Confirm the PR is still active; remote closure/merge is not checked by this hook. "
         "Do not invent decisions, test results, or approval. Follow the filled contract and stopping conditions. "
         "This preset does not enforce full reads or prevent mutations/merges. After reconciliation and "
