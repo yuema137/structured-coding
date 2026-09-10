@@ -433,11 +433,10 @@ class ContinuityTests(WorktreeTest):
                 expected = str(script.resolve().parents[1] / "SKILL.md")
                 message = self.context(script)
                 self.assertIn(expected, message)
-                # The entrypoint leads the read list; the prompts follow it.
-                self.assertLess(
-                    message.index(expected),
-                    message.index("implementation-working-rules.md"),
-                )
+                # The message claims the entrypoint is the first file listed, so
+                # assert it against the bound documents too, not only the prompts.
+                for later in ("design.md", "implementation-working-rules.md"):
+                    self.assertLess(message.index(expected), message.index(later))
 
     def test_absent_entrypoint_is_omitted_rather_than_fabricated(self):
         script = self.skill_copy(remove=("SKILL.md",))

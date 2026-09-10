@@ -385,17 +385,17 @@ def event(project, host, mode, payload):
         for name in ("implementation-working-rules.md", "test-ci-gate-rules.md")
     ]
     routing = entrypoint()
-    if routing:
-        # First, because a recovering session is exactly the case that reads the
-        # prompts and skips the routing rules they do not contain.
-        rules.insert(0, str(routing))
+    # First in the whole list, because a recovering session is exactly the case
+    # that reads the documents and prompts and skips the routing rules neither
+    # of them contains.
+    lead = [str(routing)] if routing else []
     return context(
         f"Structured Coding: RECOVERY REQUIRED for PR {active['pr']}. {warning}"
         f"Worktree: {repository.root}; bound branch: {active['branch']}; current HEAD: {identity['head']}. "
         "Read these files IN FULL before further implementation (this message does not replay their contents): "
-        + json.dumps(documents + rules, ensure_ascii=True)
-        + ". The entrypoint, when listed, comes first: re-read it and its current phase row, then whatever "
-        "that row requires and this session has not read. "
+        + json.dumps(lead + documents + rules, ensure_ascii=True)
+        + ". The entrypoint, when present, is the first of them: re-read it and its current phase row, then "
+        "whatever that row requires and this session has not read. "
         "Reconcile actual Git state, handoff checkpoint/next actions, and known jobs/logs; "
         "reuse existing jobs. Confirm the PR is still active; remote closure/merge is not checked by this hook. "
         "Do not invent decisions, test results, or approval. Follow the filled contract and stopping conditions. "
