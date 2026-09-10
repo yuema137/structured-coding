@@ -823,5 +823,69 @@ class ExecutionTests(WorktreeTest):
         self.assertIn("Nothing was registered as a hook", value["note"])
 
 
+class BoundBaseTests(WorktreeTest):
+    def bind(self, *extra):
+        return subprocess.run(
+            [sys.executable, str(hook_install.ROOT / "structured-coding/scripts/continuity.py"),
+             "activate", "--host", "codex", "--project", str(self.project),
+             "--session", self.session, "--pr", "P", "--design", "design.md",
+             "--contract", "contract.md", "--handoff", "handoff.md", *extra],
+            capture_output=True, text=True)
+
+    def test_a_recorded_base_is_found(self):
+        self.assertEqual(self.bind("--base", "main").returncode, 0)
+        self.assertEqual(
+            standards.bound_base(self.project, "codex", self.session), "main")
+
+    def test_every_way_of_having_no_base_reads_the_same(self):
+        cases = {
+            "unbound session": lambda: None,
+            "bound without a base": lambda: self.bind(),
+            "unknown host": lambda: self.bind("--base", "main"),
+        }
+        for label, prepare in cases.items():
+            with self.subTest(case=label):
+                self.setUp()
+                prepare()
+                host = "claude-code" if label == "unknown host" else "codex"
+                self.assertIsNone(
+                    standards.bound_base(self.project, host, self.session))
+
+    def test_a_closed_binding_supplies_nothing(self):
+        self.bind("--base", "main")
+        subprocess.run(
+            [sys.executable, str(hook_install.ROOT / "structured-coding/scripts/continuity.py"),
+             "deactivate", "--host", "codex", "--project", str(self.project),
+             "--session", self.session], capture_output=True, check=True)
+        self.assertIsNone(standards.bound_base(self.project, "codex", self.session))
+
+    def test_run_uses_the_bound_base_and_an_explicit_one_wins(self):
+        self.git("checkout", "-q", "-b", "feature")
+        (self.project / "new file.py").write_text("x\n")
+        self.git("add", "-A")
+        self.git("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-qm", "f")
+        self.bind("--base", "main")
+        result = subprocess.run(
+            [sys.executable, str(RUNTIME), "run", "--project", str(self.project),
+             "--host", "codex", "--session", self.session],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["base"], "main")
+        explicit = subprocess.run(
+            [sys.executable, str(RUNTIME), "run", "--project", str(self.project),
+             "--host", "codex", "--session", self.session, "--base", "feature"],
+            capture_output=True, text=True)
+        self.assertEqual(json.loads(explicit.stdout)["base"], "feature")
+
+    def test_without_a_base_anywhere_run_reports_the_ordinary_reason(self):
+        self.bind()
+        result = subprocess.run(
+            [sys.executable, str(RUNTIME), "run", "--project", str(self.project),
+             "--host", "codex", "--session", self.session],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("--base is required", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

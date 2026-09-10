@@ -21,7 +21,9 @@ sys.dont_write_bytecode = True
 # sys.path[0], which is how checkpoints.py reaches it and why that script fails
 # hard under python3 -P. Fixing checkpoints.py is separate, recorded work.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from continuity import Repository, atomic_json, read_json, safe_path  # noqa: E402
+from continuity import (  # noqa: E402
+    HOSTS, Repository, active_record, atomic_json, read_json, safe_path,
+)
 
 MAX_INPUT = 256 * 1024
 # 1 is what the shipped defaults declare, because they need nothing newer.
@@ -534,6 +536,24 @@ def outcomes(project, effective, base):
     return results
 
 
+def bound_base(project, host, session):
+    """The base a bound PR recorded, or None when there is none to use.
+
+    Never raises: an unbound, closed, foreign or baseless binding all mean the
+    same thing to a caller, which is that it must be told the base instead."""
+    if host not in HOSTS or not isinstance(session, str) or not session:
+        return None
+    try:
+        repository = Repository(project)
+        record = active_record(
+            repository, repository.session_dir(host, session), host, session
+        )
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        return None
+    base = record.get("base")
+    return base if isinstance(base, str) and base.strip() else None
+
+
 def report(project):
     """What is in effect, where each value came from, and what would need approval."""
     root, present = discover(project)
@@ -602,6 +622,8 @@ def main(argv=None):
     parser.add_argument("action", choices=("inspect", "run", "approve"))
     parser.add_argument("--project", required=True, type=Path)
     parser.add_argument("--base", help="revision changed-file scope compares against")
+    parser.add_argument("--host", choices=HOSTS, help="host of a session binding to read the base from")
+    parser.add_argument("--session", help="session id of that binding")
     args = parser.parse_args(argv)
     try:
         if args.action == "approve":
@@ -609,10 +631,14 @@ def main(argv=None):
         value = report(args.project)
         if args.action == "run":
             effective, _ = resolved(args.project)
-            if needs_base(effective) and args.base is None:
+            # An explicit revision wins: a person naming one is more specific
+            # than a record made when the PR was bound.
+            base = args.base or bound_base(args.project, args.host, args.session)
+            if needs_base(effective) and base is None:
                 raise Invalid(args.project, "base",
                               "--base is required while a changed-scope check is enabled")
-            value["results"] = outcomes(args.project, effective, args.base)
+            value["results"] = outcomes(args.project, effective, base)
+            value["base"] = base
             value["note"] = ("Ran the declared checks. Nothing was registered as a hook; "
                              "this happens only when this command is invoked.")
         print(json.dumps(value, ensure_ascii=True, indent=2))

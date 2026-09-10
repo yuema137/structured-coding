@@ -77,8 +77,16 @@ filled contract, and semantic handoff first. For Codex, the helper is:
 python3 .agents/skills/structured-coding/scripts/continuity.py activate \
   --host codex --project /path/to/project --session ACTUAL_SESSION_ID \
   --pr PR_01a --design docs/plan/pr-01a.md \
-  --contract docs/plan/pr-01a-contract.md --handoff docs/plan/pr-01a-handoff.md
+  --contract docs/plan/pr-01a-contract.md --handoff docs/plan/pr-01a-handoff.md \
+  --base main
 ```
+
+`--base` is optional and records the revision this PR's changes are measured
+against, so a changed-file check can resolve its own range instead of being told.
+It is recorded, not resolved: a revision that resolves at bind time can stop
+resolving after a rebase, so it is looked up when a check uses it and any failure
+is reported against that check. A binding without a base is ordinary; a check
+needing one simply reports that it was not run.
 
 For Claude Code use `.claude/skills/structured-coding/scripts/continuity.py` and
 `--host claude-code`. All document paths are relative to the worktree root.
