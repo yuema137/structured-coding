@@ -983,7 +983,7 @@ class HandlerTests(WorktreeTest):
         context = value["hookSpecificOutput"]["additionalContext"]
         self.assertIn("ruff: PASS", context)
         self.assertIn("pyright: NOT RUN", context)
-        self.assertIn("advisory", context)
+        self.assertIn("Advisory", context)
 
     def test_nothing_is_reported_when_the_trigger_does_not_match(self):
         self.config("pr")
@@ -1009,6 +1009,28 @@ class HandlerTests(WorktreeTest):
             with self.subTest(payload=str(payload)[:24]):
                 value, stderr = self.fire(payload)
                 self.assertEqual(value, {})
+
+    def test_review_conventions_ride_along_when_their_trigger_matches(self):
+        relative = dict(standards.LAYERS)["base"]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('```json\n{"schema": 1,'
+                        ' "review": {"trigger": "commit", "conventions":'
+                        ' ["No bare except"]},'
+                        ' "checks": {"trigger": "pr"}}\n```\n', encoding="utf-8")
+        context = self.fire(self.payload())[0]["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("Convention: No bare except", context)
+        # checks trigger is pr, so no check result rides along
+        self.assertNotIn("ruff:", context)
+
+    def test_conventions_stay_out_when_their_trigger_does_not_match(self):
+        relative = dict(standards.LAYERS)["base"]
+        path = self.project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('```json\n{"schema": 1,'
+                        ' "review": {"trigger": "pr", "conventions": ["No bare except"]},'
+                        ' "checks": {"trigger": "pr"}}\n```\n', encoding="utf-8")
+        self.assertEqual(self.fire(self.payload())[0], {})
 
     def test_a_project_without_configuration_reports_the_default_trigger(self):
         """The default trigger is pr, so a commit produces nothing."""
