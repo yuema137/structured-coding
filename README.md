@@ -183,7 +183,7 @@ Open the part relevant to your current question. Use the resource links above fo
 <details id="hooks">
 <summary>Optional hooks: installation, coverage, and limits</summary>
 
-<p class="status">OPTIONAL CONTINUITY + CHECKPOINTS · NO MERGE GUARD</p><p>Choose continuity for compact recovery, checkpoints for commit/review reminders, or both. Both are off by default. Checkpoints advises; it does not enforce commits or certify readiness. Protocol tests do not establish native event delivery or model compliance. The agent does not dynamically register its own hooks.</p><h4>Choose your optional presets</h4><pre><code>./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+<p class="status">OPTIONAL CONTINUITY + CHECKPOINTS + STANDARDS · NO MERGE GUARD</p><p>Choose continuity for compact recovery, checkpoints for commit/review reminders, standards to run your declared checks after a commit, or any combination. Both are off by default. Checkpoints advises; it does not enforce commits or certify readiness. Protocol tests do not establish native event delivery or model compliance. The agent does not dynamically register its own hooks.</p><h4>Choose your optional presets</h4><pre><code>./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
 ./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --hooks continuity checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --check-hooks

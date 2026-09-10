@@ -232,7 +232,7 @@ On resume, reload the current design, filled contract, and full execution rules;
 
 ## Optional hooks: installation, coverage, and limits
 
-Choose continuity for compact recovery, checkpoints for commit/review reminders, or both. Both are off by default. Checkpoints advises; it does not enforce commits or certify readiness. Protocol tests do not establish native event delivery or model compliance. The agent does not dynamically register its own hooks.
+Choose continuity for compact recovery, checkpoints for commit/review reminders, standards to run your declared checks after a commit, or any combination. Both are off by default. Checkpoints advises; it does not enforce commits or certify readiness. Protocol tests do not establish native event delivery or model compliance. The agent does not dynamically register its own hooks.
 
 ```sh
 ./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
