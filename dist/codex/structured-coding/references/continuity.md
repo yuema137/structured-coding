@@ -117,6 +117,7 @@ The hook does not query GitHub to discover that a PR was closed or merged.
 | Manual `PreCompact` | Compare current state to the session's explicit checkpoint; deny stale/missing checkpoints or unreadable bound state, with a repair message | Tests mechanical freshness, not handoff quality |
 | Automatic `PreCompact` | Attempt a bounded mechanical snapshot; record `recovery_required` and warnings; return without blocking compact even on failure | Disk/host failures can prevent saving; stderr warns, and resume always requests recovery |
 | `SessionStart` | For a bound session, inject its current PR and absolute document/rule paths with full-read and actual-state reconciliation instructions | No full prompt replay, mutation interception, process inspection, or claim that recovery was completed |
+| `SessionStart`, either state | Name the installed `SKILL.md` by absolute path, so a session that did not plan this work is told where the phase resource list is | Names the entrypoint; does not deliver it, and an absent entrypoint is omitted rather than guessed. Reaching a session is not reading |
 | Unbound or explicitly closed session | Unbound/closed compact proceeds; session start explains the absent/closed binding | Does not impose this workflow on unrelated work |
 
 Codex manual denial uses `continue: false` with `stopReason`. Claude Code uses

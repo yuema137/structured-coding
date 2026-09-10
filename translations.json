@@ -3,27 +3,27 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "134e958f2c914435b757584b16169141427c2a9ad1f4091e024c6c19d5927451",
-    "chinese_sha256": "a8eee06738196a2000f7016cd822cb7c172c0ccade49b5a9011d25f99714e526"
+    "english_sha256": "7a8d58ad68e56ad6f3ef10aac60df01dca2256fd237474544ceb313f7bb09440",
+    "chinese_sha256": "9a66f3193d5358db7c1fed532eed3ac0e05203e7ce46a7f4c61d6dbf93adbcfa"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "7e4fcb667638ec5d3300db5ae269d9f4b2c2eab6544c9c73c2d59cc4eeb1cb39",
-      "chinese_sha256": "d54503afa062fcb488bb55bdbc1af463455a2d44d7baf62424878cb5a55483c4"
+      "english_sha256": "1d07bec1eaec7cadb56aadb241d16c19310dd2fe6789108e3add477fb0679fbb",
+      "chinese_sha256": "54ec6dde48b5d04e404b54de0221ae3e07862f913534e45355bb35beb46d5cb8"
     },
     {
       "english": "TUTORIAL.md",
       "chinese": "TUTORIAL.zh-CN.md",
-      "english_sha256": "24e158e97d983e13b077024762d18152a4a99e0cfa6c20f589e5647fd9bf3b2f",
-      "chinese_sha256": "b9cc1510f76878a9dd119842e87c7b69f046f071b1a6fbe19c1cd869a058c04c"
+      "english_sha256": "22995baecd9d47a314cea80150805ee7cac6ba2d46e5db6a8daa2ca1b643a576",
+      "chinese_sha256": "3edb560f63ce536d8681f688234540552fabc4bfb50e3268bdb15f75a5b6261b"
     },
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "1cd4b7df7a6dfbfe32c0f694d7a07fa9cc2c98e9a2bb210d51838fbdeec09d8e",
-      "chinese_sha256": "7f7ccbeaef3aa966b4a7b7cf6de4590b94554dc906a7b48dbcad618cc5e14dac"
+      "english_sha256": "37d48efbef1a3c8fb1d0d74608aae14e7c7e24c9651bd7dcc302b2579052a6c9",
+      "chinese_sha256": "64f4d8d32c41d0ee55407cdc90ae90e8b5e4c762a1d920c3449bc94de5c5fc67"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
@@ -45,7 +45,7 @@
     }
   ],
   "specification_sha256": {
-    "structured-coding/SKILL.md": "bbfa75b6f56f04754799b5c7a0199008663ba4346630a483340182544fa7af37",
+    "structured-coding/SKILL.md": "bea7c82214ef6332ba587385b0d76a71c820e05f8d9a95796ba6d16efb40f0e0",
     "structured-coding/prompts/implementation-working-rules.md": "7caa1d829fcdb0741b3b621918d6058352adcacf6c8bfee5267e37d2850debcf",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",

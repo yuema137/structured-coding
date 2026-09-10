@@ -209,7 +209,7 @@
       "title": "4. Open a fresh implementation conversation for this PR.",
       "paragraphs": [
         "Start a genuinely new conversation in the same target project. Do not just rename the planning conversation. Invoke the skill again and give it the kickoff with the actual paths. The new agent does not need the entire planning chat: it needs the durable agreement and the source files that establish current state.",
-        "Before editing, the agent must read the approved design, filled contract, and complete execution and test rules. It checks the branch, HEAD, existing edits, merged prerequisites, and relevant running jobs. It preserves unrelated work. If you explicitly enabled a preset, it also reads that preset's interface and binds this session to the current PR; it must not assume installation selected an active PR for it."
+        "Before editing, the agent must re-read the skill entrypoint and its execute row, then the approved design, filled contract, and complete execution and test rules. It checks the branch, HEAD, existing edits, merged prerequisites, and relevant running jobs. It preserves unrelated work. If you explicitly enabled a preset, it also reads that preset's interface and binds this session to the current PR; it must not assume installation selected an active PR for it."
       ],
       "promptIndex": 2,
       "checkpoint": "Confirm that the agent is working on the intended PR and has loaded the approved paths. The kickoff delegates execution within the contract; it does not grant extra host permissions or enable hooks."
@@ -384,7 +384,7 @@
     "Prepare the next PR",
     "Execute after approval, in a fresh session"
   ],
-  "promptNote": "These are entry requests, not substitutes for the preserved prompts. The agent still reads the complete required files.",
+  "promptNote": "These are entry requests, not substitutes for the preserved prompts. Each one routes through the skill's entrypoint, whose phase table is the required resource list, so the agent does not have to reconstruct that list from the prompt names a message happens to mention. Asking is still not evidence that it read them.",
   "fitTitle": "When this is worth it, and when it is not",
   "fit": "This is built for sustained work on a large codebase. It earns its overhead when a change spans several PRs or sessions, when the code is big enough that an agent must audit before it edits, and when someone has to pick the work up later. For a typo, a one-file bug fix, or a throwaway prototype it is overkill: the planning documents will cost more than the change itself. Use your agent directly for those. Plans, tests, and LLM reviews can still be wrong; what this workflow adds is that their assumptions and evidence are written down where you can inspect them.",
   "footer": "English is the authoritative source; Chinese is a synchronized mirror with English technical terms. The human explanation follows DongbeiGPT. Specifications and reusable prompts are in English.",
@@ -397,9 +397,9 @@
   "copied": "Copied",
   "skip": "Skip to content",
   "prompts": [
-    "Use the structured-coding workflow for this feature. First agree with me on\nrequirements, module-level direction, and overall step boundaries; then detail\nthe current step. Work on planning for now.\nRequirements: ...",
-    "Read the overall and step documents, audit the current code, and prepare the\nPR 01a design doc and filled execution contract. Follow the original PR\nrequirements for the commit checklist. Separate implementation, validation,\nand review, and prepare the design for my approval.",
-    "Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,\nand the filled contract is docs/plan/pr-01a-contract.md.\nUse structured-coding. Read Implementation Working Rules and TEST / CI / GATE\nin full, reconcile actual state, and begin.\nContinue autonomously to READY FOR OPERATOR REVIEW under the contract.\nDo not merge."
+    "Use the structured-coding skill for this feature. Read its SKILL.md\nentrypoint first and load the complete resources its table lists for the\ncurrent phase.\nFirst agree with me on requirements, module-level direction, and overall\nstep boundaries; then detail the current step. Work on planning for now.\nRequirements: ...",
+    "Read the overall and step documents, audit the current code, and prepare the\nPR 01a design doc and filled execution contract. Use structured-coding:\nstart from its SKILL.md entrypoint and load what the PR design row lists.\nFollow the original PR requirements for the commit checklist. Separate\nimplementation, validation, and review, and prepare the design for my\napproval.",
+    "Execute PR 01a. The approved DESIGN FROZEN document is\n.structured-coding/plans/order-flag/pr-01a.md, and the filled contract is\n.structured-coding/plans/order-flag/pr-01a-contract.md.\nUse structured-coding: read its SKILL.md entrypoint, then the complete\nresources its execute row lists, including Implementation Working Rules and\nTEST / CI / GATE in full. Reconcile actual state, and begin.\nContinue autonomously to READY FOR OPERATOR REVIEW under the contract.\nDo not merge."
   ],
   "quickStartTitle": "Quick start",
   "exampleTitle": "What using it looks like",

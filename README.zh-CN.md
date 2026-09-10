@@ -51,9 +51,11 @@ Codex 安装后，文件夹在目标项目的 .agents/skills/structured-coding�
 ### 1. 规划 feature
 
 ```text
-Use the structured-coding workflow for this feature. First agree with me on
-requirements, module-level direction, and overall step boundaries; then detail
-the current step. Work on planning for now.
+Use the structured-coding skill for this feature. Read its SKILL.md
+entrypoint first and load the complete resources its table lists for the
+current phase.
+First agree with me on requirements, module-level direction, and overall
+step boundaries; then detail the current step. Work on planning for now.
 Requirements: ...
 ```
 
@@ -63,9 +65,11 @@ Agent 会问它推断不出来的东西，检查你真实的代码，然后写�
 
 ```text
 Read the overall and step documents, audit the current code, and prepare the
-PR 01a design doc and filled execution contract. Follow the original PR
-requirements for the commit checklist. Separate implementation, validation,
-and review, and prepare the design for my approval.
+PR 01a design doc and filled execution contract. Use structured-coding:
+start from its SKILL.md entrypoint and load what the PR design row lists.
+Follow the original PR requirements for the commit checklist. Separate
+implementation, validation, and review, and prepare the design for my
+approval.
 ```
 
 你会拿到一份 PR 设计：经过代码审计的 commit 计划，加一份填好的执行 contract。读它、要求修改，等它确实描述了你想要的东西再批准。
@@ -73,10 +77,12 @@ and review, and prepare the design for my approval.
 ### 3. 批准后，用新 session 执行
 
 ```text
-Execute PR 01a. The approved DESIGN FROZEN document is docs/plan/pr-01a.md,
-and the filled contract is docs/plan/pr-01a-contract.md.
-Use structured-coding. Read Implementation Working Rules and TEST / CI / GATE
-in full, reconcile actual state, and begin.
+Execute PR 01a. The approved DESIGN FROZEN document is
+.structured-coding/plans/order-flag/pr-01a.md, and the filled contract is
+.structured-coding/plans/order-flag/pr-01a-contract.md.
+Use structured-coding: read its SKILL.md entrypoint, then the complete
+resources its execute row lists, including Implementation Working Rules and
+TEST / CI / GATE in full. Reconcile actual state, and begin.
 Continue autonomously to READY FOR OPERATOR REVIEW under the contract.
 Do not merge.
 ```

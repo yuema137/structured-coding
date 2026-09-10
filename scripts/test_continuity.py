@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -117,11 +118,21 @@ class WorktreeTest(unittest.TestCase):
             ),
         }
 
-    def event(self, mode, host="codex", session=None, raw=None, cwd=None):
+    def skill_copy(self, remove=()):
+        """A relocated installation, so a message must resolve its own paths."""
+        destination = self.root / "installed"
+        if not destination.exists():
+            shutil.copytree(hook_install.ROOT / "structured-coding", destination)
+        for relative in remove:
+            (destination / relative).unlink()
+        return destination / "scripts/continuity.py"
+
+    def event(self, mode, host="codex", session=None, raw=None, cwd=None,
+              script=RUNTIME):
         result = subprocess.run(
             [
                 sys.executable,
-                str(RUNTIME),
+                str(script),
                 "event",
                 "--host",
                 host,
@@ -400,6 +411,44 @@ class ContinuityTests(WorktreeTest):
         ):
             self.assertIn(value, message)
         self.assertNotIn("Initial design.md", message)
+
+    def context(self, script=RUNTIME):
+        return self.event("session-start", script=script)[0]["hookSpecificOutput"][
+            "additionalContext"
+        ]
+
+    def test_session_start_names_the_installed_entrypoint_absolutely(self):
+        relocated = self.skill_copy()
+        self.assertNotEqual(relocated.parents[1], RUNTIME.parents[1])
+        for script in (RUNTIME, relocated):
+            with self.subTest(script=str(script), state="unbound"):
+                expected = str(script.resolve().parents[1] / "SKILL.md")
+                self.assertTrue(Path(expected).is_absolute())
+                message = self.context(script)
+                self.assertIn(expected, message)
+                self.assertIn("required", message)
+        self.activate()
+        for script in (RUNTIME, relocated):
+            with self.subTest(script=str(script), state="recovery"):
+                expected = str(script.resolve().parents[1] / "SKILL.md")
+                message = self.context(script)
+                self.assertIn(expected, message)
+                # The message claims the entrypoint is the first file listed, so
+                # assert it against the bound documents too, not only the prompts.
+                for later in ("design.md", "implementation-working-rules.md"):
+                    self.assertLess(message.index(expected), message.index(later))
+
+    def test_absent_entrypoint_is_omitted_rather_than_fabricated(self):
+        script = self.skill_copy(remove=("SKILL.md",))
+        absent = str(script.resolve().parents[1] / "SKILL.md")
+        unbound = self.context(script)
+        self.assertNotIn(absent, unbound)
+        self.assertIn("no PR is bound", unbound)
+        self.activate()
+        recovery = self.context(script)
+        self.assertNotIn(absent, recovery)
+        self.assertIn("IN FULL", recovery)
+        self.assertIn("implementation-working-rules.md", recovery)
 
     def test_changed_branch_cannot_reuse_checkpoint(self):
         self.activate()
