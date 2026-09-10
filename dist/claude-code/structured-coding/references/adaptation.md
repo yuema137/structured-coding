@@ -24,7 +24,7 @@ Repository/git/process truth establishes actual state, including when a document
 | Gate 1 / Gate 2 | In this workflow, real-LLM and real-lifecycle evidence. Map to actual project commands, and record `NOT REQUIRED` where the claim does not need that layer. |
 | Ruff, Pyright, Pydantic, pytest | Examples of ownership and commands. Use the repository's actual tools; the skill does not require new language/tool dependencies. |
 | Scorer, metric, model, training, GPU | Apply when the task has those semantics. Non-ML projects still use deterministic and real-integration evidence where appropriate. |
-| `before_end_memory.md` | Suggested handoff filename. Reuse an established file or choose a PR-specific path; never overwrite unrelated user notes. |
+| `before_end_memory.md` | The handoff filename in the source prompt. The default location is `.structured-coding/plans/<effort>/handoff.md`; reuse an established file if the project has one, and never overwrite unrelated user notes. |
 | Full-suite result in final handoff | Report the canonical result if run, or `NOT RUN` with its reason and the actual selected CI evidence. Do not run a new full suite solely to populate this field. |
 
 ## Budget and approval interpretation

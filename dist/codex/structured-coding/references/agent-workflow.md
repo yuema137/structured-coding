@@ -10,15 +10,19 @@ Inspect the user's request and the repository's existing planning conventions. L
 
 Choose the requested phase: overall planning, step planning, PR design/freeze, execution, same-PR recovery, operator review, or post-merge update. Explain the chosen phase briefly. Continue from usable existing artifacts instead of regenerating the hierarchy.
 
-Keep a single active PR identity per implementation context. Record repository/worktree, PR identifier, branch/base, primary design, parent documents, and filled execution contract. Paths below are examples, not prescribed filenames:
+Keep a single active PR identity per implementation context. Record repository/worktree, PR identifier, branch/base, primary design, parent documents, and filled execution contract.
+
+Keep these documents together under `.structured-coding/plans/`, one directory per effort, so concurrent efforts do not collide and the project's own `docs/` tree is left alone:
 
 ```text
-docs/plan/overall.md
-docs/plan/step-01.md
-docs/plan/pr-01a.md
-docs/plan/pr-01a-contract.md
-before_end_memory.md
+.structured-coding/plans/infra-exp-p0/overall.md
+.structured-coding/plans/infra-exp-p0/step-01-user-map.md
+.structured-coding/plans/infra-exp-p0/pr-01a-proposer.md
+.structured-coding/plans/infra-exp-p0/pr-01a-contract.md
+.structured-coding/plans/infra-exp-p0/handoff.md
 ```
+
+That is the default, not a requirement. A project that already keeps planning documents somewhere else should keep them there; what matters is that one location is the authority and that a later session can find it. Commit them if later sessions or teammates need to read them, which is usually the point of writing them down.
 
 Do not create additional tracking documents that compete with the primary PR ledger. The contract can be a section of the PR design or a separate linked document. The handoff is a continuation aid, not another design authority.
 
