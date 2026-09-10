@@ -165,6 +165,31 @@ PR CONTEXT CLOSEOUT:
   The NEXT PR starts from a fresh filled Implementation Working Rules contract  
   and a freshly initialized context.
 
+ENDPOINT AUTHORITY:  
+  Each endpoint is a separate decision. Record the decision and its SOURCE:  
+  an explicit operator instruction, an applicable repository restriction, or  
+  `unresolved`. Caution is not a source: an endpoint you narrowed yourself is  
+  `unresolved`, not the operator's decision, and is settled before freeze.
+
+  - implementation + local validation:  <default: authorized>  
+      source: <...>  
+  - semantic commits:                   <default: authorized; section 14 —  
+                                         no approval before each commit>  
+      source: <...>  
+  - branch push:                        <default: authorized; section 21>  
+      source: <...>  
+  - PR creation / update:               <default: authorized; section 21>  
+      source: <...>  
+  - CI repair to review readiness:      <default: authorized; section 21>  
+      source: <...>  
+  - merge:                              explicit operator authorization only;  
+                                         section 22. No source value changes  
+                                         this line.
+
+  A planning-only or explicitly local-only request restricts publication, and  
+  that restriction has a source: the operator's instruction. The absence of any  
+  instruction does not.
+
 NORMAL STOP CONDITION:  
   <e.g. PR 01a READY FOR OPERATOR REVIEW — DO NOT MERGE>
 
