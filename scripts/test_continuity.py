@@ -196,11 +196,13 @@ class ContinuityTests(WorktreeTest):
         self.assertEqual(runtime.digest(runtime.encoded(loaded)), digest_before)
         self.assertEqual(path.read_bytes(), legacy)
 
+    @unittest.skipIf(sys.version_info < (3, 11), "-P and PYTHONSAFEPATH are 3.11+")
     def test_every_runtime_script_imports_without_a_path_default(self):
         """A hook launched under python3 -P must still reach its shared helpers.
 
         The import sits above main()'s try, so failing there exits non-zero
-        without the empty result a hook is required to return."""
+        without the empty result a hook is required to return. Older interpreters
+        have no safe-path mode, so the failure cannot arise there."""
         skill = hook_install.ROOT / "structured-coding/scripts"
         for name in ("continuity", "checkpoints", "standards"):
             with self.subTest(script=name):
