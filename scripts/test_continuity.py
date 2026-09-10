@@ -152,6 +152,50 @@ class ContinuityTests(WorktreeTest):
         payload["cwd"] = str(nested)
         self.assertEqual(runtime.event(self.project, "codex", "pre-manual", payload), {})
 
+    def test_a_binding_records_an_optional_base_revision(self):
+        self.assertEqual(self.command("activate", "--pr", "P", "--design", "design.md",
+                                      "--contract", "contract.md", "--handoff", "handoff.md",
+                                      "--base", "main").returncode, 0)
+        record = json.loads((self.state() / "active.json").read_text())
+        self.assertEqual(record["schema"], 2)
+        self.assertEqual(record["base"], "main")
+
+    def test_a_binding_without_a_base_is_ordinary(self):
+        self.activate()
+        record = json.loads((self.state() / "active.json").read_text())
+        self.assertEqual(record["schema"], 2)
+        self.assertNotIn("base", record)
+        self.checkpoint()  # the binding is still usable end to end
+
+    def test_a_base_that_reads_as_an_option_is_refused(self):
+        """argparse rejects a bare -x value; --base=-x reaches our own check."""
+        for options in (["--base", "--upload-pack=evil"],
+                        ["--base=--upload-pack=evil"],
+                        ["--base", ""],
+                        ["--base", "   "]):
+            with self.subTest(options=" ".join(options)):
+                result = self.command("activate", "--pr", "P", "--design", "design.md",
+                                      "--contract", "contract.md",
+                                      "--handoff", "handoff.md", *options)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.state() / "active.json").exists())
+
+    def test_a_previous_release_binding_still_loads_with_its_digest_intact(self):
+        """Rewriting a schema-1 record would invalidate every checkpoint hashed from it."""
+        self.activate()
+        path = self.state() / "active.json"
+        record = json.loads(path.read_text())
+        record["schema"] = 1
+        legacy = runtime.encoded(record)
+        path.write_bytes(legacy)
+        digest_before = runtime.digest(legacy)
+        loaded = runtime.active_record(
+            runtime.Repository(self.project), self.state(), "codex", self.session
+        )
+        self.assertEqual(loaded["schema"], 1)
+        self.assertEqual(runtime.digest(runtime.encoded(loaded)), digest_before)
+        self.assertEqual(path.read_bytes(), legacy)
+
     def test_fixture_disables_git_background_maintenance(self):
         """Housekeeping locks otherwise appear mid-test in whole-tree comparisons."""
         for key, expected in (("maintenance.auto", "false"), ("gc.auto", "0")):
