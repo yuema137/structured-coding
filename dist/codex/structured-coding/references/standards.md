@@ -1,15 +1,13 @@
 # Project standards configuration
 
-Status: **REPORTS; NEVER BLOCKS.** This release reads the configuration and,
-on the `run` command, executes the declared checks and classifies each result.
-With the optional `standards` preset installed, it also reports after a direct
-`git commit`. It blocks nothing: no commit, no merge, no tool call. Automatic triggering is later work; the target behaviour for a hook
-remains in the [hook contract](hook-contract.md).
+Status: **REPORTS; NEVER BLOCKS.** Checks run when you invoke `run`, and, with the
+optional `standards` preset installed, after a direct `git commit`. Nothing is
+blocked: no commit, no merge, no tool call. A clean report is not proof that a
+check ran; read the outcomes.
 
-A project uses this to state, once, what is true of its whole codebase, so the
-operator does not restate it in every planning conversation. Requirements
-specific to one PR stay in that PR's conversation and its frozen design; putting
-them here would create a second authority over the same decision.
+A project states here what is true of its whole codebase, so the operator does
+not restate it in every planning conversation. Requirements specific to one PR
+belong in that PR's conversation, not here.
 
 ## Files
 
@@ -19,59 +17,36 @@ them here would create a second authority over the same decision.
 | `.structured-coding/standards.local.md` | overlay |
 
 Copy [the template](../standards-template.md) to the base path and edit its
-single fenced `json` block. The surrounding prose is never read, which is the
-point: it carries the options, the alternatives and the reasons that JSON cannot.
-Exactly one top-level `json` block is read. A block nested inside another fence
-is prose. Zero blocks, several, or unparsable content is refused, naming the file.
+single fenced `json` block. The surrounding prose is never read. Exactly one
+top-level `json` block is read; a block nested inside another fence is prose.
+Zero blocks, several, or unparsable content is refused, naming the file. Both
+files are optional, and with neither the shipped defaults apply.
 
-Both files are optional. With neither present the shipped defaults apply and
-behaviour is unchanged.
+## Layer and trust are decided separately
 
-## Two determinations, decided separately
+Layer comes from the filename. Trust comes from `git ls-files`: a tracked file is
+shared, so anything it declares outside the allowlist needs approval; an untracked
+file is personal, absent from a fresh clone, so authoring it is the approval.
 
-**Layer comes from the filename.** The base states the project's standard. The
-overlay may add and tighten only.
-
-**Trust comes from `git ls-files`.** A tracked file is shared: any contributor can
-change it in a pull request, so a tool it declares outside the allowlist needs
-approval. An untracked file is personal: it is absent from a fresh clone and can
-only have been written by the machine's owner, so authoring it is the approval.
-
-The two are independent, which removes the special cases. A tracked overlay is an
-overlay that happens to be shared. An untracked base is the base and happens to
-be personal. Filename must not decide trust, because `.gitignore` does not apply
-to a file Git already tracks, so a repository could otherwise commit a file under
-the personal name and have it treated as locally authored.
+Filename must not decide trust, because `.gitignore` does not apply to a file Git
+already tracks. A tracked overlay is simply a shared overlay; an untracked base is
+simply a personal base.
 
 ## Resolution
 
-Defaults, then base, then overlay. The base may relax the shipped defaults: those
-defaults are a suggestion and the project's standard is the authority. Only the
-overlay is restricted.
+Defaults, then base, then overlay. The base may relax the defaults; they are a
+suggestion and the project's standard is the authority.
 
 ```text
 trigger:  off  <  pr  <  commit
 scope:    changed  <  repository
 ```
 
-The overlay may raise a rank, enable a disabled tool, add a tool, and add a
-convention. It may not lower a rank, disable a tool, or narrow a scope. Overlay
-conventions are additions, so removing one has no representation at all.
-
-A relaxing overlay is **refused, naming the field**. Ignoring it would leave a
-developer believing a local skip took effect. Applying it would let one machine
-opt out of the team's standard while its report still read as compliant. A
-genuine local skip belongs in the PR as a recorded deviation. This is the same
-rule the workflow already states for documents: a child may not silently relax a
-binding restriction.
-
-## Tool classification
-
-Grouped by whether the tool executes project code, not by whether the name is
-recognized. `ruff` and `pyright` analyze without running anything. `pytest`
-imports `conftest.py` by design and `mypy` imports configured plugins, so both are
-recognized and still require approval. Anything else is unrecognized and also
-requires approval. Recognition is not trust.
+The overlay may only raise a rank, enable a disabled tool, add a tool, or add a
+convention. A relaxing overlay is **refused, naming the field** — ignoring it
+would leave a developer believing a local skip took effect, and applying it would
+let one machine opt out while its report still read as compliant. Overlay
+conventions are additions, so removing one has no representation.
 
 ## Commands
 
@@ -81,73 +56,41 @@ python3 <installed skill>/scripts/standards.py run     --project . --base main
 python3 <installed skill>/scripts/standards.py approve --project .
 ```
 
-`inspect` prints the files found with their trust, the effective values, the
-layer every value came from, each tool's approval verdict, and a note. It runs
-nothing. A refusal exits non-zero with an empty stdout, so a failure cannot be
-mistaken for a defaults report.
+`inspect` prints the files found, their trust, the effective values, the layer
+every value came from, and each tool's approval verdict. It runs nothing.
 
-`run` adds the result of every enabled check. A base is required while any
-enabled check uses changed-file scope, and there is no fallback to a guessed
-default branch: guessing which branch a project treats as its base is how a check
-silently examines the wrong range.
-
-The base comes from `--base`, or from the session binding when `--host` and
-`--session` identify one that recorded it. An explicit `--base` wins, because a
-person naming a revision is more specific than a record made when the PR was
-bound. With neither, a changed-scope check reports that it was not run.
+`run` adds the result of every enabled check. A base is required while any enabled
+check uses changed-file scope; it comes from `--base` or from a session binding
+identified by `--host` and `--session`, with `--base` winning. There is no
+fallback to a guessed default branch, because guessing which branch a project
+treats as its base is how a check examines the wrong range and reports
+confidently about it.
 
 ## Outcomes
 
 | Outcome | Meaning |
 | --- | --- |
-| `PASS` | the tool ran and reported nothing |
-| `FAIL` | the tool ran and reported findings |
-| `INCONCLUSIVE` | it could not run or could not finish: absent, timed out, killed, or exited in its own error mode |
-| `NOT RUN` | disabled, no files in scope, no command declared, or approval missing |
+| `PASS` | ran, reported nothing |
+| `FAIL` | ran, reported findings |
+| `INCONCLUSIVE` | could not run or finish: absent, timed out, killed, or exited in its own error mode |
+| `NOT RUN` | disabled, nothing in scope, no command, or approval missing |
 
-An absent tool is `INCONCLUSIVE`, never `PASS`: nothing was examined, so nothing
-was established. An empty changed-file selection is `NOT RUN` for the same
-reason.
+An absent tool is `INCONCLUSIVE`, never `PASS`, and so is an empty changed-file
+selection: neither examined anything.
 
-Exit codes are mapped per tool, because tools disagree. `ruff check` returns 2
-when it terminates abnormally; `pyright` returns 2 for a fatal error, 3 for a
-config file it could not read and 4 for illegal parameters. Those mean the tool
-could not run. A command the project supplied has no such map, so a non-zero exit
-is reported as `FAIL` and the report says its exit codes are unmapped.
+Exit codes are mapped per tool because tools disagree. `ruff check` returns 2 on
+abnormal termination; `pyright` returns 2 fatal, 3 unreadable config, 4 illegal
+parameters. A command the project supplied has no map, so a non-zero exit is
+`FAIL` and the report says the codes are unmapped.
 
-Runs are bounded: a per-tool timeout, a total budget, and captured output
-truncated with the truncation marked.
+Runs are bounded by a per-tool timeout, a total budget, and truncated output. A
+timed-out tool has its process group ended, so nothing it spawned outlives it.
 
-## The optional preset
+## Tools the skill does not ship argv for
 
-```sh
-./scripts/install codex --project /path/to/project --hooks standards
-```
-
-It registers one hook: `PostToolUse` on a direct `git commit`. After the commit
-exists, the checks whose trigger is `commit` run and the result is reported to
-the agent as context. Nothing is blocked, and the commit has already happened.
-
-The registered budget is 60 seconds, larger than the 12 the other presets use,
-because a check is slower than a notice. The host is blocked while it runs, so
-keep the commit trigger to fast checks; a tool that outruns the budget is
-`INCONCLUSIVE`, and its process group is ended rather than left running.
-
-**`trigger: "pr"` has no hook, deliberately.** Neither host has a PR-completed
-event. `Stop` is the nearest moment, and it fires at the end of every agent turn,
-which is not what `pr` means. Rather than map onto an event that means something
-else and then suppress the noise, that granularity stays an explicit
-`standards.py run` at review time, alongside the review discipline the workflow
-already carries.
-
-## Commands this skill does not ship
-
-`ruff` and `pyright` run with argv this skill supplies, and a configuration
-declaring `command` for them is refused: those names mean that argv, and letting
-a project redefine them would make the allowlist meaningless.
-
-Any other tool must supply `command` as argv words, which requires schema 2, and
-must be approved before it runs:
+`ruff` and `pyright` run with argv this skill supplies; declaring `command` for
+them is refused. Anything else needs `command` as argv words, which requires
+schema 2, and an approval:
 
 ```sh
 python3 <installed skill>/scripts/standards.py approve --project .
@@ -156,20 +99,38 @@ python3 <installed skill>/scripts/standards.py approve --project .
 `approve` prints every command it authorizes and records the approval under the
 Git directory, outside the working tree, so a pull request cannot carry approval
 for the command it introduces. The record is bound to those commands alone:
-changing one revokes it, while an unrelated edit to the configuration does not,
-because a prompt that appears after harmless changes is one people learn to
-accept without reading. Until an approval matches, those tools are `NOT RUN` and
-nothing is executed.
+changing one revokes it, an unrelated edit does not. Until an approval matches,
+those tools are `NOT RUN`.
 
-**A disclosed limit:** `approve` is an operator command, and nothing in this
-skill prevents an agent from running it, exactly as nothing prevents an agent
-from running the installer. It records a decision; it does not enforce who made
-it.
+Tools are grouped by whether they execute project code, not by whether the name
+is recognized. `pytest` imports `conftest.py` by design and `mypy` imports
+configured plugins, so both are recognized and still need approval.
+
+**A disclosed limit:** `approve` records an operator decision; it does not enforce
+who made it. Nothing here prevents an agent from running it, exactly as nothing
+prevents an agent from running the installer.
+
+## The optional preset
+
+```sh
+./scripts/install codex --project /path/to/project --hooks standards
+```
+
+One hook: `PostToolUse` on a direct `git commit`. The checks whose trigger is
+`commit` run and the result is reported as context. The commit already exists;
+nothing is blocked. The budget is 60 seconds rather than the 12 the other presets
+use, and the host is blocked while it runs, so keep the commit trigger to fast
+checks.
+
+**`trigger: "pr"` has no hook, deliberately.** Neither host has a PR-completed
+event, and `Stop`, the nearest moment, fires at the end of every agent turn,
+which is not what `pr` means. That granularity stays an explicit `run` at review
+time.
 
 ## Limits
 
 Stdlib and Git only; Python 3.9 or newer. A declared command is argv and is never
-passed to a shell. The configuration itself is read as data and never executed. A refusal names the file and the field and never carries the
-file's contents. Symlinked, non-regular, oversized and non-UTF-8 configuration
-files are refused rather than parsed. Reading a file proves nothing about whether
-the agent followed it.
+passed to a shell; the configuration itself is read as data and never executed. A
+refusal names the file and field and never carries file contents. Symlinked,
+non-regular, oversized and non-UTF-8 configuration files are refused. Reading a
+file proves nothing about whether the agent followed it.
