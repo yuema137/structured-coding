@@ -24,6 +24,8 @@ Read [agent-workflow.md](references/agent-workflow.md) and [adaptation.md](refer
 | Project standards | [standards contract](references/standards.md), only when `.structured-coding/standards.md` exists in the target project | Apply the project's declared review conventions and check ownership; the helper reports, it does not enforce |
 | Hook design / integration | [hook contract](references/hook-contract.md); [platform notes](references/platforms.md); [continuity preset](references/continuity.md) and [checkpoints preset](references/checkpoints.md), only when explicitly enabled | Read only explicitly enabled preset interfaces; further integration only when requested |
 
+This table is the required resource list for the phase; do not assemble one from the prompt names a request happens to mention. Before stating that work does or does not comply with this workflow, read the rule being cited, in this session: the routing rules live here and in [agent-workflow.md](references/agent-workflow.md), not in the long prompts, and recalling them from an earlier session is not evidence.
+
 The original long prompts are deliberately preserved. Do not replace them with this entrypoint or a summary during execution. Resolve relative resource links against this skill directory, not the target repository.
 
 ## Essential operating rules
@@ -32,7 +34,7 @@ The original long prompts are deliberately preserved. Do not replace them with t
 2. Plan overall → step → PR. If a step needs one PR, expand the step document in place into the PR design; keep one authority for that work.
 3. Every PR supplies a meaningful integration checkpoint. Each planned commit tracks implementation, deterministic validation, and LLM logic review separately with `[ ]` / `[x]` and evidence.
 4. Require a user-approved `DESIGN FROZEN` header and an authorized implementation contract before starting implementation. Freeze scope, invariants, and acceptance; keep progress, evidence, and bounded discoveries live.
-5. Start each new PR in a fresh implementation session. Resume after compaction as the same PR. Recover repository/process truth and re-read the current PR design and execution rules before editing.
+5. Start each new PR in a fresh implementation session. Resume after compaction as the same PR. Recover repository/process truth and re-read the current PR design and execution rules before editing. A session that is new, replacing another, or a delegated agent re-reads this entrypoint and its current phase row first; that is a session boundary, not something to repeat every turn.
 6. Within the approved contract, investigate, implement, run sufficient validation, review, update the ledger, and create semantic commits autonomously. Commit inspection is a checkpoint, not a request for approval.
 7. Audit uncertainty before asking. Resolve bounded details and ordinary failures autonomously. Record departures immediately. Escalate material changes or work outside existing authorization with concrete evidence and a proposed next step.
 8. Respect test ownership and the approved cost envelope. Real Gates require real evidence. CI evidence must match the exact final PR head; do not repeat expensive full suites without an independent reason.
