@@ -232,7 +232,7 @@ Compact 是 host 为腾出 context 而压缩聊天历史的过程，不是新建
 
 ## 可选 hook：安装、覆盖范围和限制
 
-需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，也可同时安装。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。
+需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，需要在 commit 后跑你声明的检查可选 standards，也可任意组合。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。
 
 ```sh
 ./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run

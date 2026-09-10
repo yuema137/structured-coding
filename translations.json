@@ -3,15 +3,15 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "8db93e6522744e63cef3d46f214034f6237002ffc86b2b0cdfd5f45d4500255e",
-    "chinese_sha256": "aca9fcad8ead24426e8d64b08cb1645cc0eb1438afc68c0d721e972c5d9eb56d"
+    "english_sha256": "134e958f2c914435b757584b16169141427c2a9ad1f4091e024c6c19d5927451",
+    "chinese_sha256": "a8eee06738196a2000f7016cd822cb7c172c0ccade49b5a9011d25f99714e526"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "04f659d3634cbdb4c0613aa7e479eab0e495470c7a23f821c5ce839390214674",
-      "chinese_sha256": "b09bc57d9c97cab448023537efe777e186a5540719f7304dc4dd8a956b1822a4"
+      "english_sha256": "7e4fcb667638ec5d3300db5ae269d9f4b2c2eab6544c9c73c2d59cc4eeb1cb39",
+      "chinese_sha256": "d54503afa062fcb488bb55bdbc1af463455a2d44d7baf62424878cb5a55483c4"
     },
     {
       "english": "TUTORIAL.md",
@@ -22,8 +22,8 @@
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "e953396c0b59ac68fd94aa5e70ead11cecf9123f7bcb75d0df5bf7687ee4883a",
-      "chinese_sha256": "34570f05a25eaee49a145da9332424bc7207a76a92506addc4c0ad146c8ed9ed"
+      "english_sha256": "1cd4b7df7a6dfbfe32c0f694d7a07fa9cc2c98e9a2bb210d51838fbdeec09d8e",
+      "chinese_sha256": "7f7ccbeaef3aa966b4a7b7cf6de4590b94554dc906a7b48dbcad618cc5e14dac"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
@@ -40,8 +40,8 @@
     {
       "english": "structured-coding/references/platforms.md",
       "chinese": "structured-coding/references/platforms.zh-CN.md",
-      "english_sha256": "c38c3a4029f8aa81fceff307fe0bf9d2053a4258104448ee3eb0231ececa1524",
-      "chinese_sha256": "b57aa667541f6d86712158cc2cf1ddfbce8be1bf06d2f7d23ee6a04f33ffd4ac"
+      "english_sha256": "337dcccc731d825606d58955e86f20fc34d5749da2c7f41e6e19f6723a5e3d74",
+      "chinese_sha256": "8391e94bb9fa9d48315288414080392bb6ab00499562368e394eeebb07e51469"
     }
   ],
   "specification_sha256": {
@@ -49,6 +49,6 @@
     "structured-coding/prompts/implementation-working-rules.md": "7caa1d829fcdb0741b3b621918d6058352adcacf6c8bfee5267e37d2850debcf",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",
-    "structured-coding/references/hook-contract.md": "37ecc2b092669dd3253556564f1cb4086a4309937d573dd7bf5a52342179ad75"
+    "structured-coding/references/hook-contract.md": "bb4aeec01af96ea42d0fb4248e9b9e3ccf54cae8f7266f523eed57031a68d81f"
   }
 }

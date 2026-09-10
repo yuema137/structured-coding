@@ -95,6 +95,8 @@ class PresetTests(WorktreeTest):
                     expected = set().union(*(self.EVENTS[p] for p in survivors))
                     self.assertEqual(set(json.loads(config.read_bytes())["hooks"]), expected)
                     report = hooks.doctor(host, self.project)
+                    # A user must be able to tell which release they installed.
+                    self.assertIn("Skill version 0.1.0", report)
                     for survivor in survivors:
                         self.assertIn(survivor, report)
                     data = self.state(host) / "retained.json"

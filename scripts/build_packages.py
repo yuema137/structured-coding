@@ -20,6 +20,7 @@ HOSTS = ("codex", "claude-code")
 # Adding a new source file requires an explicit publication decision here.
 PUBLISHED_FILES = {
     "SKILL.md",
+    "VERSION",
     "README.md",
     "README.zh-CN.md",
     "agents/openai.yaml",

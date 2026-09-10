@@ -31,11 +31,11 @@ Codex 的目录和调用方式依据 [OpenAI 官方 skills 文档](https://learn
 ./scripts/install codex --project /path/to/project --remove-hooks
 ```
 
-Claude Code 用户把 `codex` 换成 `claude-code`。需要 Python 3.9+、Git 和 macOS/Linux/WSL。目前保守的宿主版本下限是 Codex 0.153.4 和 Claude Code 2.1.261；实际事件送达还需要独立的 native 验证。修改后重启 host 并检查 `/hooks`；installer 不授予信任，也不会打开被禁用的 hook。
+Claude Code 用户把 `codex` 换成 `claude-code`。需要 Python 3.9+、Git 和 macOS/Linux/WSL。目前保守的宿主版本下限是 Codex 0.153.4 和 Claude Code 2.1.261；实际事件送达还需要独立的 native 验证。修改后重启 host 并检查 `/hooks`；installer 不授予信任，也不会打开被禁用的 hook。安装后的副本在 `VERSION` 里带着自己的发布版本，`--check-hooks` 会报告它，所以你能知道某个项目装的是哪一版。
 
 Codex 的信任分**两层**，两层都给到之前注册都是空转的。第一层是项目：在项目被信任之前，Codex 根本不加载任何 project-local hook，并会在 stderr 上说明，同时指出它要求写入的文件。那条记录必须写在 `CODEX_HOME` 下的 `config.toml` 里；命令行上的 `-c projects."<path>".trust_level="trusted"` 覆盖**不满足**这一条，而这种失败看起来像是 hook 被送达却被忽略了。第二层是每个 hook 定义按自身内容 hash 单独信任，所以改动命令会重新询问。两层都是 Codex 自己的机制，installer 都不会替你授予。Claude Code 没有对应的第二层。
 
-安装是追加操作。单装 standards 会注册共享 SessionStart 和 PostToolUse，它是唯一会真正运行东西的 preset；它的 PostToolUse hook 预算是 60 秒而不是 12 秒，因为跑一次检查比发一条提示慢。单装 checkpoints 会注册共享 SessionStart、PreToolUse 和 Stop，不注册 compact handler。单装 continuity 会注册共享 SessionStart 和手动/自动 PreCompact。组合安装共五个 group，SessionStart 只出现一次。移除一个后另一个仍可用。裸 `--remove-hooks` 移除全部自有 preset，保留 skill 和 session 数据。重复安装同一选择不会改变文件字节；重复或未知名称会被拒绝。
+安装是追加操作。单装 standards 会注册共享 SessionStart 和 PostToolUse，它是唯一会真正运行东西的 preset；它的 PostToolUse hook 预算是 60 秒而不是 12 秒，因为跑一次检查比发一条提示慢。单装 checkpoints 会注册共享 SessionStart、PreToolUse 和 Stop，不注册 compact handler。单装 continuity 会注册共享 SessionStart 和手动/自动 PreCompact。三个一起安装共六个 group，SessionStart 只出现一次。移除一个后另一个仍可用。裸 `--remove-hooks` 移除全部自有 preset，保留 skill 和 session 数据。重复安装同一选择不会改变文件字节；重复或未知名称会被拒绝。
 
 一份 aggregate receipt 保存原始设置备份。旧 continuity receipt 仍可读取，仅在明确改变安装状态时迁移；检查、预览和未改变选择的重装都不改写它。installer 不覆盖定制过的 runtime 依赖：先比较、备份已有 skill，再明确升级。自有 group 缺失、被修改或重复，receipt schema 未知，以及路径被重定向或无法核验，都会导致拒绝。新安装注册的命令不含任何机器相关路径，因此提交到共享设置文件里的注册在同事的机器上同样有效；每台机器仍需自己审阅并信任这些 hook。旧版本装出来的注册保留其绝对路径命令，仍可检查、仍可移除，只有 `--upgrade-registration` 会重写它；重写会改变每一条命令，因此需要重新信任这些 hook。`--check-hooks` 会说明注册是否可移植，并且只对绝对路径的注册报告记录的 interpreter。
 

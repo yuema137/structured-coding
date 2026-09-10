@@ -259,6 +259,17 @@ class SchemaTwoTests(unittest.TestCase):
                 self.assertIn(expected, str(caught.exception))
 
 
+class VersionTests(unittest.TestCase):
+    def test_the_shipped_version_is_a_plain_release_string(self):
+        import build_packages
+        text = (build_packages.SOURCE / "VERSION").read_text()
+        self.assertRegex(text.strip(), r"\A\d+\.\d+\.\d+\Z")
+        self.assertEqual(text, text.strip() + "\n")
+        self.assertIn("VERSION", build_packages.PUBLISHED_FILES)
+        for host in build_packages.HOSTS:
+            self.assertIn("VERSION", build_packages.source_files(host))
+
+
 class PackagingTests(unittest.TestCase):
     def test_a_stray_bytecode_cache_does_not_break_packaging(self):
         """Importing an installed helper must not make the skill unpublishable."""

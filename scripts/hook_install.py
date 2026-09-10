@@ -685,6 +685,8 @@ def doctor(host, project):
     record, presets = validate_record(read(receipt), host, project, skill, config)
     validate_owned(current, record["groups"])
     verify_skill({"skill": skill, "presets": presets})
+    declared = read(safe(skill, "VERSION"))
+    installed = declared.decode().strip() if declared else "unknown"
     portability = (
         "Commands are portable across machines."
         if shape_for_schema(record["schema"]) == WRITE_SHAPE
@@ -693,7 +695,7 @@ def doctor(host, project):
         "registration portable."
     )
     return (
-        f"Installed presets: {', '.join(presets)}. Registration and runtime files match "
-        f"({host} {version_string}). {portability} "
+        f"Installed presets: {', '.join(presets)}. Skill version {installed}. "
+        f"Registration and runtime files match ({host} {version_string}). {portability} "
         "Trust/enabled state and real host delivery still require /hooks verification."
     )

@@ -183,7 +183,7 @@ scope 按工具分别设置，因为正确答案本来就因工具而异：只�
 <details id="hooks">
 <summary>可选 hook：安装、覆盖范围和限制</summary>
 
-<p class="status">可选 CONTINUITY + CHECKPOINTS · 尚无 MERGE GUARD</p><p>需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，也可同时安装。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。</p><h4>选择需要的 preset</h4><pre><code>./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
+<p class="status">可选 CONTINUITY + CHECKPOINTS + STANDARDS · 无 MERGE GUARD</p><p>需要 compact 恢复可选 continuity，需要 commit/review 提醒可选 checkpoints，需要在 commit 后跑你声明的检查可选 standards，也可任意组合。默认都不开。Checkpoints 提供建议，不拦截 commit，也不证明已达到交付条件。Protocol 测试不能证明 native 事件送达或模型遵守了提示。agent 不会动态注册自己的 hook。</p><h4>选择需要的 preset</h4><pre><code>./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints --dry-run
 ./structured-coding/scripts/install codex --project /path/to/project --hooks checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --hooks continuity checkpoints
 ./structured-coding/scripts/install codex --project /path/to/project --check-hooks
