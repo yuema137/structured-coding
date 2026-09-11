@@ -199,6 +199,17 @@ ENDPOINT AUTHORITY:
   that restriction has a source: the operator's instruction. The absence of any  
   instruction does not.
 
+POST-MERGE SYNCHRONIZATION OWNER:  
+  <default: the planning session owns the step and overall updates; THIS  
+   implementation session owns the PR document, the merge identity, the  
+   evidence, the deviations and the remaining issues>
+
+  One conversation may own both. Record which, so neither session assumes the  
+  other did it. Only the owner writes the parent documents; the other reports  
+  to the owner. Do not overwrite parent content that has moved on — reconcile.
+
+  Owning this is not merge authority and does not confer it.
+
 NORMAL STOP CONDITION:  
   <e.g. PR 01a READY FOR OPERATOR REVIEW — DO NOT MERGE>
 

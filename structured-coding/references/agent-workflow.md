@@ -41,6 +41,16 @@ Work with the operator to establish the final requirement, major use cases, obse
 
 Describe modules and large capabilities. Leave file/function details for the PR that will implement them. Explain meaningful tradeoffs and ask about missing product or direction decisions that the available evidence cannot settle. Continue independent audit and drafting while those decisions are pending.
 
+Before the operator accepts the overall, and before the first PR is frozen, the document must cover the whole selected effort:
+
+1. The complete effort and its observable outcomes, without pulling in later phases the operator has not approved.
+2. Every currently identifiable necessary high-level step, each with its intended output, broad dependency or order, and acceptance checkpoint. Low-level implementation detail stays unresolved.
+3. Each operator-required outcome matched to a step or to an explicit unresolved decision. A requirement leaves the effort only through an explicit scope decision — never because it does not fit the first PR.
+4. Discovery-dependent work represented as a conditional step or a decision point rather than omitted. An audit may establish that a contemplated change is unnecessary; record that evidence and any scope agreement it needs.
+5. Which subset the current PR covers, and what remains after it.
+
+This is a completeness check on the route, not a demand for speculative architecture, a minimum number of steps, or detail the audits have not produced yet. An effort that genuinely needs one step stays a one-step effort.
+
 Use a form suited to the project. An overall document is ready when the operator understands and agrees on what will be delivered and the broad route. Do not infer agreement from silence or proceed into code merely because an overall document exists.
 
 ## 3. Step planning: choose useful PR checkpoints
@@ -49,7 +59,7 @@ Read the agreed overall direction and inspect the relevant subsystem. Determine 
 
 For multiple PRs, describe each PR's medium scope: likely files or file groups, their relationships, dependencies, and excluded follow-up work. Define a meaningful integration checkpoint for each PR, with observable pass conditions and adversarial criteria. Avoid splitting PRs solely by file count or arbitrary size.
 
-For one PR, first establish the step scope, then expand that same document in place to PR-level detail. Label its combined step/PR role and link it directly to the overall document. Do not maintain two separate copies of the same plan.
+For one PR, first establish the step scope, then expand that same document in place to PR-level detail. Label its combined step/PR role and link it directly to the overall document. Do not maintain two separate copies of the same plan. This is a document-layout rule about one step; it says nothing about how many steps the overall has.
 
 Keep later PRs at medium scope until evidence from earlier implementation justifies their detailed design. A known dependency that invalidates a later step should be flagged immediately, even though only the next PR is fully detailed.
 
@@ -191,7 +201,15 @@ After confirmed merge:
 3. Update the overall document with resulting progress and material direction/dependency implications.
 4. Re-audit and detail the immediate next PR using the merged code and new findings. Flag wider implications at their proper level without rewriting every future PR in detail.
 
+A merged PR completes that PR. It does not complete its step or its overall: record what remains, and treat the overall as complete only when every enumerated step is delivered or explicitly dropped by an operator scope decision. If merged work revealed necessary steps the overall does not list, add them at their own level — a PR that is already frozen and bounded stays bounded, and the remaining work is planned separately rather than folded into the active PR.
+
 For a combined step/PR document, update it once and then the overall document; do not invent a separate parent or create a self-reference.
+
+Those four actions have owners, and the owner is recorded rather than inferred. By default the implementation session owns action 1, because it holds the evidence; the synchronization owner named in the contract — by default the planning session — owns actions 2 and 3, because it holds the agreement and will design the next PR from those records; action 4 belongs to the planning session. One conversation may own all of it, and a project that wants implementation-side propagation says so in the contract. The point of recording it is that neither session assumes the other did it.
+
+The handoff between them is explicit. The implementation session marks parent synchronization pending in the PR document and names the owner; the owner records the parent updates and acknowledges in the same place what it recorded. Only the owner writes the parent documents; the other reports to the owner. Parent content that has moved on is reconciled, never overwritten. Owning propagation is not merge authority and does not confer it.
+
+An implementation conversation may close once its PR document carries the merge identity, validation evidence, deviations, remaining issues and a durable handoff, and responsibility for any remaining synchronization has been explicitly accepted. Durable does not mean published: a project that keeps its plans out of version control keeps them there.
 
 Make status updates through the repository's established documentation process. If the implementation branch is closed or protected, prepare/use the appropriate documentation change rather than silently pushing to a protected branch. Do not claim parent synchronization is complete until it is recorded in the authoritative location.
 

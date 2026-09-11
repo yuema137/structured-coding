@@ -39,7 +39,7 @@ The original long prompts are deliberately preserved. Do not replace them with t
 7. Audit uncertainty before asking. Resolve bounded details and ordinary failures autonomously. Record departures immediately. Escalate material changes or work outside existing authorization with concrete evidence and a proposed next step.
 8. Respect test ownership and the approved cost envelope. Real Gates require real evidence. CI evidence must match the exact final PR head; do not repeat expensive full suites without an independent reason.
 9. Continue authorized execution until the PR is ready for operator review, including CI repair when needed. Present the complete handoff and retain the explicit merge-approval boundary.
-10. After confirmed merge, update progress and implications in the step and overall documents. Detail one step ahead; do not begin the next PR in the old implementation context.
+10. After confirmed merge, update progress and implications in the step and overall documents. Completing a PR does not complete its overall; record what remains. Detail one step ahead; do not begin the next PR in the old implementation context.
 
 ## Authority and packaging boundaries
 

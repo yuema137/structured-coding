@@ -41,6 +41,16 @@
 
 描述 module 和主要能力，把文件与函数细节留给实际实现它们的 PR。解释有意义的取舍；现有证据无法确定的产品或方向问题，需要询问 operator。等待决定时，继续独立的 audit 和起草工作。
 
+operator 认可 overall 之前、第一个 PR freeze 之前，这份文档必须覆盖整个选定的 effort：
+
+1. 完整的 effort 及其可观察的产出，不要把 operator 还没批准的后续阶段拉进来。
+2. 当前能识别出来的每一个必要的高层 step，各自写清预期产出、大致依赖或顺序、验收检查点。低层实现细节可以先不定。
+3. operator 要求的每一项产出，都要对上一个 step，或者对上一个明确"尚未决定"的条目。某项需求要退出这个 effort，只能通过明确的 scope 决定——绝不能因为它装不进第一个 PR 就消失。
+4. 依赖后续发现才能定的工作，要写成条件 step 或决策点，而不是省略掉。audit 有可能证明某个设想的改动其实不必要；那就把这个证据、以及它需要的 scope 共识记下来。
+5. 当前这个 PR 覆盖其中哪一部分，做完之后还剩什么。
+
+这是对路线完整性的检查，不是要你去编还没做过 audit 的架构、也不是规定 step 的最小数量。真的只需要一步的 effort，就还是一步。
+
 采用适合项目的文档形式。operator 理解并同意交付内容和大方向后，overall doc 才算准备好。不能把沉默当成同意，也不能因为已有 overall doc 就开始改代码。
 
 ## 3. Step planning：选择有意义的 PR checkpoint
@@ -49,7 +59,7 @@
 
 如果需要多个 PR，描述各自的 medium scope：可能涉及的文件或文件组、彼此关系、依赖和不包含的后续工作。为每个 PR 定义有意义的 integration checkpoint、可观察的通过条件和 adversarial criteria。不要只按文件数或任意大小拆 PR。
 
-如果只需要一个 PR，先确定 step scope，再将同一文档原地扩充到 PR 级细节。标明其兼任 step/PR 的角色，并直接链接 overall doc。不要维护同一计划的两个独立副本。
+如果只需要一个 PR，先确定 step scope，再将同一文档原地扩充到 PR 级细节。标明其兼任 step/PR 的角色，并直接链接 overall doc。不要维护同一计划的两个独立副本。这是关于单个 step 的文档排布规则，它跟 overall 有几个 step 无关。
 
 后续 PR 保持 medium scope，直到前面实现提供的证据足以支撑详细设计。已知依赖如果推翻后续 step，应立即指出，即使当前只会完整细化下一个 PR。
 
@@ -191,7 +201,15 @@ review 要求修复时，明确恢复同一个 PR 的工作、核对状态并重
 3. 向 overall doc 回写进度，以及重要方向或依赖影响。
 4. 根据 merged code 和新发现，重新 audit 并细化紧接着的下一个 PR。在相应层级标注更广的影响，不必详细重写所有后续 PR。
 
+PR merge 了，只说明这个 PR 完成了。它不代表对应的 step 或 overall 完成了：把剩余工作记下来；只有当所有列出的 step 都交付、或者被 operator 明确的 scope 决定去掉之后，overall 才算完成。如果已合并的工作暴露出 overall 里没有列的必要 step，就在它自己的层级上补上——已经 freeze 且有边界的 PR 保持原边界，剩下的工作单独规划，不要塞进正在进行的 PR。
+
 同一文档兼任 step/PR 时，只更新一次，然后更新 overall doc；不要虚构独立 parent 或产生自引用。
+
+这四件事各有归属，而归属是记下来的，不是靠推断。默认：action 1 由 implementation session 负责，因为证据在它手里；action 2 和 3 由 contract 里写明的 synchronization owner 负责——默认是 planning session，因为共识在它手里，而且它要拿这些记录去设计下一个 PR；action 4 属于 planning session。一个对话全包也可以；希望由 implementation 侧回写的项目，在 contract 里写清楚就行。记下来的意义在于：不要两个 session 都以为对方做了。
+
+两者之间的交接是明确的。implementation session 在 PR 文档里把 parent 同步标成 pending 并写明 owner；owner 完成 parent 更新后，在同一处确认自己记了什么。只有 owner 写 parent 文档，另一方向 owner 汇报。parent 里已经往前走了的内容要对账，不能覆盖。负责回写不等于 merge 权限，也不会带来 merge 权限。
+
+implementation 对话可以在满足以下条件后关闭：它的 PR 文档里有 merge 身份、验证证据、偏离、遗留问题和一份可持续的 handoff，并且剩余同步工作的责任已被明确接手。可持续不等于发布出去：把 plans 留在版本库之外的项目，就继续留在外面。
 
 按照仓库既有文档流程更新状态。implementation branch 已关闭或受保护时，准备或使用合适的文档改动途径，不要静默 push 到受保护 branch。未在权威位置记录前，不能声称 parent 同步已经完成。
 
