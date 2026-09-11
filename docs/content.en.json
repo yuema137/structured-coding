@@ -267,7 +267,7 @@
       "You review evidence before merge."
     ]
   ],
-  "autonomy": "After design approval, the agent investigates, implements, validates, reviews, records, and commits. If PR and CI work are authorized, it completes those too without waiting for you to prompt each step.",
+  "autonomy": "After design approval, the agent investigates, implements, validates, reviews, records, and commits. If PR and CI work are authorized, it completes those too without waiting for you to prompt each step. The contract records which endpoints you authorized — commit, push, opening the PR, CI repair — and merge is never one of them. The agent may not quietly narrow that list either: a stopping point you did not ask for is a question for you, not a cautious default it can adopt on your behalf.",
   "escalation": "A material scope change or an action outside existing authorization comes back to you with evidence and a proposal.",
   "technicalTitle": "The details, when you need them.",
   "technicalLead": "Open the part relevant to your current question. Use the resource links above for the complete specifications.",

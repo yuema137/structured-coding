@@ -3,15 +3,15 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "7a8d58ad68e56ad6f3ef10aac60df01dca2256fd237474544ceb313f7bb09440",
-    "chinese_sha256": "9a66f3193d5358db7c1fed532eed3ac0e05203e7ce46a7f4c61d6dbf93adbcfa"
+    "english_sha256": "a2bc3a9756629106426fb0fe2cd6b769b6b8453c576e8311f4dae2b56ad660d8",
+    "chinese_sha256": "2644dc6f143cd15de1247150011056b018cdd427157e8b2c7caf5cfc8765ff48"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "1d07bec1eaec7cadb56aadb241d16c19310dd2fe6789108e3add477fb0679fbb",
-      "chinese_sha256": "54ec6dde48b5d04e404b54de0221ae3e07862f913534e45355bb35beb46d5cb8"
+      "english_sha256": "f835a245555081fe6b8cef930ce30e6d884af166342bb32b1f23cf8416cb7de1",
+      "chinese_sha256": "94818040582045da1939bd3276d17a1a087ba8c6f5a586c80b9d9754d186ed3b"
     },
     {
       "english": "TUTORIAL.md",
@@ -22,14 +22,14 @@
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "37d48efbef1a3c8fb1d0d74608aae14e7c7e24c9651bd7dcc302b2579052a6c9",
-      "chinese_sha256": "64f4d8d32c41d0ee55407cdc90ae90e8b5e4c762a1d920c3449bc94de5c5fc67"
+      "english_sha256": "3a90c843c21087c8190cc23bd082454f9f0bcb2d5e1eba784f133bde67b3fa36",
+      "chinese_sha256": "b0287cf97eb6b84f62c2464b3bd88cdd8039a8ec988503982cc850dc6e521b6d"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
       "chinese": "structured-coding/references/agent-workflow.zh-CN.md",
-      "english_sha256": "e21eeba615de33bcbd63dad6266a3250721c1e4bb72082458eebb35f3ac1c4ec",
-      "chinese_sha256": "5fcfd93698999c7504a860ef24cca9ca933dad9a7009b5196e890ac4e631141d"
+      "english_sha256": "a4b7d08b0016f358863cda8089b480bf049099b1786dfdc14b49bfbf39cb2127",
+      "chinese_sha256": "4a2495a38d0a525c79bfb3a3a6ba061160c7c0a153b198c77d200016e51c45e5"
     },
     {
       "english": "structured-coding/references/adaptation.md",

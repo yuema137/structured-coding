@@ -115,7 +115,7 @@ Do not merge.
 
 ![你在哪些地方参与？](docs/assets/people.zh-CN.svg)
 
-设计批准以后，agent 自己调查、实现、验证、review、记录并 commit。PR 和 CI 工作如果已经授权，它也会继续做完，不用你一步一步催。
+design 批准之后，agent 自己调查、实现、验证、review、记录并 commit。如果 PR 和 CI 工作已获授权，它也会一并做完，不需要你一步一步催。contract 里记着你授权到哪些 endpoint——commit、push、开 PR、修 CI——merge 永远不在其中。agent 也不许偷偷把这份清单收窄：一个你没要求过的停止点，是要拿来问你的，不是它可以替你采用的保守默认值。
 
 遇到实质性范围变化，或者现有授权以外的操作，agent 带着证据和方案回来找你。
 

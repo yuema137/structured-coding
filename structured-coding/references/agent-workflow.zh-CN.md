@@ -86,6 +86,8 @@ Validation 为指定 claim 提供确定性或实证 execution evidence。Review 
 
 contract 必须区分每次 Gate 的限制和总 runtime/cost 范围，并明确 commit、branch 发布、PR 更新和 validation 是否已授权。沿用已有 session 授权，不要重复询问已经作出的决定。
 
+freeze 之前，把这个 endpoint 块跟 operator 实际说过的话对一遍。整件事约定的流程是做到 PR review-ready，而块里却停在本地文档和测试——这是需要提出来的不一致，不是一个可以直接 freeze 的保守默认值。反过来同样是不一致：planning-only 或明确只在本地做的请求，不会因为出厂默认值有发布权限就获得发布权限。每一处收紧都需要一个 operator 认得出来的 source；没有 source 的那一行是 unresolved，不是已决定。
+
 operator 批准具体 design 进入 implementation 后，记录清晰的 header，例如：
 
 ```markdown

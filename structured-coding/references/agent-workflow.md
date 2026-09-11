@@ -86,6 +86,8 @@ Iterate the PR design with the operator. Prepare a filled implementation contrac
 
 The contract must distinguish the per-Gate limit from the total runtime/cost envelope and identify whether commit, branch publication, PR updates, and validation are authorized. Reuse existing session authorization; do not ask again for a decision already made.
 
+Before freezing, reconcile that endpoint block against what the operator actually said. A block that stops at local documentation and tests, in an effort whose agreed workflow runs to PR review readiness, is a mismatch to raise — not a cautious default to freeze. The converse is equally a mismatch: a planning-only or explicitly local-only request does not acquire publication permission because the shipped default has one. Every narrowing needs a source the operator would recognize, and a line without one is unresolved rather than decided.
+
 When the operator approves the concrete design for implementation, record a visible header such as:
 
 ```markdown
