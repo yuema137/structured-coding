@@ -205,6 +205,12 @@ PR merge 了，只说明这个 PR 完成了。它不代表对应的 step 或 ove
 
 同一文档兼任 step/PR 时，只更新一次，然后更新 overall doc；不要虚构独立 parent 或产生自引用。
 
+这四件事各有归属，而归属是记下来的，不是靠推断。默认：action 1 由 implementation session 负责，因为证据在它手里；action 2 和 3 由 contract 里写明的 synchronization owner 负责——默认是 planning session，因为共识在它手里，而且它要拿这些记录去设计下一个 PR；action 4 属于 planning session。一个对话全包也可以；希望由 implementation 侧回写的项目，在 contract 里写清楚就行。记下来的意义在于：不要两个 session 都以为对方做了。
+
+两者之间的交接是明确的。implementation session 在 PR 文档里把 parent 同步标成 pending 并写明 owner；owner 完成 parent 更新后，在同一处确认自己记了什么。只有 owner 写 parent 文档，另一方向 owner 汇报。parent 里已经往前走了的内容要对账，不能覆盖。负责回写不等于 merge 权限，也不会带来 merge 权限。
+
+implementation 对话可以在满足以下条件后关闭：它的 PR 文档里有 merge 身份、验证证据、偏离、遗留问题和一份可持续的 handoff，并且剩余同步工作的责任已被明确接手。可持续不等于发布出去：把 plans 留在版本库之外的项目，就继续留在外面。
+
 按照仓库既有文档流程更新状态。implementation branch 已关闭或受保护时，准备或使用合适的文档改动途径，不要静默 push 到受保护 branch。未在权威位置记录前，不能声称 parent 同步已经完成。
 
 下一个 PR design 必须取得自己的 freeze/implementation 授权，并在 fresh execution session 开始。其知识来自 merged state 和 binding 文档，不来自上一个 PR 尚未结束的记忆。

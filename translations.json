@@ -28,8 +28,8 @@
     {
       "english": "structured-coding/references/agent-workflow.md",
       "chinese": "structured-coding/references/agent-workflow.zh-CN.md",
-      "english_sha256": "cd7ecdf18496e87f4da4686ffd5def9c9454621b4ffe411a86cc36f04c6b1830",
-      "chinese_sha256": "c533155c7a05215815a8b5338fd597679c3cb99c2bf070ea1ed993441e6f102a"
+      "english_sha256": "8fc2399f9887b9a4587f5c418b6b61a02b9da19ec6096d3f375e3a232b70d4dd",
+      "chinese_sha256": "1355271e74a542cfcd3e1bf71585d5e4d6398a6dfd0e0f99bcd2ae3a42371d2e"
     },
     {
       "english": "structured-coding/references/adaptation.md",
@@ -46,7 +46,7 @@
   ],
   "specification_sha256": {
     "structured-coding/SKILL.md": "66170c488940105b5bd127349bd8abda9eee48c27fa4ea1f1ca1fe2879a1e36f",
-    "structured-coding/prompts/implementation-working-rules.md": "e6c80df1f0f2af4eac4cf98d6fea13441362602c0ab02be021fa135078f02d6d",
+    "structured-coding/prompts/implementation-working-rules.md": "4b07b2594aadc1d0fd4d98c2af6f980695ff65dda8e3cc642c8ac95dcfafedfa",
     "structured-coding/prompts/pr-design-requirements.md": "dc5d654ee5e4e2d7a7558726823eb3452167f551d7841403ac8a98c862972baa",
     "structured-coding/prompts/test-ci-gate-rules.md": "ace549262e04880577248189f8ae460f18c13a6b2ecf6280d600566c2cd003e1",
     "structured-coding/references/hook-contract.md": "bb4aeec01af96ea42d0fb4248e9b9e3ccf54cae8f7266f523eed57031a68d81f"

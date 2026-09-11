@@ -205,6 +205,12 @@ A merged PR completes that PR. It does not complete its step or its overall: rec
 
 For a combined step/PR document, update it once and then the overall document; do not invent a separate parent or create a self-reference.
 
+Those four actions have owners, and the owner is recorded rather than inferred. By default the implementation session owns action 1, because it holds the evidence; the synchronization owner named in the contract — by default the planning session — owns actions 2 and 3, because it holds the agreement and will design the next PR from those records; action 4 belongs to the planning session. One conversation may own all of it, and a project that wants implementation-side propagation says so in the contract. The point of recording it is that neither session assumes the other did it.
+
+The handoff between them is explicit. The implementation session marks parent synchronization pending in the PR document and names the owner; the owner records the parent updates and acknowledges in the same place what it recorded. Only the owner writes the parent documents; the other reports to the owner. Parent content that has moved on is reconciled, never overwritten. Owning propagation is not merge authority and does not confer it.
+
+An implementation conversation may close once its PR document carries the merge identity, validation evidence, deviations, remaining issues and a durable handoff, and responsibility for any remaining synchronization has been explicitly accepted. Durable does not mean published: a project that keeps its plans out of version control keeps them there.
+
 Make status updates through the repository's established documentation process. If the implementation branch is closed or protected, prepare/use the appropriate documentation change rather than silently pushing to a protected branch. Do not claim parent synchronization is complete until it is recorded in the authoritative location.
 
 The next PR design must obtain its own freeze/implementation authorization and begin in a fresh execution session. Its knowledge comes from merged state and binding documents, not unfinished memory from the previous PR.
