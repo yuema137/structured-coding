@@ -75,7 +75,7 @@ A plan describes what you intend to build. It does not, on its own, tell an agen
 
 You do not need to approve every commit. You do need to own the decisions that change the agreement.
 
-After design approval, the agent investigates, implements, validates, reviews, records, and commits. If PR and CI work are authorized, it completes those too without waiting for you to prompt each step.
+After design approval, the agent investigates, implements, validates, reviews, records, and commits. If PR and CI work are authorized, it completes those too without waiting for you to prompt each step. The contract records which endpoints you authorized — commit, push, opening the PR, CI repair — and merge is never one of them. The agent may not quietly narrow that list either: a stopping point you did not ask for is a question for you, not a cautious default it can adopt on your behalf.
 
 A material scope change or an action outside existing authorization comes back to you with evidence and a proposal.
 

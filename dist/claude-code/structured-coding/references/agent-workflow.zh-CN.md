@@ -86,6 +86,8 @@ Validation 为指定 claim 提供确定性或实证 execution evidence。Review 
 
 contract 必须区分每次 Gate 的限制和总 runtime/cost 范围，并明确 commit、branch 发布、PR 更新和 validation 是否已授权。沿用已有 session 授权，不要重复询问已经作出的决定。
 
+freeze 之前，把这个 endpoint 块跟 operator 实际说过的话对一遍。整件事约定的流程是做到 PR review-ready，而块里却停在本地文档和测试——这是需要提出来的不一致，不是一个可以直接 freeze 的保守默认值。反过来同样是不一致：planning-only 或明确只在本地做的请求，不会因为出厂默认值有发布权限就获得发布权限。每一处收紧都需要一个 operator 认得出来的 source；没有 source 的那一行是 unresolved，不是已决定。
+
 operator 批准具体 design 进入 implementation 后，记录清晰的 header，例如：
 
 ```markdown
@@ -112,7 +114,7 @@ Freeze 语义需求和 acceptance，同时允许 live ledger 持续写入。整�
 
 1. 检查 branch、HEAD、status、近期历史和相关运行中的 job。
 2. 完整读取 PR design、填写好的 contract，以及所需的 binding parent 文档。
-3. 核对已批准的 design 身份、implementation 授权、base 和已 merge 的 prerequisites。
+3. 核对已批准的 design 身份、implementation 授权、base 和已 merge 的 prerequisites。读 contract 里的 endpoint authority 并照它执行；source 是 unresolved 的那一行要提给 operator，不要自己再收紧。
 4. 完整读取两个 execution prompt 文件，并检查第一个 milestone 的 source/test。
 5. 按原始 contract 要求的字段，为当前 PR 初始化 handoff。
 
@@ -156,7 +158,7 @@ Freeze 语义需求和 acceptance，同时允许 live ledger 持续写入。整�
 
 Compaction 不重置进度，也不初始化新 PR。通过 handoff 恢复 active PR，对照 repository 身份和 branch/base 核验，并按来源权威顺序处理：repository/git/process 事实 → primary design → binding parent 文档 → handoff → emergency snapshot → 对话记忆。
 
-重新完整读取当前 PR design、填写好的 contract 和两个 execution prompt。启动替代任务前先检查 active process 和 CI run。重新打开下一步所需的 source seam，在编辑前核对过时的 checkbox 或 evidence 声明。
+重新完整读取当前 PR design、填写好的 contract 和两个 execution prompt。只出现在 handoff 里、没有 source、contract 里也找不到依据的限制，要报告而不是遵守；operator 新的明确指示优先于它。启动替代任务前先检查 active process 和 CI run。重新打开下一步所需的 source seam，在编辑前核对过时的 checkbox 或 evidence 声明。
 
 计划中的 manual compaction 应先同步 design、handoff、HEAD 和 working-tree fingerprint。不可避免的 automatic compaction 遇到过时的语义 handoff 时，应产生机械恢复 snapshot 和警告，不能造成 compaction deadlock。hook 不得编造 semantic summary。
 

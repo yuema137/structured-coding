@@ -85,6 +85,7 @@ PR CONTEXT INITIALIZATION:
     - working-tree fingerprint;  
     - approved scope;  
     - frozen invariants;  
+    - endpoint authority, with each line's source;  
     - implementation sequence;  
     - validation budget;  
     - current checkpoint;  
@@ -105,6 +106,14 @@ PR CONTEXT AUTHORITY ORDER:
     6. conversational memory.
 
   A lower item may never override a higher one.
+
+  An explicit operator instruction in the CURRENT session outranks a recorded  
+  restriction, including one carried in the handoff. Quote the instruction,  
+  update ENDPOINT AUTHORITY with it as the source, and say plainly that it  
+  replaces the earlier line. Do not silently drop either side.
+
+  Merge authority is outside this: it is never inherited, never widened, and  
+  always requires the operator's explicit authorization for this merge.
 
 PR CONTEXT CONTINUITY:  
   During THIS PR:
@@ -165,6 +174,31 @@ PR CONTEXT CLOSEOUT:
   The NEXT PR starts from a fresh filled Implementation Working Rules contract  
   and a freshly initialized context.
 
+ENDPOINT AUTHORITY:  
+  Each endpoint is a separate decision. Record the decision and its SOURCE:  
+  an explicit operator instruction, an applicable repository restriction, or  
+  `unresolved`. Caution is not a source: an endpoint you narrowed yourself is  
+  `unresolved`, not the operator's decision, and is settled before freeze.
+
+  - implementation + local validation:  <default: authorized>  
+      source: <...>  
+  - semantic commits:                   <default: authorized; section 14 —  
+                                         no approval before each commit>  
+      source: <...>  
+  - branch push:                        <default: authorized; section 21>  
+      source: <...>  
+  - PR creation / update:               <default: authorized; section 21>  
+      source: <...>  
+  - CI repair to review readiness:      <default: authorized; section 21>  
+      source: <...>  
+  - merge:                              explicit operator authorization only;  
+                                         section 22. No source value changes  
+                                         this line.
+
+  A planning-only or explicitly local-only request restricts publication, and  
+  that restriction has a source: the operator's instruction. The absence of any  
+  instruction does not.
+
 NORMAL STOP CONDITION:  
   <e.g. PR 01a READY FOR OPERATOR REVIEW — DO NOT MERGE>
 
@@ -182,7 +216,17 @@ MERGE AUTHORITY:
 If a field is not applicable, mark it `N/A` rather than inventing a value.
 
 The project-specific contract overrides generic defaults below where it is  
-more restrictive.
+more restrictive **and the restriction records a source**: an explicit operator  
+instruction or an applicable repository restriction.
+
+A restriction with no source is not a project decision and does not override  
+anything. Resolve it with the operator before freeze instead of acting on it.  
+Without this, choosing caution and writing the result into the contract presents  
+an agent's decision as the operator's — and every later session that reads the  
+contract correctly then inherits it as a frozen operator boundary.
+
+This does not work in reverse. An unsourced line is resolved, not widened past  
+the shipped defaults, and merge authority is never widened at all.
 
 # 1. Inspect before asking, guessing, or changing the design
 
