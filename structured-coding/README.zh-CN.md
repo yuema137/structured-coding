@@ -105,7 +105,7 @@ Specification 是写下来的要求，不是一个盯着所有操作的程序。
 | Planning 会话 | 讨论需求，让 agent 检查 repo、写计划，review 当前 PR design，并批准 execution contract。 | 当前 PR 批准后，让 agent 准备带真实文档路径的 kickoff，再开新的 implementation 会话。 |
 | PR A 的 implementation 会话 | 把已批准的 design 和 contract 交给 agent，让它实现、验证、review、commit，并完成已授权的 PR 和 CI 工作。 | 普通修复、commit、compact 和 resume 都继续处理这个 PR，不在这里启动 PR B。 |
 | PR A 的 review | 你看 diff 和 handoff。有问题，就在原 implementation 会话里要求修复；满意以后，再明确授权 merge。 | 可以另开 reviewer 会话，但不是必须。修复后，要更新证据，并确认最终 HEAD 的 CI。 |
-| PR B 的 planning 和 implementation | 确认 A 已 merge 后，让 agent 更新 A 的记录、所属 step 和 overall plan，再据此设计并批准 B。 | 你可以回原 planning 会话，也可以新开一个，让它读已保存的计划。B 的 implementation 必须另开新会话。 |
+| PR B 的规划与实现 | 确认 A 已 merge 之后，implementation 对话记录 A 的 merge 身份和证据；synchronization owner——默认就是这个 planning 对话——回写 A 的 parent step 和 overall plan，再拿这些记录去细化并批准 B。 | 做完 A 不等于做完计划：overall 里列出的每个 step 都交付、或者被你去掉之前，它一直是未完成的。你可以回到 planning 对话，也可以开一个替代对话去读已保存的 plans。B 要在另一个全新的 implementation 对话里开始。 |
 
 比如一个功能拆成两个 PR，通常就是三个工作会话：planning、implementation A、implementation B。这是示例，不是硬性数量限制。Planning 聊得太长可以换会话，implementation 中断了也可以恢复。会话之间传递约定，靠的是项目里保存的文档，不是指望另一个聊天自动记得前面的事。 Handoff 就是 agent 保存的接续说明，告诉恢复后的会话：做到哪儿了、什么还在跑、下一步是什么。
 

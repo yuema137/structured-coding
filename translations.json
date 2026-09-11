@@ -3,15 +3,15 @@
   "presentation_source_pair": {
     "english": "docs/content.en.json",
     "chinese": "docs/content.zh-CN.json",
-    "english_sha256": "a2bc3a9756629106426fb0fe2cd6b769b6b8453c576e8311f4dae2b56ad660d8",
-    "chinese_sha256": "2644dc6f143cd15de1247150011056b018cdd427157e8b2c7caf5cfc8765ff48"
+    "english_sha256": "91679c50493e7436472193f0df1bbeea23f394f0cffc9298a23d4ae89a553687",
+    "chinese_sha256": "c7519c04a757c2cd803054701cf860469d6e8c6cb5f2188210aa12861ef579cc"
   },
   "pairs": [
     {
       "english": "README.md",
       "chinese": "README.zh-CN.md",
-      "english_sha256": "f835a245555081fe6b8cef930ce30e6d884af166342bb32b1f23cf8416cb7de1",
-      "chinese_sha256": "94818040582045da1939bd3276d17a1a087ba8c6f5a586c80b9d9754d186ed3b"
+      "english_sha256": "d37e33be8f8557e696948fd4d772cb0a09ffdaf9af7bfb720baea077d2153a8a",
+      "chinese_sha256": "feb45b76ed2ede456d61229e38f4a077fc152d66e97cccdbc5feedc0ee5a465a"
     },
     {
       "english": "TUTORIAL.md",
@@ -22,8 +22,8 @@
     {
       "english": "structured-coding/README.md",
       "chinese": "structured-coding/README.zh-CN.md",
-      "english_sha256": "3a90c843c21087c8190cc23bd082454f9f0bcb2d5e1eba784f133bde67b3fa36",
-      "chinese_sha256": "b0287cf97eb6b84f62c2464b3bd88cdd8039a8ec988503982cc850dc6e521b6d"
+      "english_sha256": "ccb1cc10b0c17daf9da5426668f15ba89fd3f6f26e35dd6cfc960f2b37fb24c2",
+      "chinese_sha256": "a6fb530e6b8dcba43159a13668f436a7042ad79ba1054db6634d9043a9fac4b3"
     },
     {
       "english": "structured-coding/references/agent-workflow.md",
