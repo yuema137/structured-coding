@@ -201,6 +201,8 @@ After confirmed merge:
 3. Update the overall document with resulting progress and material direction/dependency implications.
 4. Re-audit and detail the immediate next PR using the merged code and new findings. Flag wider implications at their proper level without rewriting every future PR in detail.
 
+A merged PR completes that PR. It does not complete its step or its overall: record what remains, and treat the overall as complete only when every enumerated step is delivered or explicitly dropped by an operator scope decision. If merged work revealed necessary steps the overall does not list, add them at their own level — a PR that is already frozen and bounded stays bounded, and the remaining work is planned separately rather than folded into the active PR.
+
 For a combined step/PR document, update it once and then the overall document; do not invent a separate parent or create a self-reference.
 
 Make status updates through the repository's established documentation process. If the implementation branch is closed or protected, prepare/use the appropriate documentation change rather than silently pushing to a protected branch. Do not claim parent synchronization is complete until it is recorded in the authoritative location.

@@ -201,6 +201,8 @@ review 要求修复时，明确恢复同一个 PR 的工作、核对状态并重
 3. 向 overall doc 回写进度，以及重要方向或依赖影响。
 4. 根据 merged code 和新发现，重新 audit 并细化紧接着的下一个 PR。在相应层级标注更广的影响，不必详细重写所有后续 PR。
 
+PR merge 了，只说明这个 PR 完成了。它不代表对应的 step 或 overall 完成了：把剩余工作记下来；只有当所有列出的 step 都交付、或者被 operator 明确的 scope 决定去掉之后，overall 才算完成。如果已合并的工作暴露出 overall 里没有列的必要 step，就在它自己的层级上补上——已经 freeze 且有边界的 PR 保持原边界，剩下的工作单独规划，不要塞进正在进行的 PR。
+
 同一文档兼任 step/PR 时，只更新一次，然后更新 overall doc；不要虚构独立 parent 或产生自引用。
 
 按照仓库既有文档流程更新状态。implementation branch 已关闭或受保护时，准备或使用合适的文档改动途径，不要静默 push 到受保护 branch。未在权威位置记录前，不能声称 parent 同步已经完成。
