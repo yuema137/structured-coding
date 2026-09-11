@@ -41,6 +41,16 @@ Work with the operator to establish the final requirement, major use cases, obse
 
 Describe modules and large capabilities. Leave file/function details for the PR that will implement them. Explain meaningful tradeoffs and ask about missing product or direction decisions that the available evidence cannot settle. Continue independent audit and drafting while those decisions are pending.
 
+Before the operator accepts the overall, and before the first PR is frozen, the document must cover the whole selected effort:
+
+1. The complete effort and its observable outcomes, without pulling in later phases the operator has not approved.
+2. Every currently identifiable necessary high-level step, each with its intended output, broad dependency or order, and acceptance checkpoint. Low-level implementation detail stays unresolved.
+3. Each operator-required outcome matched to a step or to an explicit unresolved decision. A requirement leaves the effort only through an explicit scope decision — never because it does not fit the first PR.
+4. Discovery-dependent work represented as a conditional step or a decision point rather than omitted. An audit may establish that a contemplated change is unnecessary; record that evidence and any scope agreement it needs.
+5. Which subset the current PR covers, and what remains after it.
+
+This is a completeness check on the route, not a demand for speculative architecture, a minimum number of steps, or detail the audits have not produced yet. An effort that genuinely needs one step stays a one-step effort.
+
 Use a form suited to the project. An overall document is ready when the operator understands and agrees on what will be delivered and the broad route. Do not infer agreement from silence or proceed into code merely because an overall document exists.
 
 ## 3. Step planning: choose useful PR checkpoints
@@ -49,7 +59,7 @@ Read the agreed overall direction and inspect the relevant subsystem. Determine 
 
 For multiple PRs, describe each PR's medium scope: likely files or file groups, their relationships, dependencies, and excluded follow-up work. Define a meaningful integration checkpoint for each PR, with observable pass conditions and adversarial criteria. Avoid splitting PRs solely by file count or arbitrary size.
 
-For one PR, first establish the step scope, then expand that same document in place to PR-level detail. Label its combined step/PR role and link it directly to the overall document. Do not maintain two separate copies of the same plan.
+For one PR, first establish the step scope, then expand that same document in place to PR-level detail. Label its combined step/PR role and link it directly to the overall document. Do not maintain two separate copies of the same plan. This is a document-layout rule about one step; it says nothing about how many steps the overall has.
 
 Keep later PRs at medium scope until evidence from earlier implementation justifies their detailed design. A known dependency that invalidates a later step should be flagged immediately, even though only the next PR is fully detailed.
 
